@@ -14,6 +14,7 @@ export class UploadController {
           success: false,
           error: 'No file uploaded',
         });
+        return;
       }
 
       const { filename, path: filePath } = req.file;
@@ -49,6 +50,7 @@ export class UploadController {
           success: false,
           error: 'Invalid ID',
         });
+        return;
       }
 
       const invoice = await InvoiceModel.findById(id);
@@ -57,6 +59,7 @@ export class UploadController {
           success: false,
           error: 'Invoice not found',
         });
+        return;
       }
 
       res.json({

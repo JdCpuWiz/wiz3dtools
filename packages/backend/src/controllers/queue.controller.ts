@@ -25,6 +25,7 @@ export class QueueController {
           success: false,
           error: 'Invalid ID',
         });
+        return;
       }
 
       const item = await queueService.getItemById(id);
@@ -59,6 +60,7 @@ export class QueueController {
           success: false,
           error: 'Items must be an array',
         });
+        return;
       }
 
       const createdItems = await queueService.createManyItems(items);
@@ -80,6 +82,7 @@ export class QueueController {
           success: false,
           error: 'Invalid ID',
         });
+        return;
       }
 
       const item = await queueService.updateItem(id, req.body);
@@ -101,6 +104,7 @@ export class QueueController {
           success: false,
           error: 'Invalid ID',
         });
+        return;
       }
 
       await queueService.deleteItem(id);
@@ -122,6 +126,7 @@ export class QueueController {
           success: false,
           error: 'itemId and newPosition are required',
         });
+        return;
       }
 
       await queueService.reorderItem({ itemId, newPosition });
@@ -144,6 +149,7 @@ export class QueueController {
           success: false,
           error: 'Invalid ID',
         });
+        return;
       }
 
       if (!status) {
@@ -151,6 +157,7 @@ export class QueueController {
           success: false,
           error: 'Status is required',
         });
+        return;
       }
 
       const item = await queueService.updateItemStatus(id, status);
