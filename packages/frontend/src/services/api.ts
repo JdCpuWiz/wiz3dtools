@@ -11,12 +11,35 @@ import type {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+console.log('API Base URL:', API_BASE_URL);
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 120000, // 2 minute timeout for file uploads
 });
+
+// Log all requests for debugging
+api.interceptors.request.use((config) => {
+  console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ API Response: ${response.config.url} - ${response.status}`);
+    return response;
+  },
+  (error) => {
+    console.error(`❌ API Error: ${error.config?.url}`, error.message);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Queue API
 export const queueApi = {
