@@ -1,6 +1,9 @@
 import path from 'path';
 import fs from 'fs/promises';
-import { convert, info } from 'pdf-poppler';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 export class PdfService {
   /**
@@ -15,15 +18,13 @@ export class PdfService {
       // Create temporary directory for images
       await fs.mkdir(outputDir, { recursive: true });
 
-      // Convert PDF to PNG images using poppler
-      const options = {
-        format: 'png' as const,
-        out_dir: outputDir,
-        out_prefix: 'page',
-        page: null, // Convert all pages
-      };
+      // Use pdftoppm directly to convert PDF to PNG images
+      // -png: output format PNG
+      // -r 150: resolution 150 DPI for good quality
+      const outputPrefix = path.join(outputDir, 'page');
+      const command = `pdftoppm -png -r 150 "${pdfPath}" "${outputPrefix}"`;
 
-      await convert(pdfPath, options);
+      await execAsync(command);
 
       // Read all generated PNG files
       const files = await fs.readdir(outputDir);
@@ -79,9 +80,10 @@ export class PdfService {
    */
   async getPageCount(pdfPath: string): Promise<number> {
     try {
-      // Use pdf-poppler to get info
-      const pdfInfo = await info(pdfPath);
-      return parseInt(pdfInfo.pages) || 1;
+      // Use pdfinfo to get page count
+      const { stdout } = await execAsync(`pdfinfo "${pdfPath}"`);
+      const match = stdout.match(/Pages:\s+(\d+)/);
+      return match ? parseInt(match[1]) : 1;
     } catch (error) {
       console.error('Error getting page count:', error);
       return 1;

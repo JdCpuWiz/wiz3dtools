@@ -16,7 +16,6 @@
     "pg": "^8.11.3",
     "multer": "^2.0.2",
     "axios": "^1.6.5",
-    "pdf-poppler": "^0.2.1",
     "dotenv": "^16.3.1",
     "cors": "^2.8.5",
     "express-rate-limit": "^7.1.5"
