@@ -11,7 +11,7 @@ export function errorHandler(
 
   // Multer errors
   if (err.message?.includes('File too large')) {
-    return res.status(413).json({
+    res.status(413).json({
       success: false,
       error: 'File too large',
       message: err.message,
@@ -19,7 +19,7 @@ export function errorHandler(
   }
 
   if (err.message?.includes('Invalid file type')) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: 'Invalid file type',
       message: err.message,
@@ -28,7 +28,7 @@ export function errorHandler(
 
   // Database errors
   if (err.message?.includes('violates')) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: 'Database constraint violation',
       message: err.message,
@@ -37,7 +37,7 @@ export function errorHandler(
 
   // Not found errors
   if (err.message?.includes('not found')) {
-    return res.status(404).json({
+    res.status(404).json({
       success: false,
       error: 'Resource not found',
       message: err.message,

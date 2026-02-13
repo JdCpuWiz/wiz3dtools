@@ -10,7 +10,7 @@ export class UploadController {
   async uploadInvoice(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       if (!req.file) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'No file uploaded',
         });
@@ -45,7 +45,7 @@ export class UploadController {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'Invalid ID',
         });
@@ -53,7 +53,7 @@ export class UploadController {
 
       const invoice = await InvoiceModel.findById(id);
       if (!invoice) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: 'Invoice not found',
         });

@@ -21,7 +21,7 @@ export class QueueController {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'Invalid ID',
         });
@@ -55,7 +55,7 @@ export class QueueController {
       const { items } = req.body;
 
       if (!Array.isArray(items)) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'Items must be an array',
         });
@@ -76,7 +76,7 @@ export class QueueController {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'Invalid ID',
         });
@@ -97,7 +97,7 @@ export class QueueController {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'Invalid ID',
         });
@@ -118,7 +118,7 @@ export class QueueController {
       const { itemId, newPosition } = req.body;
 
       if (!itemId || newPosition === undefined) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'itemId and newPosition are required',
         });
@@ -140,14 +140,14 @@ export class QueueController {
       const { status } = req.body;
 
       if (isNaN(id)) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'Invalid ID',
         });
       }
 
       if (!status) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'Status is required',
         });
