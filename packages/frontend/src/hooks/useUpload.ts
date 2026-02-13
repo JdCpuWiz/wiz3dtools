@@ -21,9 +21,9 @@ export const useUpload = () => {
     queryKey: ['invoice-status', uploadedInvoiceId],
     queryFn: () => uploadApi.getInvoiceStatus(uploadedInvoiceId!),
     enabled: uploadedInvoiceId !== null,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Stop polling once processed
-      return data?.processed ? false : 2000;
+      return query.state.data?.processed ? false : 2000;
     },
   });
 

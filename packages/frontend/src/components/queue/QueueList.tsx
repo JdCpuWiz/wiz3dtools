@@ -38,9 +38,6 @@ export const QueueList: React.FC = () => {
     const newIndex = items.findIndex((item) => item.id === over.id);
 
     if (oldIndex !== -1 && newIndex !== -1) {
-      // Optimistically update UI
-      const reorderedItems = arrayMove(items, oldIndex, newIndex);
-
       // Send update to server
       reorder({
         itemId: Number(active.id),

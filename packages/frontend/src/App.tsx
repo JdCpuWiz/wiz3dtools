@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Layout } from './components/layout/Layout';
 import { QueueList } from './components/queue/QueueList';
 import { UploadZone } from './components/upload/UploadZone';

@@ -89,13 +89,13 @@ export const UploadZone: React.FC = () => {
           </p>
 
           <div className="space-y-3 mb-6">
-            {extractedProducts.map((product, index) => (
+            {extractedProducts.map((product, idx) => (
               <div
-                key={index}
+                key={idx}
                 className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
               >
                 <div className="flex-shrink-0 w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center font-semibold">
-                  {index + 1}
+                  {idx + 1}
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">

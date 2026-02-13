@@ -1,10 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queueApi } from '../services/api';
 import type {
-  QueueItem,
-  CreateQueueItemDto,
   UpdateQueueItemDto,
-  ReorderQueueDto,
 } from '@wizqueue/shared';
 import toast from 'react-hot-toast';
 
