@@ -68,7 +68,7 @@ export const QueueList: React.FC = () => {
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             />
           </svg>
-          <p className="text-gray-600">Loading queue...</p>
+          <p className="text-base text-gray-600 dark:text-gray-400">Loading queue...</p>
         </div>
       </div>
     );
@@ -91,8 +91,8 @@ export const QueueList: React.FC = () => {
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <p className="font-medium">Failed to load queue</p>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-base font-medium">Failed to load queue</p>
+          <p className="text-base text-gray-600 dark:text-gray-400 mt-1">
             {error instanceof Error ? error.message : 'Unknown error'}
           </p>
         </div>
@@ -116,10 +116,10 @@ export const QueueList: React.FC = () => {
             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           />
         </svg>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
           Queue is empty
         </h3>
-        <p className="text-gray-600">
+        <p className="text-base text-gray-600 dark:text-gray-400">
           Upload an invoice to get started, or add items manually.
         </p>
       </div>
@@ -129,10 +129,10 @@ export const QueueList: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
           Print Queue ({items.length} items)
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-base text-gray-500 dark:text-gray-400">
           Drag and drop to reorder
         </p>
       </div>

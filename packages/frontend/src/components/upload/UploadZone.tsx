@@ -81,10 +81,10 @@ export const UploadZone: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="card">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
             Review Extracted Products
           </h2>
-          <p className="text-sm text-gray-600 mb-6">
+          <p className="text-base text-gray-600 dark:text-gray-400 mb-6">
             {extractedProducts.length} products extracted from {selectedFile?.name}
           </p>
 
@@ -92,19 +92,19 @@ export const UploadZone: React.FC = () => {
             {extractedProducts.map((product, idx) => (
               <div
                 key={idx}
-                className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
+                className="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
               >
-                <div className="flex-shrink-0 w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center font-semibold">
+                <div className="flex-shrink-0 w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center font-semibold text-base">
                   {idx + 1}
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {product.productName}
                   </h3>
                   {product.details && (
-                    <p className="text-sm text-gray-600 mt-1">{product.details}</p>
+                    <p className="text-base text-gray-600 dark:text-gray-300 mt-1">{product.details}</p>
                   )}
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-base text-gray-500 dark:text-gray-400 mt-2">
                     Quantity: {product.quantity}
                   </p>
                 </div>
@@ -144,8 +144,8 @@ export const UploadZone: React.FC = () => {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <h3 className="text-lg font-semibold mb-2">Processing Failed</h3>
-            <p className="text-sm text-gray-600">{invoiceStatus.processingError}</p>
+            <h3 className="text-xl font-semibold mb-2">Processing Failed</h3>
+            <p className="text-base text-gray-600 dark:text-gray-400">{invoiceStatus.processingError}</p>
           </div>
           <Button variant="primary" onClick={handleReset}>
             Try Again
@@ -168,7 +168,7 @@ export const UploadZone: React.FC = () => {
   // Show upload zone
   return (
     <div className="card">
-      <h2 className="text-xl font-bold text-gray-900 mb-6">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
         Upload Invoice
       </h2>
 
@@ -198,10 +198,10 @@ export const UploadZone: React.FC = () => {
           />
         </svg>
 
-        <p className="text-lg font-medium text-gray-900 mb-2">
+        <p className="text-xl font-medium text-gray-900 dark:text-white mb-2">
           Drop your PDF invoice here
         </p>
-        <p className="text-sm text-gray-600 mb-6">
+        <p className="text-base text-gray-600 dark:text-gray-400 mb-6">
           or click to browse your files
         </p>
 
@@ -223,11 +223,11 @@ export const UploadZone: React.FC = () => {
         </p>
       </div>
 
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h3 className="text-sm font-semibold text-blue-900 mb-2">
+      <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
+        <h3 className="text-base font-semibold text-orange-900 dark:text-orange-200 mb-2">
           How it works:
         </h3>
-        <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+        <ol className="text-base text-orange-800 dark:text-orange-300 space-y-1 list-decimal list-inside">
           <li>Upload your PDF invoice</li>
           <li>AI automatically extracts product information</li>
           <li>Review and confirm extracted items</li>
