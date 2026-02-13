@@ -17,7 +17,7 @@ export class PdfService {
 
       // Convert PDF to PNG images using poppler
       const options = {
-        format: 'png',
+        format: 'png' as const,
         out_dir: outputDir,
         out_prefix: 'page',
         page: null, // Convert all pages
