@@ -5,7 +5,11 @@ import { UploadProgress } from './UploadProgress';
 import { Button } from '../common/Button';
 import type { ExtractedProduct } from '@wizqueue/shared';
 
-export const UploadZone: React.FC = () => {
+interface UploadZoneProps {
+  onClose?: () => void;
+}
+
+export const UploadZone: React.FC<UploadZoneProps> = ({ onClose }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
@@ -66,6 +70,7 @@ export const UploadZone: React.FC = () => {
         }))
       );
       handleReset();
+      onClose?.();
     }
   };
 

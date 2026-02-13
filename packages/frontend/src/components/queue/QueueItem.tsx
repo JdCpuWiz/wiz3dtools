@@ -29,8 +29,8 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
   };
 
   const statusColors = {
-    pending: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-    printing: 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200',
+    pending: 'bg-gray-300 text-black dark:bg-gray-600 dark:text-black',
+    printing: 'bg-yellow-400 text-black dark:bg-yellow-400 dark:text-black',
     completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
     cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
   };
@@ -42,7 +42,12 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
   };
 
   const handleStatusChange = (newStatus: string) => {
-    updateStatus({ id: item.id, status: newStatus });
+    // Auto-delete when status changes to completed
+    if (newStatus === 'completed') {
+      deleteItem(item.id);
+    } else {
+      updateStatus({ id: item.id, status: newStatus });
+    }
   };
 
   return (
@@ -109,7 +114,6 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
                   <option value="pending">Pending</option>
                   <option value="printing">Printing</option>
                   <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
                 </select>
 
                 {item.priority > 0 && (

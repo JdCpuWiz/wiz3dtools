@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -15,9 +15,20 @@ import {
 } from '@dnd-kit/sortable';
 import { useQueue } from '../../hooks/useQueue';
 import { QueueItem } from './QueueItem';
+import type { QueueFilter } from '../../App';
 
-export const QueueList: React.FC = () => {
+interface QueueListProps {
+  filter: QueueFilter;
+}
+
+export const QueueList: React.FC<QueueListProps> = ({ filter }) => {
   const { items, isLoading, isError, error, reorder } = useQueue();
+
+  // Filter items based on selected tab
+  const filteredItems = useMemo(() => {
+    if (filter === 'all') return items;
+    return items.filter(item => item.status === filter);
+  }, [items, filter]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -33,8 +44,8 @@ export const QueueList: React.FC = () => {
       return;
     }
 
-    const oldIndex = items.findIndex((item) => item.id === active.id);
-    const newIndex = items.findIndex((item) => item.id === over.id);
+    const oldIndex = filteredItems.findIndex((item) => item.id === active.id);
+    const newIndex = filteredItems.findIndex((item) => item.id === over.id);
 
     if (oldIndex !== -1 && newIndex !== -1) {
       // Send update to server
@@ -100,7 +111,7 @@ export const QueueList: React.FC = () => {
     );
   }
 
-  if (items.length === 0) {
+  if (filteredItems.length === 0) {
     return (
       <div className="card text-center">
         <svg
@@ -117,10 +128,13 @@ export const QueueList: React.FC = () => {
           />
         </svg>
         <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
-          Queue is empty
+          {filter === 'all' ? 'Queue is empty' : `No ${filter} items`}
         </h3>
         <p className="text-base text-gray-600 dark:text-gray-400">
-          Upload an invoice to get started, or add items manually.
+          {filter === 'all'
+            ? 'Upload an invoice to get started, or add items manually.'
+            : `There are no items with status "${filter}".`
+          }
         </p>
       </div>
     );
@@ -130,7 +144,7 @@ export const QueueList: React.FC = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
-          Print Queue ({items.length} items)
+          {filter === 'all' ? 'Print Queue' : filter.charAt(0).toUpperCase() + filter.slice(1)} ({filteredItems.length} items)
         </h2>
         <p className="text-base text-gray-500 dark:text-gray-400">
           Drag and drop to reorder
@@ -143,11 +157,11 @@ export const QueueList: React.FC = () => {
         onDragEnd={handleDragEnd}
       >
         <SortableContext
-          items={items.map((item) => item.id)}
+          items={filteredItems.map((item) => item.id)}
           strategy={verticalListSortingStrategy}
         >
           <div className="space-y-3">
-            {items.map((item) => (
+            {filteredItems.map((item) => (
               <QueueItem key={item.id} item={item} />
             ))}
           </div>
