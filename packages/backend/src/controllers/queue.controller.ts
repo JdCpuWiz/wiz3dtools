@@ -5,7 +5,7 @@ import type { ApiResponse } from '@wizqueue/shared';
 const queueService = new QueueService();
 
 export class QueueController {
-  async getAll(req: Request, res: Response<ApiResponse>, next: NextFunction) {
+  async getAll(_req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const items = await queueService.getAllItems();
       res.json({
@@ -17,7 +17,7 @@ export class QueueController {
     }
   }
 
-  async getById(req: Request, res: Response<ApiResponse>, next: NextFunction) {
+  async getById(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -37,7 +37,7 @@ export class QueueController {
     }
   }
 
-  async create(req: Request, res: Response<ApiResponse>, next: NextFunction) {
+  async create(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const item = await queueService.createItem(req.body);
       res.status(201).json({
@@ -50,7 +50,7 @@ export class QueueController {
     }
   }
 
-  async createBatch(req: Request, res: Response<ApiResponse>, next: NextFunction) {
+  async createBatch(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const { items } = req.body;
 
@@ -72,7 +72,7 @@ export class QueueController {
     }
   }
 
-  async update(req: Request, res: Response<ApiResponse>, next: NextFunction) {
+  async update(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -93,7 +93,7 @@ export class QueueController {
     }
   }
 
-  async delete(req: Request, res: Response<ApiResponse>, next: NextFunction) {
+  async delete(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -113,7 +113,7 @@ export class QueueController {
     }
   }
 
-  async reorder(req: Request, res: Response<ApiResponse>, next: NextFunction) {
+  async reorder(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const { itemId, newPosition } = req.body;
 
@@ -134,7 +134,7 @@ export class QueueController {
     }
   }
 
-  async updateStatus(req: Request, res: Response<ApiResponse>, next: NextFunction) {
+  async updateStatus(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const id = parseInt(req.params.id);
       const { status } = req.body;

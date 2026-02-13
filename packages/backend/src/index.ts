@@ -19,13 +19,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
 // Health check endpoint
-app.get('/health', async (req: Request, res: Response) => {
+app.get('/health', async (_req: Request, res: Response) => {
   const dbConnected = await testDbConnection();
   const ollamaConnected = await testOllamaConnection();
 
@@ -47,7 +47,7 @@ app.use('/api/queue', queueRoutes);
 app.use('/api/upload', uploadRoutes);
 
 // Root endpoint
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
   res.json({
     name: 'WizQueue API',
     version: '1.0.0',

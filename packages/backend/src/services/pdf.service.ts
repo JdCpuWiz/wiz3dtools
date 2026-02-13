@@ -1,7 +1,6 @@
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { createCanvas } from 'canvas';
 import fs from 'fs/promises';
-import path from 'path';
 
 export class PdfService {
   /**

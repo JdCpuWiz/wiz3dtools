@@ -7,7 +7,7 @@ import fs from 'fs/promises';
 const ollamaService = new OllamaService();
 
 export class UploadController {
-  async uploadInvoice(req: Request, res: Response<ApiResponse>, next: NextFunction) {
+  async uploadInvoice(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       if (!req.file) {
         return res.status(400).json({
@@ -41,7 +41,7 @@ export class UploadController {
     }
   }
 
-  async getInvoiceStatus(req: Request, res: Response<ApiResponse>, next: NextFunction) {
+  async getInvoiceStatus(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -73,7 +73,7 @@ export class UploadController {
     }
   }
 
-  async getAllInvoices(req: Request, res: Response<ApiResponse>, next: NextFunction) {
+  async getAllInvoices(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const invoices = await InvoiceModel.findAll(limit);
