@@ -6,7 +6,7 @@ This guide will walk you through setting up and running WizQueue locally for dev
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js** (>= 18.0.0) - [Download](https://nodejs.org/)
+- **Node.js** (>= 20.0.0 LTS) - [Download](https://nodejs.org/)
 - **npm** (>= 9.0.0) - Comes with Node.js
 - **PostgreSQL** (>= 14) - [Download](https://www.postgresql.org/download/)
 - **Ollama** - [Download](https://ollama.ai/)
