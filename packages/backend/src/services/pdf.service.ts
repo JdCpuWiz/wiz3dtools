@@ -1,28 +1,6 @@
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { createCanvas, Canvas } from 'canvas';
+import path from 'path';
 import fs from 'fs/promises';
-
-// Canvas factory for node-canvas integration with PDF.js
-class NodeCanvasFactory {
-  create(width: number, height: number) {
-    const canvas = createCanvas(width, height);
-    const context = canvas.getContext('2d');
-    return {
-      canvas,
-      context,
-    };
-  }
-
-  reset(canvasAndContext: { canvas: Canvas; context: any }, width: number, height: number) {
-    canvasAndContext.canvas.width = width;
-    canvasAndContext.canvas.height = height;
-  }
-
-  destroy(canvasAndContext: { canvas: Canvas; context: any }) {
-    canvasAndContext.canvas.width = 0;
-    canvasAndContext.canvas.height = 0;
-  }
-}
+import { convert } from 'pdf-poppler';
 
 export class PdfService {
   /**
@@ -31,57 +9,51 @@ export class PdfService {
    * @returns Array of base64-encoded images
    */
   async convertPdfToImages(pdfPath: string): Promise<string[]> {
+    const outputDir = path.join(path.dirname(pdfPath), `temp_${Date.now()}`);
+
     try {
+      // Create temporary directory for images
+      await fs.mkdir(outputDir, { recursive: true });
+
+      // Convert PDF to PNG images using poppler
+      const options = {
+        format: 'png',
+        out_dir: outputDir,
+        out_prefix: 'page',
+        page: null, // Convert all pages
+      };
+
+      await convert(pdfPath, options);
+
+      // Read all generated PNG files
+      const files = await fs.readdir(outputDir);
+      const imageFiles = files
+        .filter(f => f.endsWith('.png'))
+        .sort((a, b) => {
+          // Extract page numbers for proper sorting
+          const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+          const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+          return numA - numB;
+        });
+
       const images: string[] = [];
-
-      // Read PDF file
-      const data = new Uint8Array(await fs.readFile(pdfPath));
-
-      // Create canvas factory for PDF.js
-      const canvasFactory = new NodeCanvasFactory();
-
-      // Load PDF document with canvas factory
-      const loadingTask = pdfjsLib.getDocument({
-        data,
-        verbosity: 0,
-        canvasFactory: canvasFactory as any,
-      } as any);
-      const pdfDocument = await loadingTask.promise;
-
-      // Process each page
-      for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
-        const page = await pdfDocument.getPage(pageNum);
-
-        // Set scale for good quality (2x = 144 DPI)
-        const scale = 2.0;
-        const viewport = page.getViewport({ scale });
-
-        // Create canvas using factory
-        const canvasAndContext = canvasFactory.create(
-          Math.floor(viewport.width),
-          Math.floor(viewport.height)
-        );
-
-        // Render PDF page to canvas
-        const renderContext = {
-          canvasContext: canvasAndContext.context,
-          viewport: viewport,
-        };
-
-        await page.render(renderContext as any).promise;
-
-        // Convert canvas to base64 PNG
-        const base64Image = canvasAndContext.canvas.toBuffer('image/png').toString('base64');
-        images.push(base64Image);
-
-        // Clean up
-        canvasFactory.destroy(canvasAndContext);
+      for (const file of imageFiles) {
+        const imagePath = path.join(outputDir, file);
+        const buffer = await fs.readFile(imagePath);
+        images.push(buffer.toString('base64'));
       }
 
       return images;
     } catch (error) {
       console.error('Error converting PDF to images:', error);
       throw new Error(`Failed to convert PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      // Clean up temporary directory
+      try {
+        await fs.rm(outputDir, { recursive: true, force: true });
+      } catch (cleanupError) {
+        console.warn('Failed to clean up temporary directory:', cleanupError);
+      }
     }
   }
 
@@ -107,13 +79,10 @@ export class PdfService {
    */
   async getPageCount(pdfPath: string): Promise<number> {
     try {
-      const data = new Uint8Array(await fs.readFile(pdfPath));
-      const loadingTask = pdfjsLib.getDocument({
-        data,
-        verbosity: 0,
-      } as any);
-      const pdfDocument = await loadingTask.promise;
-      return pdfDocument.numPages;
+      // Use pdf-poppler to get info
+      const { info } = await import('pdf-poppler');
+      const pdfInfo = await info(pdfPath);
+      return parseInt(pdfInfo.pages) || 1;
     } catch (error) {
       console.error('Error getting page count:', error);
       return 1;

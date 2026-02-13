@@ -1,15 +1,5 @@
 FROM node:22-alpine AS builder
 
-# Install canvas dependencies for PDF processing
-RUN apk add --no-cache \
-    build-base \
-    cairo-dev \
-    pango-dev \
-    jpeg-dev \
-    giflib-dev \
-    librsvg-dev \
-    pixman-dev
-
 WORKDIR /app
 
 # Copy workspace root and shared package
@@ -30,14 +20,8 @@ RUN npm run build -w @wizqueue/backend
 # Production image
 FROM node:22-alpine
 
-# Install canvas dependencies for PDF processing
-RUN apk add --no-cache \
-    cairo \
-    pango \
-    jpeg \
-    giflib \
-    librsvg \
-    pixman
+# Install poppler-utils for PDF processing
+RUN apk add --no-cache poppler-utils
 
 WORKDIR /app
 
