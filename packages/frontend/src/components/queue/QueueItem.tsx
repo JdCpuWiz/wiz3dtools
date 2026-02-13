@@ -88,7 +88,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
 
               {/* Quantity Badge */}
               <div className="flex-shrink-0">
-                <span className="inline-flex items-center px-4 py-2 rounded-full text-base font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
+                <span className="inline-flex items-center px-4 py-2 rounded-full text-base font-medium bg-black text-white dark:bg-white dark:text-black">
                   Qty: {item.quantity}
                 </span>
               </div>
@@ -123,7 +123,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-base font-medium"
+                  className="text-primary-600 hover:text-primary-700 dark:text-white dark:hover:text-gray-200 text-base font-medium"
                 >
                   Edit
                 </button>
