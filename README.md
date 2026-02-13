@@ -34,7 +34,7 @@ wizqueue/
 
 ### Prerequisites
 
-- Node.js >= 20.0.0 (LTS)
+- Node.js >= 20.19.0 or >= 22.0.0
 - PostgreSQL >= 14
 - Ollama with vision model
 

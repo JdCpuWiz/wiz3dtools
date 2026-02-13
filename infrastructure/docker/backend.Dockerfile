@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Install GraphicsMagick and Ghostscript for PDF processing
 RUN apk add --no-cache graphicsmagick ghostscript
@@ -20,7 +20,7 @@ RUN npm run build -w @wizqueue/shared
 RUN npm run build -w @wizqueue/backend
 
 # Production image
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Install GraphicsMagick and Ghostscript for PDF processing
 RUN apk add --no-cache graphicsmagick ghostscript
