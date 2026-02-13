@@ -58,7 +58,7 @@ export const UploadZone: React.FC = () => {
   const handleAddToQueue = () => {
     if (extractedProducts.length > 0) {
       createBatch(
-        extractedProducts.map((product, index) => ({
+        extractedProducts.map((product) => ({
           productName: product.productName,
           details: product.details,
           quantity: product.quantity,
