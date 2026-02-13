@@ -78,9 +78,8 @@ GRANT ALL PRIVILEGES ON DATABASE wizqueue TO wizqueue_user;
 Then run migrations from the deployment server:
 
 ```bash
-# Install Node.js temporarily for migrations
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
+# Install Node.js and npm for migrations
+sudo apt install nodejs npm -y
 
 # Run migrations
 npm install
