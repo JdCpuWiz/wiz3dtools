@@ -18,7 +18,7 @@ services:
       - DATABASE_USER=${DATABASE_USER}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-llava:latest}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-minicpm-v:8b}
       - UPLOAD_DIR=/app/uploads
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10485760}
     volumes:

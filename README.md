@@ -65,7 +65,8 @@ npm run migrate
 5. Start Ollama and pull vision model:
 ```bash
 ollama serve
-ollama pull llava
+ollama pull minicpm-v:8b  # Recommended for invoice processing
+# Or use: ollama pull llava
 ```
 
 6. Start development servers:

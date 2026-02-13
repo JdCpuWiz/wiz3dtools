@@ -84,7 +84,8 @@ ollama pull llava
 ```
 
 Available models:
-- `llava:latest` - Fast and accurate (default)
+- `minicpm-v:8b` - Excellent for invoices/documents (recommended) ⭐
+- `llava:latest` - Fast and accurate
 - `llama3.2-vision:latest` - Better accuracy, slower
 - `llava:13b` - Highest quality, requires more RAM
 
