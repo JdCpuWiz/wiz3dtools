@@ -10,10 +10,19 @@ const ORANGE = '#E8610A';
 const DARK = '#1a1a1a';
 const LIGHT_GRAY = '#f5f5f5';
 const MID_GRAY = '#cccccc';
-const SHADE_BOX = '#1e1e1e';
+const BOX_BG = '#f0f0f0';   // soft light grey for all section boxes
+const BOX_PAD = 8;
 
 function formatCurrency(amount: number): string {
   return `$${amount.toFixed(2)}`;
+}
+
+function formatDate(dateInput: Date | string): string {
+  return new Date(dateInput).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 }
 
 function calcTotals(invoice: SalesInvoice): { subtotal: number; shippingCost: number; taxAmount: number; total: number } {
@@ -38,33 +47,52 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     const companyPhone = process.env.COMPANY_PHONE || '';
     const companyAddress = process.env.COMPANY_ADDRESS || '';
 
-    // ── Header ──────────────────────────────────────────────────────────
-    // Logo top-left (1024:1167 aspect → 50×57px)
+    // ── Company Info Box (top-left, light grey) ────────────────────────────
     const LOGO_W = 50;
     const LOGO_H = 57;
-    let logoLoaded = false;
+
+    const companyInfoLines: string[] = [];
+    if (companyEmail) companyInfoLines.push(companyEmail);
+    if (companyPhone) companyInfoLines.push(companyPhone);
+    if (companyAddress) companyInfoLines.push(companyAddress);
+
+    // Calculate box height from content
+    const infoBlockH = 22 + companyInfoLines.length * 13; // name(22px) + info lines
+    const contentH = Math.max(LOGO_H, infoBlockH);
+    const COMPANY_BOX_X = 42;
+    const COMPANY_BOX_TOP = 38;
+    const COMPANY_BOX_W = 290;
+    const COMPANY_BOX_H = BOX_PAD + contentH + BOX_PAD;
+
+    // Draw box background first, then overlay logo and text
+    doc.roundedRect(COMPANY_BOX_X, COMPANY_BOX_TOP, COMPANY_BOX_W, COMPANY_BOX_H, 6).fill(BOX_BG);
+
+    const logoX = COMPANY_BOX_X + BOX_PAD;
+    const logoY = COMPANY_BOX_TOP + BOX_PAD;
+    const textX = logoX + LOGO_W + 10;
+
     try {
-      doc.image(LOGO_PATH, 50, 45, { width: LOGO_W, height: LOGO_H });
-      logoLoaded = true;
+      doc.image(LOGO_PATH, logoX, logoY, { width: LOGO_W, height: LOGO_H });
     } catch {
-      // logo missing — fall back to text-only header
+      // logo missing — skip
     }
 
-    // Company name + contact — right of logo if loaded, else at x=50
-    const textX = logoLoaded ? 50 + LOGO_W + 10 : 50;
-    doc.fillColor(ORANGE).fontSize(20).font('Helvetica-Bold').text(companyName, textX, 47);
+    doc.fillColor(ORANGE).fontSize(18).font('Helvetica-Bold').text(companyName, textX, logoY + 2);
     doc.fillColor(DARK).fontSize(9).font('Helvetica');
-    let companyY = 71;
-    if (companyEmail) { doc.text(companyEmail, textX, companyY); companyY += 13; }
-    if (companyPhone) { doc.text(companyPhone, textX, companyY); companyY += 13; }
-    if (companyAddress) { doc.text(companyAddress, textX, companyY); companyY += 13; }
+    let infoY = logoY + 24;
+    for (const line of companyInfoLines) {
+      doc.text(line, textX, infoY, { width: COMPANY_BOX_W - (textX - COMPANY_BOX_X) - BOX_PAD });
+      infoY += 13;
+    }
 
-    // Invoice title + number (right aligned)
-    doc.fillColor(DARK).fontSize(28).font('Helvetica-Bold').text('INVOICE', 350, 45, { align: 'right', width: 195 });
+    // ── Invoice title + number (right aligned) ─────────────────────────────
+    const INV_X = 350;
+    const INV_W = 195;
+    doc.fillColor(DARK).fontSize(28).font('Helvetica-Bold')
+      .text('INVOICE', INV_X, COMPANY_BOX_TOP, { align: 'right', width: INV_W });
     doc.fontSize(11).font('Helvetica').fillColor(ORANGE)
-      .text(invoice.invoiceNumber, 350, 80, { align: 'right', width: 195 });
+      .text(invoice.invoiceNumber, INV_X, COMPANY_BOX_TOP + 35, { align: 'right', width: INV_W });
 
-    // Status badge
     const statusColors: Record<string, string> = {
       draft: '#888888',
       sent: '#3b82f6',
@@ -72,26 +100,20 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
       cancelled: '#ef4444',
     };
     doc.fillColor(statusColors[invoice.status] || DARK).fontSize(10)
-      .text(invoice.status.toUpperCase(), 350, 97, { align: 'right', width: 195 });
+      .text(invoice.status.toUpperCase(), INV_X, COMPANY_BOX_TOP + 52, { align: 'right', width: INV_W });
 
-    // Dates
     doc.fillColor(DARK).fontSize(9).font('Helvetica');
-    const issueDate = new Date(invoice.createdAt).toLocaleDateString('en-NZ');
-    doc.text(`Issue Date: ${issueDate}`, 350, 117, { align: 'right', width: 195 });
+    doc.text(`Issue Date: ${formatDate(invoice.createdAt)}`, INV_X, COMPANY_BOX_TOP + 70, { align: 'right', width: INV_W });
     if (invoice.dueDate) {
-      const due = new Date(invoice.dueDate).toLocaleDateString('en-NZ');
-      doc.text(`Due Date: ${due}`, 350, 131, { align: 'right', width: 195 });
+      doc.text(`Due Date: ${formatDate(invoice.dueDate)}`, INV_X, COMPANY_BOX_TOP + 83, { align: 'right', width: INV_W });
     }
 
-    // ── Divider ──────────────────────────────────────────────────────────
-    const headerBottom = Math.max(companyY, logoLoaded ? 45 + LOGO_H : 0, 150);
-    const dividerY = headerBottom + 8;
+    // ── Divider ────────────────────────────────────────────────────────────
+    const dividerY = Math.max(COMPANY_BOX_TOP + COMPANY_BOX_H, 130) + 10;
     doc.moveTo(50, dividerY).lineTo(545, dividerY).lineWidth(1.5).strokeColor(ORANGE).stroke();
 
-    // ── Bill To (shaded box) ─────────────────────────────────────────────
+    // ── Bill To (light grey box) ───────────────────────────────────────────
     const billBoxTop = dividerY + 12;
-
-    // Measure content height first
     const customer = invoice.customer;
     const billLines: string[] = [];
     if (customer) {
@@ -99,29 +121,29 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
       billLines.push(customer.contactName);
       if (customer.email) billLines.push(customer.email);
       if (customer.phone) billLines.push(customer.phone);
-      const addrParts = [customer.addressLine1, customer.addressLine2, customer.city, customer.stateProvince, customer.postalCode, customer.country].filter(Boolean);
+      // country excluded — city/state/zip only
+      const addrParts = [customer.addressLine1, customer.addressLine2, customer.city, customer.stateProvince, customer.postalCode].filter(Boolean);
       if (addrParts.length) billLines.push(addrParts.join(', '));
     } else {
       billLines.push('N/A');
     }
 
-    const billBoxH = 16 + billLines.length * 14 + 10;
-    doc.roundedRect(50, billBoxTop, 250, billBoxH, 6).fill(SHADE_BOX);
+    const billBoxH = BOX_PAD + 14 + billLines.length * 14 + BOX_PAD;
+    doc.roundedRect(50, billBoxTop, 250, billBoxH, 6).fill(BOX_BG);
 
-    let billY = billBoxTop + 10;
+    let billY = billBoxTop + BOX_PAD;
     doc.fillColor(ORANGE).fontSize(9).font('Helvetica-Bold').text('BILL TO', 62, billY);
-    billY += 15;
-    doc.fillColor('#e5e5e5').font('Helvetica').fontSize(9);
+    billY += 14;
+    doc.fillColor(DARK).font('Helvetica').fontSize(9);
     for (const line of billLines) {
       doc.text(line, 62, billY, { width: 226 });
       billY += 14;
     }
 
-    // ── Line Items Table ─────────────────────────────────────────────────
+    // ── Line Items Table ───────────────────────────────────────────────────
     const tableY = billBoxTop + billBoxH + 18;
     const colX = { product: 50, details: 170, qty: 330, price: 390, subtotal: 470 };
 
-    // Table header
     doc.fillColor(ORANGE).rect(50, tableY, 495, 22).fill();
     doc.fillColor('white').fontSize(9).font('Helvetica-Bold');
     doc.text('PRODUCT', colX.product + 4, tableY + 6);
@@ -130,7 +152,6 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     doc.text('UNIT PRICE', colX.price + 4, tableY + 6);
     doc.text('SUBTOTAL', colX.subtotal + 4, tableY + 6);
 
-    // Rows
     let rowY = tableY + 22;
     doc.font('Helvetica').fontSize(9).fillColor(DARK);
 
@@ -149,41 +170,40 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
       rowY += rowHeight;
     });
 
-    // Bottom border of table
     doc.moveTo(50, rowY).lineTo(545, rowY).lineWidth(0.5).strokeColor(MID_GRAY).stroke();
 
-    // ── Totals (shaded box) ───────────────────────────────────────────────
+    // ── Totals (light grey box) ────────────────────────────────────────────
     const { subtotal, shippingCost, taxAmount, total } = calcTotals(invoice);
 
-    // Calculate totals box height
-    let totalsLines = 1; // subtotal always
-    if (shippingCost > 0) totalsLines++;
-    totalsLines++; // tax or exempt
-    const totalsBoxH = totalsLines * 18 + 12 + 28; // rows + padding + total row
+    let totalsRows = 1; // subtotal
+    if (shippingCost > 0) totalsRows++;
+    totalsRows++; // tax or exempt
+
     const totalsBoxTop = rowY + 10;
     const totalsBoxX = 340;
     const totalsBoxW = 205;
+    const totalsBoxH = BOX_PAD + totalsRows * 18 + 6 + 26 + BOX_PAD; // pad + rows + gap + total row + pad
 
-    doc.roundedRect(totalsBoxX, totalsBoxTop, totalsBoxW, totalsBoxH, 6).fill(SHADE_BOX);
+    doc.roundedRect(totalsBoxX, totalsBoxTop, totalsBoxW, totalsBoxH, 6).fill(BOX_BG);
 
-    let tY = totalsBoxTop + 10;
+    let tY = totalsBoxTop + BOX_PAD;
     const labelX = totalsBoxX + 8;
-    const valueX = totalsBoxX + 110;
-    const valueW = totalsBoxW - 118;
+    const valueX = totalsBoxX + 105;
+    const valueW = totalsBoxW - 113;
 
-    doc.fillColor('#d1d5db').fontSize(9).font('Helvetica');
-    doc.text('Subtotal:', labelX, tY, { width: 100 });
+    doc.fillColor(DARK).fontSize(9).font('Helvetica');
+    doc.text('Subtotal:', labelX, tY, { width: 95 });
     doc.text(formatCurrency(subtotal), valueX, tY, { width: valueW, align: 'right' });
     tY += 18;
 
     if (shippingCost > 0) {
-      doc.text('Shipping:', labelX, tY, { width: 100 });
+      doc.text('Shipping:', labelX, tY, { width: 95 });
       doc.text(formatCurrency(shippingCost), valueX, tY, { width: valueW, align: 'right' });
       tY += 18;
     }
 
     if (!invoice.taxExempt) {
-      doc.text(`IA Sales Tax (${(invoice.taxRate * 100).toFixed(0)}%):`, labelX, tY, { width: 100 });
+      doc.text(`IA Sales Tax (${(invoice.taxRate * 100).toFixed(0)}%):`, labelX, tY, { width: 95 });
       doc.text(formatCurrency(taxAmount), valueX, tY, { width: valueW, align: 'right' });
       tY += 18;
     } else {
@@ -191,20 +211,21 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
       tY += 18;
     }
 
-    // Total row inside shaded box
-    doc.fillColor(ORANGE).roundedRect(totalsBoxX + 4, tY + 2, totalsBoxW - 8, 22, 4).fill();
+    tY += 4;
+    doc.fillColor(ORANGE).roundedRect(totalsBoxX + 4, tY, totalsBoxW - 8, 24, 4).fill();
     doc.fillColor('white').font('Helvetica-Bold').fontSize(11);
-    doc.text('TOTAL:', labelX, tY + 7, { width: 100 });
-    doc.text(formatCurrency(total), valueX, tY + 7, { width: valueW, align: 'right' });
+    doc.text('TOTAL:', labelX, tY + 6, { width: 95 });
+    doc.text(formatCurrency(total), valueX, tY + 6, { width: valueW, align: 'right' });
 
     rowY = totalsBoxTop + totalsBoxH + 12;
 
-    // ── Notes (shaded box) ───────────────────────────────────────────────
+    // ── Notes (light grey box) ─────────────────────────────────────────────
     if (invoice.notes) {
-      const notesBoxH = 14 + 16 + 14 + 10; // label + text estimate + padding
-      doc.roundedRect(50, rowY, 495, notesBoxH, 6).fill(SHADE_BOX);
-      doc.fillColor(ORANGE).fontSize(9).font('Helvetica-Bold').text('NOTES', 62, rowY + 10);
-      doc.fillColor('#d1d5db').font('Helvetica').text(invoice.notes, 62, rowY + 24, { width: 471 });
+      const noteLines = Math.max(1, Math.ceil(invoice.notes.length / 85));
+      const notesBoxH = BOX_PAD + 14 + noteLines * 14 + BOX_PAD;
+      doc.roundedRect(50, rowY, 495, notesBoxH, 6).fill(BOX_BG);
+      doc.fillColor(ORANGE).fontSize(9).font('Helvetica-Bold').text('NOTES', 62, rowY + BOX_PAD);
+      doc.fillColor(DARK).font('Helvetica').text(invoice.notes, 62, rowY + BOX_PAD + 14, { width: 471 });
     }
 
     doc.end();
