@@ -5,17 +5,20 @@ interface StatusBadgeProps {
   status: SalesInvoiceStatus;
 }
 
-const CONFIG: Record<SalesInvoiceStatus, { label: string; className: string }> = {
-  draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
-  sent: { label: 'Sent', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
-  paid: { label: 'Paid', className: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
-  cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+const CONFIG: Record<SalesInvoiceStatus, { label: string; style: React.CSSProperties }> = {
+  draft:     { label: 'Draft',     style: { background: 'rgba(74,74,74,0.6)',    color: '#9a9a9a' } },
+  sent:      { label: 'Sent',      style: { background: 'rgba(59,130,246,0.2)', color: '#60a5fa' } },
+  paid:      { label: 'Paid',      style: { background: 'rgba(34,197,94,0.2)',  color: '#4ade80' } },
+  cancelled: { label: 'Cancelled', style: { background: 'rgba(239,68,68,0.2)',  color: '#f87171' } },
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-  const { label, className } = CONFIG[status] || CONFIG.draft;
+  const { label, style } = CONFIG[status] || CONFIG.draft;
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${className}`}>
+    <span
+      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+      style={style}
+    >
       {label}
     </span>
   );

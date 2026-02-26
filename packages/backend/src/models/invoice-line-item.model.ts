@@ -2,9 +2,10 @@ import { pool } from '../config/database.js';
 import type { InvoiceLineItem, CreateLineItemDto } from '@wizqueue/shared';
 
 const SELECT_FIELDS = `
-  id, invoice_id as "invoiceId", product_name as "productName",
-  details, quantity, unit_price as "unitPrice",
-  queue_item_id as "queueItemId", created_at as "createdAt"
+  id, invoice_id as "invoiceId", product_id as "productId",
+  product_name as "productName", details, quantity,
+  unit_price as "unitPrice", queue_item_id as "queueItemId",
+  created_at as "createdAt"
 `;
 
 export class InvoiceLineItemModel {
@@ -13,7 +14,7 @@ export class InvoiceLineItemModel {
       `SELECT ${SELECT_FIELDS} FROM invoice_line_items WHERE invoice_id = $1 ORDER BY id ASC`,
       [invoiceId],
     );
-    return result.rows;
+    return result.rows.map((r: Record<string, unknown>) => ({ ...r, unitPrice: parseFloat(r.unitPrice as string) })) as InvoiceLineItem[];
   }
 
   static async findById(id: number): Promise<InvoiceLineItem | null> {
@@ -21,17 +22,19 @@ export class InvoiceLineItemModel {
       `SELECT ${SELECT_FIELDS} FROM invoice_line_items WHERE id = $1`,
       [id],
     );
-    return result.rows[0] || null;
+    if (!result.rows[0]) return null;
+    return { ...result.rows[0], unitPrice: parseFloat(result.rows[0].unitPrice) };
   }
 
   static async create(invoiceId: number, data: CreateLineItemDto): Promise<InvoiceLineItem> {
     const result = await pool.query(
-      `INSERT INTO invoice_line_items (invoice_id, product_name, details, quantity, unit_price)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO invoice_line_items (invoice_id, product_id, product_name, details, quantity, unit_price)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING ${SELECT_FIELDS}`,
-      [invoiceId, data.productName, data.details || null, data.quantity, data.unitPrice],
+      [invoiceId, data.productId || null, data.productName, data.details || null, data.quantity, data.unitPrice],
     );
-    return result.rows[0];
+    const row = result.rows[0];
+    return { ...row, unitPrice: parseFloat(row.unitPrice) };
   }
 
   static async update(id: number, data: Partial<CreateLineItemDto>): Promise<InvoiceLineItem | null> {

@@ -5,6 +5,9 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 import './styles/globals.css';
 
+// Always dark — matches wiz3dprints.com
+document.documentElement.classList.add('dark');
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

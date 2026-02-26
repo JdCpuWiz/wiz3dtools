@@ -15,6 +15,9 @@ import type {
   UpdateSalesInvoiceDto,
   InvoiceLineItem,
   CreateLineItemDto,
+  Product,
+  CreateProductDto,
+  UpdateProductDto,
 } from '@wizqueue/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -218,5 +221,35 @@ export const salesInvoiceApi = {
 
   downloadPdf: (id: number): string => {
     return `${API_BASE_URL}/sales-invoices/${id}/pdf`;
+  },
+};
+
+// Products API
+export const productApi = {
+  getAll: async (activeOnly = false): Promise<Product[]> => {
+    const response = await api.get<ApiResponse<Product[]>>(`/products${activeOnly ? '?active=true' : ''}`);
+    return response.data.data || [];
+  },
+
+  getById: async (id: number): Promise<Product> => {
+    const response = await api.get<ApiResponse<Product>>(`/products/${id}`);
+    if (!response.data.data) throw new Error('Product not found');
+    return response.data.data;
+  },
+
+  create: async (data: CreateProductDto): Promise<Product> => {
+    const response = await api.post<ApiResponse<Product>>('/products', data);
+    if (!response.data.data) throw new Error('Failed to create product');
+    return response.data.data;
+  },
+
+  update: async (id: number, data: UpdateProductDto): Promise<Product> => {
+    const response = await api.put<ApiResponse<Product>>(`/products/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update product');
+    return response.data.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/products/${id}`);
   },
 };

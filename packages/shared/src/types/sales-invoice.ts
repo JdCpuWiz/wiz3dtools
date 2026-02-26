@@ -5,6 +5,7 @@ export type SalesInvoiceStatus = 'draft' | 'sent' | 'paid' | 'cancelled';
 export interface InvoiceLineItem {
   id: number;
   invoiceId: number;
+  productId: number | null;
   productName: string;
   details: string | null;
   quantity: number;
@@ -30,6 +31,7 @@ export interface SalesInvoice {
 }
 
 export interface CreateLineItemDto {
+  productId?: number;
   productName: string;
   details?: string;
   quantity: number;

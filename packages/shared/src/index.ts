@@ -22,6 +22,13 @@ export type {
   PaginatedResponse,
 } from './types/api';
 
+// Product types
+export type {
+  Product,
+  CreateProductDto,
+  UpdateProductDto,
+} from './types/product';
+
 // Customer types
 export type {
   Customer,

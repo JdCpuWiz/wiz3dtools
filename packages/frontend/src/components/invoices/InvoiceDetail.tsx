@@ -4,8 +4,15 @@ import { useSalesInvoice, useSalesInvoices } from '../../hooks/useSalesInvoices'
 import { StatusBadge } from '../common/StatusBadge';
 import { LineItemRow } from './LineItemRow';
 import { salesInvoiceApi } from '../../services/api';
-import type { CreateLineItemDto, SalesInvoiceStatus } from '@wizqueue/shared';
 import { useCustomers } from '../../hooks/useCustomers';
+import { useProducts } from '../../hooks/useProducts';
+import type { CreateLineItemDto, SalesInvoiceStatus } from '@wizqueue/shared';
+
+const inputSt: React.CSSProperties = {
+  background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)',
+  border: 'none',
+  boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)',
+};
 
 export const InvoiceDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +22,7 @@ export const InvoiceDetail: React.FC = () => {
   const { invoice, isLoading, addLineItem, updateLineItem, deleteLineItem } = useSalesInvoice(invoiceId);
   const { sendEmail, sendToQueue, update, isSending } = useSalesInvoices();
   const { customers } = useCustomers();
+  const { products } = useProducts(true);
 
   const [showAddRow, setShowAddRow] = useState(false);
   const [newItem, setNewItem] = useState<CreateLineItemDto>({ productName: '', quantity: 1, unitPrice: 0 });
@@ -22,277 +30,223 @@ export const InvoiceDetail: React.FC = () => {
   const [editingCustomer, setEditingCustomer] = useState(false);
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-16">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
-      </div>
-    );
+    return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" /></div>;
   }
-
   if (!invoice) {
-    return <div className="text-center py-16 text-gray-500">Invoice not found</div>;
+    return <div className="text-center py-16 text-iron-400">Invoice not found</div>;
   }
 
   const subtotal = invoice.lineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0);
   const taxAmount = invoice.taxExempt ? 0 : subtotal * invoice.taxRate;
   const total = subtotal + taxAmount;
 
+  const applyProduct = (productId: number) => {
+    const p = products.find((pr) => pr.id === productId);
+    if (!p) return;
+    setNewItem({ productId: p.id, productName: p.name, unitPrice: p.unitPrice, details: p.description || '', quantity: newItem.quantity });
+  };
+
   const handleAddItem = async () => {
-    if (!newItem.productName.trim() || newItem.unitPrice <= 0) return;
+    if (!newItem.productName.trim()) return;
     await addLineItem(newItem);
     setNewItem({ productName: '', quantity: 1, unitPrice: 0 });
     setShowAddRow(false);
   };
 
-  const handleSendToQueue = async (lineItemId?: number) => {
-    await sendToQueue(invoiceId, lineItemId ? [lineItemId] : undefined);
-  };
-
-  const inputClass = 'px-2 py-1.5 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 w-full';
+  const selectClass = 'w-full px-3 py-2 rounded-lg text-iron-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500';
+  const cellInputClass = 'w-full px-2 py-1.5 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500';
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/invoices')} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm">
-          ← Back
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{invoice.invoiceNumber}</h2>
+      {/* Header bar */}
+      <div className="flex items-start gap-4 flex-wrap">
+        <button onClick={() => navigate('/invoices')} className="text-sm text-iron-400 hover:text-iron-50 transition-colors pt-1">← Back</button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-xl font-semibold text-iron-50">{invoice.invoiceNumber}</h2>
             <StatusBadge status={invoice.status} />
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-xs text-iron-400 mt-0.5">
             Created {new Date(invoice.createdAt).toLocaleDateString('en-NZ')}
             {invoice.dueDate && ` · Due ${new Date(invoice.dueDate).toLocaleDateString('en-NZ')}`}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
+        <div className="flex items-center gap-2 flex-wrap">
           <a
             href={salesInvoiceApi.downloadPdf(invoiceId)}
             target="_blank"
             rel="noreferrer"
-            className="px-3 py-1.5 text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="btn-secondary btn-sm text-sm"
           >
             Download PDF
           </a>
           <button
-            onClick={() => handleSendToQueue()}
-            className="px-3 py-1.5 text-sm font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/60 transition-colors"
+            onClick={() => sendToQueue(invoiceId)}
+            className="btn-sm text-sm font-medium px-3 py-1.5 rounded-lg transition-all"
+            style={{ background: 'linear-gradient(to bottom,#22c55e,#16a34a)', color: '#fff', boxShadow: '0 4px 8px rgb(0 0 0 / 0.4)' }}
           >
-            Send All to Queue
+            Send All → Queue
           </button>
-          {invoice.status === 'draft' && (
+          {invoice.status !== 'cancelled' && (
             <button
               onClick={() => sendEmail(invoiceId)}
               disabled={isSending || !invoice.customer?.email}
               title={!invoice.customer?.email ? 'Customer has no email' : undefined}
-              className="px-3 py-1.5 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+              className="btn-primary btn-sm text-sm"
             >
-              {isSending ? 'Sending...' : 'Send Email'}
+              {isSending ? 'Sending…' : 'Send Email'}
             </button>
           )}
         </div>
       </div>
 
-      {/* Customer + status info */}
+      {/* Customer + Status cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Bill To</span>
-            {!editingCustomer ? (
-              <button onClick={() => setEditingCustomer(true)} className="text-xs text-primary-600 dark:text-primary-400 hover:underline">Change</button>
-            ) : (
-              <button onClick={() => setEditingCustomer(false)} className="text-xs text-gray-500 hover:underline">Cancel</button>
-            )}
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#ff9900' }}>Bill To</span>
+            {!editingCustomer
+              ? <button onClick={() => setEditingCustomer(true)} className="text-xs text-primary-500 hover:text-primary-400">Change</button>
+              : <button onClick={() => setEditingCustomer(false)} className="text-xs text-iron-400">Cancel</button>
+            }
           </div>
           {editingCustomer ? (
-            <select
-              className="w-full px-2 py-1.5 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-              defaultValue={invoice.customerId || ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                update(invoiceId, { customerId: val ? parseInt(val) : null });
-                setEditingCustomer(false);
-              }}
-            >
+            <select className={selectClass} style={inputSt} defaultValue={invoice.customerId || ''} onChange={(e) => { update(invoiceId, { customerId: e.target.value ? parseInt(e.target.value) : null }); setEditingCustomer(false); }}>
               <option value="">— No customer —</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.businessName ? `${c.contactName} (${c.businessName})` : c.contactName}
-                </option>
-              ))}
+              {customers.map((c) => <option key={c.id} value={c.id}>{c.businessName ? `${c.contactName} (${c.businessName})` : c.contactName}</option>)}
             </select>
           ) : invoice.customer ? (
-            <div className="text-sm text-gray-800 dark:text-gray-200 space-y-0.5">
-              {invoice.customer.businessName && <p className="font-medium">{invoice.customer.businessName}</p>}
-              <p>{invoice.customer.contactName}</p>
-              {invoice.customer.email && <p className="text-gray-500 dark:text-gray-400">{invoice.customer.email}</p>}
-              {invoice.customer.phone && <p className="text-gray-500 dark:text-gray-400">{invoice.customer.phone}</p>}
+            <div className="text-sm space-y-0.5">
+              {invoice.customer.businessName && <p className="font-medium text-iron-50">{invoice.customer.businessName}</p>}
+              <p className="text-iron-100">{invoice.customer.contactName}</p>
+              {invoice.customer.email && <p className="text-iron-400">{invoice.customer.email}</p>}
+              {invoice.customer.phone && <p className="text-iron-400">{invoice.customer.phone}</p>}
             </div>
-          ) : (
-            <p className="text-sm text-gray-400">No customer assigned</p>
-          )}
+          ) : <p className="text-sm text-iron-500">No customer assigned</p>}
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</span>
-            {!editingStatus ? (
-              <button onClick={() => setEditingStatus(true)} className="text-xs text-primary-600 dark:text-primary-400 hover:underline">Change</button>
-            ) : (
-              <button onClick={() => setEditingStatus(false)} className="text-xs text-gray-500 hover:underline">Cancel</button>
-            )}
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#ff9900' }}>Status</span>
+            {!editingStatus
+              ? <button onClick={() => setEditingStatus(true)} className="text-xs text-primary-500 hover:text-primary-400">Change</button>
+              : <button onClick={() => setEditingStatus(false)} className="text-xs text-iron-400">Cancel</button>
+            }
           </div>
           {editingStatus ? (
-            <select
-              className="w-full px-2 py-1.5 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-              defaultValue={invoice.status}
-              onChange={(e) => {
-                update(invoiceId, { status: e.target.value as SalesInvoiceStatus });
-                setEditingStatus(false);
-              }}
-            >
-              {(['draft', 'sent', 'paid', 'cancelled'] as SalesInvoiceStatus[]).map((s) => (
+            <select className={selectClass} style={inputSt} defaultValue={invoice.status} onChange={(e) => { update(invoiceId, { status: e.target.value as SalesInvoiceStatus }); setEditingStatus(false); }}>
+              {(['draft','sent','paid','cancelled'] as SalesInvoiceStatus[]).map((s) => (
                 <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
               ))}
             </select>
           ) : (
-            <div className="mt-1">
+            <div>
               <StatusBadge status={invoice.status} />
-              {invoice.sentAt && (
-                <p className="text-xs text-gray-500 mt-1">Sent {new Date(invoice.sentAt).toLocaleDateString('en-NZ')}</p>
-              )}
+              {invoice.sentAt && <p className="text-xs text-iron-400 mt-1">Sent {new Date(invoice.sentAt).toLocaleDateString('en-NZ')}</p>}
             </div>
           )}
-          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 space-y-0.5">
-            <div className="flex justify-between">
-              <span>Tax Rate:</span>
-              <span>{invoice.taxExempt ? 'Exempt' : `${(invoice.taxRate * 100).toFixed(0)}%`}</span>
-            </div>
+          <div className="mt-3 pt-3 text-xs text-iron-400 space-y-0.5" style={{ borderTop: '1px solid #2d2d2d' }}>
+            <div className="flex justify-between"><span>Tax:</span><span>{invoice.taxExempt ? 'Exempt' : `${(invoice.taxRate * 100).toFixed(0)}%`}</span></div>
           </div>
         </div>
       </div>
 
-      {/* Notes */}
       {invoice.notes && (
-        <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'rgba(230,138,0,0.1)', border: '1px solid rgba(230,138,0,0.3)', color: '#ffbc60' }}>
           <span className="font-semibold">Notes: </span>{invoice.notes}
         </div>
       )}
 
       {/* Line Items Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-800 dark:text-gray-200">Line Items</h3>
-          <button
-            onClick={() => setShowAddRow(true)}
-            className="px-3 py-1.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded hover:bg-primary-200 dark:hover:bg-primary-900/60 transition-colors"
-          >
-            + Add Item
-          </button>
+      <div className="card-surface">
+        <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #2d2d2d' }}>
+          <h3 className="font-semibold text-iron-50">Line Items</h3>
+          <button onClick={() => setShowAddRow(true)} className="btn-secondary btn-sm text-xs">+ Add Item</button>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 dark:bg-gray-800/50">
-                <th className="text-left px-3 py-2 font-semibold text-gray-600 dark:text-gray-400">Product</th>
-                <th className="text-left px-3 py-2 font-semibold text-gray-600 dark:text-gray-400">Details</th>
-                <th className="text-left px-3 py-2 font-semibold text-gray-600 dark:text-gray-400 w-16">Qty</th>
-                <th className="text-left px-3 py-2 font-semibold text-gray-600 dark:text-gray-400 w-24">Unit Price</th>
-                <th className="text-right px-3 py-2 font-semibold text-gray-600 dark:text-gray-400 w-24">Subtotal</th>
-                <th className="px-3 py-2 w-32" />
+              <tr style={{ background: 'linear-gradient(to bottom, #4a4a4a, #3a3a3a)' }}>
+                <th className="text-left px-3 py-2 font-semibold text-iron-100">Product</th>
+                <th className="text-left px-3 py-2 font-semibold text-iron-100">Details</th>
+                <th className="text-left px-3 py-2 font-semibold text-iron-100 w-16">Qty</th>
+                <th className="text-left px-3 py-2 font-semibold text-iron-100 w-24">Unit Price</th>
+                <th className="text-right px-3 py-2 font-semibold text-iron-100 w-24">Subtotal</th>
+                <th className="px-3 py-2 w-36" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            <tbody>
               {invoice.lineItems.map((item) => (
                 <LineItemRow
                   key={item.id}
                   item={item}
                   onUpdate={(itemId, data) => updateLineItem(itemId, data)}
                   onDelete={deleteLineItem}
-                  onSendToQueue={(itemId) => handleSendToQueue(itemId)}
+                  onSendToQueue={(itemId) => sendToQueue(invoiceId, [itemId])}
                 />
               ))}
 
               {showAddRow && (
-                <tr className="bg-primary-50 dark:bg-primary-900/10">
-                  <td className="px-3 py-2">
-                    <input
-                      value={newItem.productName}
-                      onChange={(e) => setNewItem((p) => ({ ...p, productName: e.target.value }))}
-                      className={inputClass}
-                      placeholder="Product name"
-                      autoFocus
-                    />
+                <tr style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(230,138,0,0.05)' }}>
+                  {products.length > 0 && (
+                    <td className="px-3 py-2" colSpan={1}>
+                      <select
+                        className={selectClass}
+                        style={inputSt}
+                        value={newItem.productId || ''}
+                        onChange={(e) => e.target.value && applyProduct(parseInt(e.target.value))}
+                      >
+                        <option value="">— pick product —</option>
+                        {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${p.unitPrice.toFixed(2)})</option>)}
+                      </select>
+                    </td>
+                  )}
+                  <td className="px-3 py-2" colSpan={products.length > 0 ? 1 : 2}>
+                    <input value={newItem.productName} onChange={(e) => setNewItem((p) => ({ ...p, productName: e.target.value }))} className={cellInputClass} style={inputSt} placeholder="Product name" autoFocus />
                   </td>
                   <td className="px-3 py-2">
-                    <input
-                      value={newItem.details || ''}
-                      onChange={(e) => setNewItem((p) => ({ ...p, details: e.target.value }))}
-                      className={inputClass}
-                      placeholder="Details"
-                    />
+                    <input value={newItem.details || ''} onChange={(e) => setNewItem((p) => ({ ...p, details: e.target.value }))} className={cellInputClass} style={inputSt} placeholder="Details" />
                   </td>
                   <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      min={1}
-                      value={newItem.quantity}
-                      onChange={(e) => setNewItem((p) => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
-                      className={`${inputClass} w-16`}
-                    />
+                    <input type="number" min={1} value={newItem.quantity} onChange={(e) => setNewItem((p) => ({ ...p, quantity: parseInt(e.target.value) || 1 }))} className={`${cellInputClass} w-14`} style={inputSt} />
                   </td>
                   <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={newItem.unitPrice}
-                      onChange={(e) => setNewItem((p) => ({ ...p, unitPrice: parseFloat(e.target.value) || 0 }))}
-                      className={`${inputClass} w-24`}
-                    />
+                    <input type="number" min={0} step={0.01} value={newItem.unitPrice} onChange={(e) => setNewItem((p) => ({ ...p, unitPrice: parseFloat(e.target.value) || 0 }))} className={`${cellInputClass} w-20`} style={inputSt} />
                   </td>
-                  <td className="px-3 py-2 text-right font-medium text-gray-900 dark:text-white">
+                  <td className="px-3 py-2 text-right font-medium" style={{ color: '#ff9900' }}>
                     ${(newItem.quantity * newItem.unitPrice).toFixed(2)}
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex gap-1">
-                      <button onClick={handleAddItem} className="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700">Add</button>
-                      <button onClick={() => setShowAddRow(false)} className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">Cancel</button>
+                      <button onClick={handleAddItem} className="btn-primary btn-sm text-xs">Add</button>
+                      <button onClick={() => setShowAddRow(false)} className="btn-secondary btn-sm text-xs">Cancel</button>
                     </div>
                   </td>
                 </tr>
               )}
 
               {invoice.lineItems.length === 0 && !showAddRow && (
-                <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-gray-400 text-sm">
-                    No line items yet — click "+ Add Item"
-                  </td>
-                </tr>
+                <tr><td colSpan={6} className="px-3 py-8 text-center text-iron-500 text-sm">No line items — click "+ Add Item"</td></tr>
               )}
             </tbody>
           </table>
         </div>
 
         {/* Totals */}
-        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-800">
-          <div className="flex flex-col items-end gap-1 text-sm">
-            <div className="flex justify-between w-48">
-              <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
-              <span className="font-medium text-gray-900 dark:text-white">${subtotal.toFixed(2)}</span>
+        <div className="px-6 py-4 text-sm" style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(10,10,10,0.4)' }}>
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex justify-between w-52">
+              <span className="text-iron-400">Subtotal</span>
+              <span className="font-medium text-iron-50">${subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between w-48">
-              <span className="text-gray-600 dark:text-gray-400">
-                {invoice.taxExempt ? 'Tax (exempt)' : `GST (${(invoice.taxRate * 100).toFixed(0)}%)`}
-              </span>
-              <span className="font-medium text-gray-900 dark:text-white">${taxAmount.toFixed(2)}</span>
+            <div className="flex justify-between w-52">
+              <span className="text-iron-400">{invoice.taxExempt ? 'Tax (exempt)' : `GST (${(invoice.taxRate * 100).toFixed(0)}%)`}</span>
+              <span className="font-medium text-iron-50">${taxAmount.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between w-48 pt-2 border-t border-gray-300 dark:border-gray-600 mt-1">
-              <span className="font-bold text-gray-900 dark:text-white">Total</span>
-              <span className="font-bold text-primary-600 dark:text-primary-400 text-base">${total.toFixed(2)}</span>
+            <div className="flex justify-between w-52 pt-2" style={{ borderTop: '1px solid #3a3a3a' }}>
+              <span className="font-bold text-iron-50">Total</span>
+              <span className="font-bold text-lg" style={{ color: '#ff9900' }}>${total.toFixed(2)}</span>
             </div>
           </div>
         </div>
