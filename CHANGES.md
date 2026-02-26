@@ -1,22 +1,61 @@
 # CHANGES.md
 
-This file list a number of new features as well as some changes i want to make to this project.
+Running log of completed work and what's still planned.
 
+---
 
-### Goal
+## Completed
 
-This new version of the application will encompass and end to end solution for my 3D printing business
-At a high level my goal is to create a new invoicing application similar to Invoice Ninja that will send
-newly invoiced products to the "wizqueue" for production.
+### Session 1 — Initial queue app
+- Queue management UI (drag-drop reorder, status update)
+- PDF invoice upload → Ollama OCR → auto-populate queue
+- Tabbed filter: All / Pending / Printing
+- Wiz3D Prints logo in header
+- Dark mode toggle
 
-The current status of "wizqueue" reads a digital PDF copy of the invoice to create the queue.
+### Session 2 — Invoicing module
+- **Customers** — full CRUD (`/customers`)
+- **Sales Invoices** — full CRUD with line items (`/invoices`)
+  - Invoice numbers auto-sequence: INV-0001, INV-0002, …
+  - Tax rate + tax-exempt flag
+  - Notes, due date
+- **PDF generation** — branded invoice PDF via pdfkit (orange theme, company info)
+- **Email delivery** — nodemailer + iCloud SMTP (`SMTP_*` env vars)
+- **Send to Queue** — push individual or all line items to the print queue
+- React Router navigation
+- Header nav tabs: Queue / Invoices / Customers
 
-I would like to fully plan the development and the changes to the to current queue app before coding.
+### Session 3 — Products module + branding overhaul
+- **Products** — full CRUD (`/products`)
+  - name, description, unit price, active/inactive
+  - **Units Sold** — auto-increments each time a line item linked to the product is sent to queue
+- **Product picker** in invoice line-item editor — selecting a product auto-fills name, price, description
+- **Branding** — fully matches wiz3dprints.com:
+  - Always-dark iron black theme (`#0a0a0a`), no light mode
+  - Orange gradient buttons (`#ff9900 → #e68a00`) with depth shadows + hover lift
+  - Steel-grey card surfaces, dark sunken inputs, orange focus rings
+  - Poppins font, sticky frosted-glass header
+  - Removed dark mode toggle
+- **Nav order** changed to: Customers → Products → Invoices → Queue
+- **Default tax rate** changed to 7%
 
-Here is a short list of features/changes I have already though of:
-1. there is no way to add a single item to the queue and there should be
-2. there should be a favicon to complete the branding
-3. there should be a way to mark queue items as partially complete where there is a qty greater than 1 for that item
-4. there should be a way to manually change the queue item qty
-5. i want to match the branding (color, look, feel, buttons, everything) from the previous project we did for the wiz3d prints web site (~/wiz3d_prints)
-6. on the upload screen there is no way to navigate back to the main screen, this may be a moot point if the queue process changes with the invoicing
+---
+
+## Outstanding / Planned
+
+### Queue improvements (from original brief)
+- [ ] **Add single item to queue manually** — button/form to add one item without an invoice
+- [ ] **Partial complete** — for items with qty > 1, mark a portion as done (e.g. 3 of 5 printed)
+- [ ] **Manually edit queue item qty** — change the quantity on an existing queue item
+- [ ] **Upload screen back navigation** — a way to return to queue without closing the upload modal (may be superseded by the invoicing flow)
+
+### Branding / polish
+- [ ] **Favicon** — proper favicon (not just logo PNG) for browser tab
+- [ ] **Queue items styling** — ensure queue cards/items fully match wiz3d dark theme
+
+### Future ideas
+- [ ] Dashboard / summary page (items in queue, invoices outstanding, revenue this month)
+- [ ] Invoice status filter on invoice list (All / Draft / Sent / Paid)
+- [ ] Customer invoice history view
+- [ ] Product sales report / export
+- [ ] Bulk status update on queue items
