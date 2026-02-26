@@ -22,6 +22,7 @@ export interface SalesInvoice {
   status: SalesInvoiceStatus;
   taxRate: number;
   taxExempt: boolean;
+  shippingCost: number;
   notes: string | null;
   dueDate: string | null;
   sentAt: string | null;
@@ -42,6 +43,7 @@ export interface CreateSalesInvoiceDto {
   customerId?: number;
   taxRate?: number;
   taxExempt?: boolean;
+  shippingCost?: number;
   notes?: string;
   dueDate?: string;
   lineItems?: CreateLineItemDto[];
@@ -52,6 +54,7 @@ export interface UpdateSalesInvoiceDto {
   status?: SalesInvoiceStatus;
   taxRate?: number;
   taxExempt?: boolean;
+  shippingCost?: number;
   notes?: string;
   dueDate?: string | null;
 }

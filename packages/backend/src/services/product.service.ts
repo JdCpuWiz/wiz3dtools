@@ -26,4 +26,8 @@ export class ProductService {
     const deleted = await ProductModel.delete(id);
     if (!deleted) throw new Error('Product not found');
   }
+
+  async suggestSku(name: string, excludeId?: number): Promise<string> {
+    return ProductModel.suggestSku(name, excludeId);
+  }
 }

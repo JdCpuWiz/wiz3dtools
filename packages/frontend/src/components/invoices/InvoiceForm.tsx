@@ -27,6 +27,7 @@ export const InvoiceForm: React.FC = () => {
   const [lineItems, setLineItems] = useState<LineItemDraft[]>([
     { _key: Date.now(), productName: '', quantity: 1, unitPrice: 0 },
   ]);
+  const [shippingCost, setShippingCost] = useState(0);
 
   const addRow = () => setLineItems((prev) => [
     ...prev,
@@ -62,6 +63,7 @@ export const InvoiceForm: React.FC = () => {
       customerId: data.customerId ? parseInt(data.customerId) : undefined,
       taxRate,
       taxExempt: data.taxExempt,
+      shippingCost,
       notes: data.notes || undefined,
       dueDate: data.dueDate || undefined,
       lineItems: validItems.map(({ _key: _, ...rest }) => rest),
@@ -176,12 +178,13 @@ export const InvoiceForm: React.FC = () => {
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <textarea
                         value={li.details || ''}
                         onChange={(e) => updateRow(li._key, 'details', e.target.value)}
                         className={cellInputClass}
                         style={inputSt}
                         placeholder="Details"
+                        rows={3}
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -214,9 +217,39 @@ export const InvoiceForm: React.FC = () => {
             </table>
           </div>
 
-          <div className="px-6 py-3 text-right text-sm" style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(10,10,10,0.4)' }}>
-            <span className="text-iron-400">Subtotal: </span>
-            <span className="font-bold text-iron-50">${subtotal.toFixed(2)}</span>
+          {/* Totals panel */}
+          <div className="px-6 py-4 text-sm" style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(10,10,10,0.4)' }}>
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="flex justify-between w-64">
+                <span className="text-iron-400">Subtotal</span>
+                <span className="font-medium text-iron-50">${subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center w-64">
+                <span className="text-iron-400">Shipping</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-iron-400">$</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={shippingCost}
+                    onChange={(e) => setShippingCost(parseFloat(e.target.value) || 0)}
+                    className="w-20 px-2 py-0.5 rounded text-iron-50 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    style={inputSt}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between w-64">
+                <span className="text-iron-400">IA Sales Tax (7%)</span>
+                <span className="font-medium text-iron-50">calculated at save</span>
+              </div>
+              <div className="flex justify-between w-64 pt-2" style={{ borderTop: '1px solid #3a3a3a' }}>
+                <span className="font-bold text-iron-50">Total</span>
+                <span className="font-bold text-lg" style={{ color: '#ff9900' }}>
+                  ${(subtotal + shippingCost).toFixed(2)} + tax
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

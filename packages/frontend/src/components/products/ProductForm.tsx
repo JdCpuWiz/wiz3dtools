@@ -1,10 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useProducts } from '../../hooks/useProducts';
 import { productApi } from '../../services/api';
 import { useQuery } from '@tanstack/react-query';
 import type { CreateProductDto } from '@wizqueue/shared';
+
+interface ProductFormFields extends CreateProductDto {
+  sku?: string;
+}
 
 export const ProductForm: React.FC = () => {
   const navigate = useNavigate();
@@ -19,20 +23,46 @@ export const ProductForm: React.FC = () => {
   });
 
   const { create, update, isCreating, isUpdating } = useProducts();
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateProductDto>();
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<ProductFormFields>();
+
+  const skuManuallyEdited = useRef(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [skuLoading, setSkuLoading] = useState(false);
+
+  const watchedName = watch('name', '');
 
   useEffect(() => {
     if (existing) {
+      skuManuallyEdited.current = !!existing.sku;
       reset({
         name: existing.name,
         description: existing.description || '',
+        sku: existing.sku || '',
         unitPrice: existing.unitPrice,
         active: existing.active,
       });
     }
   }, [existing, reset]);
 
-  const onSubmit = async (data: CreateProductDto) => {
+  // Debounced SKU suggestion on name change
+  useEffect(() => {
+    if (!watchedName || skuManuallyEdited.current) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setSkuLoading(true);
+      try {
+        const suggested = await productApi.suggestSku(watchedName, isEdit ? productId : undefined);
+        setValue('sku', suggested);
+      } catch {
+        // ignore
+      } finally {
+        setSkuLoading(false);
+      }
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [watchedName, isEdit, productId, setValue]);
+
+  const onSubmit = async (data: ProductFormFields) => {
     if (isEdit) {
       await update(productId, data);
     } else {
@@ -73,10 +103,27 @@ export const ProductForm: React.FC = () => {
         </div>
 
         <div>
+          <label className={labelClass}>
+            SKU
+            {skuLoading && <span className="ml-2 text-xs text-iron-500">generating…</span>}
+          </label>
+          <input
+            {...register('sku')}
+            className={fieldClass}
+            placeholder="e.g. CMP-001"
+            onChange={(e) => {
+              skuManuallyEdited.current = e.target.value.length > 0;
+              register('sku').onChange(e);
+            }}
+          />
+          <p className="text-xs text-iron-500 mt-1">Auto-generated from name. Edit to override.</p>
+        </div>
+
+        <div>
           <label className={labelClass}>Description</label>
           <textarea
             {...register('description')}
-            rows={3}
+            rows={6}
             className={`${fieldClass} resize-none`}
             placeholder="Optional description of this product..."
           />

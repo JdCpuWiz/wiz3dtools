@@ -39,6 +39,18 @@ Running log of completed work and what's still planned.
 - **Nav order** changed to: Customers → Products → Invoices → Queue
 - **Default tax rate** changed to 7%
 
+### Session 4 — Shipping, SKU codes, IA tax label, UX improvements
+- **Migration 007** — adds `shipping_cost` to `sales_invoices`, `sku` to `products` (unique partial index)
+- **Product SKU field** — auto-generated from product name initials (e.g. "Phone Stand" → `PS-001`), editable; stored in DB; `GET /api/products/suggest-sku?name=...` endpoint
+- **Shipping cost** — non-taxable, tracked per invoice; editable inline in InvoiceDetail; passed to PDF
+- **Tax label** — "GST" → "IA Sales Tax" everywhere (UI + PDF); company is Iowa, USA
+- **Totals formula** — `subtotal + shippingCost + taxAmount` (tax on subtotal only, shipping excluded from tax base)
+- **InvoiceForm** — full totals panel (Subtotal / Shipping input / IA Sales Tax / Total); details column uses `<textarea rows={3}>`
+- **InvoiceDetail** — inline ShippingEdit (click to edit), wider totals panel (`w-64`), correct formula
+- **LineItemRow** — details field in edit mode is now a `<textarea rows={3}>`
+- **ProductForm** — SKU field with 400ms debounced auto-suggest; description textarea increased to `rows={6}`
+- **Global `/savesession` skill** — created at `~/.claude/skills/savesession/SKILL.md`; updates docs + commits + pushes on demand
+
 ---
 
 ## Outstanding / Planned

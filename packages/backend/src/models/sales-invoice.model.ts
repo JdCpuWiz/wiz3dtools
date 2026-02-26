@@ -5,6 +5,7 @@ import { InvoiceLineItemModel } from './invoice-line-item.model.js';
 const INVOICE_SELECT = `
   si.id, si.invoice_number as "invoiceNumber", si.customer_id as "customerId",
   si.status, si.tax_rate as "taxRate", si.tax_exempt as "taxExempt",
+  si.shipping_cost as "shippingCost",
   si.notes, si.due_date as "dueDate", si.sent_at as "sentAt",
   si.created_at as "createdAt", si.updated_at as "updatedAt"
 `;
@@ -26,6 +27,7 @@ function mapRow(row: Record<string, unknown>): Omit<SalesInvoice, 'lineItems'> {
     status: row.status as SalesInvoiceStatus,
     taxRate: parseFloat(row.taxRate as string),
     taxExempt: row.taxExempt as boolean,
+    shippingCost: parseFloat((row.shippingCost as string) || '0'),
     notes: row.notes as string | null,
     dueDate: row.dueDate ? (row.dueDate as Date).toISOString().split('T')[0] : null,
     sentAt: row.sentAt as string | null,
@@ -93,14 +95,15 @@ export class SalesInvoiceModel {
   static async create(data: CreateSalesInvoiceDto): Promise<SalesInvoice> {
     const invoiceNumber = await this.getNextInvoiceNumber();
     const result = await pool.query(
-      `INSERT INTO sales_invoices (invoice_number, customer_id, tax_rate, tax_exempt, notes, due_date)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO sales_invoices (invoice_number, customer_id, tax_rate, tax_exempt, shipping_cost, notes, due_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
       [
         invoiceNumber,
         data.customerId || null,
-        data.taxRate ?? 0.15,
+        data.taxRate ?? 0.07,
         data.taxExempt ?? false,
+        data.shippingCost ?? 0,
         data.notes || null,
         data.dueDate || null,
       ],
@@ -141,6 +144,7 @@ export class SalesInvoiceModel {
       ['status', 'status'],
       ['taxRate', 'tax_rate'],
       ['taxExempt', 'tax_exempt'],
+      ['shippingCost', 'shipping_cost'],
       ['notes', 'notes'],
       ['dueDate', 'due_date'],
     ];

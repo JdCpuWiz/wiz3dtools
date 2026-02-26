@@ -252,4 +252,11 @@ export const productApi = {
   delete: async (id: number): Promise<void> => {
     await api.delete(`/products/${id}`);
   },
+
+  suggestSku: async (name: string, excludeId?: number): Promise<string> => {
+    const params = new URLSearchParams({ name });
+    if (excludeId) params.set('excludeId', String(excludeId));
+    const response = await api.get<ApiResponse<string>>(`/products/suggest-sku?${params.toString()}`);
+    return response.data.data || '';
+  },
 };

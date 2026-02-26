@@ -10,11 +10,12 @@ function formatCurrency(amount: number): string {
   return `$${amount.toFixed(2)}`;
 }
 
-function calcTotals(invoice: SalesInvoice): { subtotal: number; taxAmount: number; total: number } {
+function calcTotals(invoice: SalesInvoice): { subtotal: number; shippingCost: number; taxAmount: number; total: number } {
   const subtotal = invoice.lineItems.reduce((sum: number, li: InvoiceLineItem) => sum + li.quantity * li.unitPrice, 0);
+  const shippingCost = invoice.shippingCost || 0;
   const taxAmount = invoice.taxExempt ? 0 : subtotal * invoice.taxRate;
-  const total = subtotal + taxAmount;
-  return { subtotal, taxAmount, total };
+  const total = subtotal + shippingCost + taxAmount;
+  return { subtotal, shippingCost, taxAmount, total };
 }
 
 export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer> {
@@ -121,29 +122,35 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     doc.moveTo(50, rowY).lineTo(545, rowY).lineWidth(0.5).strokeColor(MID_GRAY).stroke();
 
     // ── Totals ───────────────────────────────────────────────────────────
-    const { subtotal, taxAmount, total } = calcTotals(invoice);
-    const totalsX = 380;
+    const { subtotal, shippingCost, taxAmount, total } = calcTotals(invoice);
+    const totalsX = 360;
     rowY += 12;
 
     doc.fillColor(DARK).fontSize(9).font('Helvetica');
-    doc.text('Subtotal:', totalsX, rowY, { width: 80 });
-    doc.text(formatCurrency(subtotal), totalsX + 85, rowY, { width: 75, align: 'right' });
+    doc.text('Subtotal:', totalsX, rowY, { width: 95 });
+    doc.text(formatCurrency(subtotal), totalsX + 100, rowY, { width: 75, align: 'right' });
     rowY += 16;
 
+    if (shippingCost > 0) {
+      doc.text('Shipping:', totalsX, rowY, { width: 95 });
+      doc.text(formatCurrency(shippingCost), totalsX + 100, rowY, { width: 75, align: 'right' });
+      rowY += 16;
+    }
+
     if (!invoice.taxExempt) {
-      doc.text(`GST (${(invoice.taxRate * 100).toFixed(0)}%):`, totalsX, rowY, { width: 80 });
-      doc.text(formatCurrency(taxAmount), totalsX + 85, rowY, { width: 75, align: 'right' });
+      doc.text(`IA Sales Tax (${(invoice.taxRate * 100).toFixed(0)}%):`, totalsX, rowY, { width: 95 });
+      doc.text(formatCurrency(taxAmount), totalsX + 100, rowY, { width: 75, align: 'right' });
       rowY += 16;
     } else {
-      doc.text('Tax Exempt', totalsX, rowY, { width: 155 });
+      doc.text('Tax Exempt', totalsX, rowY, { width: 175 });
       rowY += 16;
     }
 
     // Total box
-    doc.fillColor(ORANGE).rect(totalsX - 5, rowY, 170, 24).fill();
+    doc.fillColor(ORANGE).rect(totalsX - 5, rowY, 180, 24).fill();
     doc.fillColor('white').font('Helvetica-Bold').fontSize(11);
-    doc.text('TOTAL:', totalsX, rowY + 6, { width: 80 });
-    doc.text(formatCurrency(total), totalsX + 85, rowY + 6, { width: 75, align: 'right' });
+    doc.text('TOTAL:', totalsX, rowY + 6, { width: 95 });
+    doc.text(formatCurrency(total), totalsX + 100, rowY + 6, { width: 75, align: 'right' });
 
     // ── Notes ────────────────────────────────────────────────────────────
     if (invoice.notes) {

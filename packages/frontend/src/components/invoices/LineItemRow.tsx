@@ -33,7 +33,7 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onDele
     return (
       <tr style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(230,138,0,0.05)' }}>
         <td className="px-3 py-2"><input value={productName} onChange={(e) => setProductName(e.target.value)} className={cellInputClass} style={inputSt} /></td>
-        <td className="px-3 py-2"><input value={details} onChange={(e) => setDetails(e.target.value)} className={cellInputClass} style={inputSt} /></td>
+        <td className="px-3 py-2"><textarea value={details} onChange={(e) => setDetails(e.target.value)} className={cellInputClass} style={inputSt} rows={3} /></td>
         <td className="px-3 py-2"><input type="number" min={1} value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value) || 1)} className={`${cellInputClass} w-14`} style={inputSt} /></td>
         <td className="px-3 py-2"><input type="number" min={0} step={0.01} value={unitPrice} onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)} className={`${cellInputClass} w-20`} style={inputSt} /></td>
         <td className="px-3 py-2 text-right font-medium" style={{ color: '#ff9900' }}>${(quantity * unitPrice).toFixed(2)}</td>

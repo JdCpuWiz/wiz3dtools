@@ -46,4 +46,14 @@ export class ProductController {
       res.json({ success: true, message: 'Product deleted' });
     } catch (error) { next(error); }
   }
+
+  async suggestSku(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const name = (req.query.name as string) || '';
+      if (!name.trim()) { res.status(400).json({ success: false, error: 'name query param required' }); return; }
+      const excludeId = req.query.excludeId ? parseInt(req.query.excludeId as string) : undefined;
+      const sku = await service.suggestSku(name, excludeId);
+      res.json({ success: true, data: sku });
+    } catch (error) { next(error); }
+  }
 }

@@ -14,6 +14,45 @@ const inputSt: React.CSSProperties = {
   boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)',
 };
 
+const ShippingEdit: React.FC<{ value: number; onSave: (v: number) => void; inputSt: React.CSSProperties }> = ({ value, onSave, inputSt }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <span className="text-iron-400">$</span>
+        <input
+          type="number"
+          min={0}
+          step={0.01}
+          value={draft}
+          onChange={(e) => setDraft(parseFloat(e.target.value) || 0)}
+          className="w-20 px-2 py-0.5 rounded text-iron-50 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary-500"
+          style={inputSt}
+          autoFocus
+        />
+        <button
+          onClick={() => { onSave(draft); setEditing(false); }}
+          className="text-xs text-primary-400 hover:text-primary-300"
+        >✓</button>
+        <button
+          onClick={() => { setDraft(value); setEditing(false); }}
+          className="text-xs text-iron-500 hover:text-iron-300"
+        >✕</button>
+      </div>
+    );
+  }
+  return (
+    <button
+      onClick={() => { setDraft(value); setEditing(true); }}
+      className="font-medium text-iron-50 hover:text-primary-400 transition-colors"
+    >
+      ${value.toFixed(2)}
+    </button>
+  );
+};
+
 export const InvoiceDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -38,7 +77,7 @@ export const InvoiceDetail: React.FC = () => {
 
   const subtotal = invoice.lineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0);
   const taxAmount = invoice.taxExempt ? 0 : subtotal * invoice.taxRate;
-  const total = subtotal + taxAmount;
+  const total = subtotal + (invoice.shippingCost || 0) + taxAmount;
 
   const applyProduct = (productId: number) => {
     const p = products.find((pr) => pr.id === productId);
@@ -236,15 +275,23 @@ export const InvoiceDetail: React.FC = () => {
         {/* Totals */}
         <div className="px-6 py-4 text-sm" style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(10,10,10,0.4)' }}>
           <div className="flex flex-col items-end gap-1.5">
-            <div className="flex justify-between w-52">
+            <div className="flex justify-between w-64">
               <span className="text-iron-400">Subtotal</span>
               <span className="font-medium text-iron-50">${subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between w-52">
-              <span className="text-iron-400">{invoice.taxExempt ? 'Tax (exempt)' : `GST (${(invoice.taxRate * 100).toFixed(0)}%)`}</span>
+            <div className="flex justify-between items-center w-64">
+              <span className="text-iron-400">Shipping</span>
+              <ShippingEdit
+                value={invoice.shippingCost || 0}
+                onSave={(v) => update(invoiceId, { shippingCost: v })}
+                inputSt={inputSt}
+              />
+            </div>
+            <div className="flex justify-between w-64">
+              <span className="text-iron-400">{invoice.taxExempt ? 'Tax (exempt)' : `IA Sales Tax (${(invoice.taxRate * 100).toFixed(0)}%)`}</span>
               <span className="font-medium text-iron-50">${taxAmount.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between w-52 pt-2" style={{ borderTop: '1px solid #3a3a3a' }}>
+            <div className="flex justify-between w-64 pt-2" style={{ borderTop: '1px solid #3a3a3a' }}>
               <span className="font-bold text-iron-50">Total</span>
               <span className="font-bold text-lg" style={{ color: '#ff9900' }}>${total.toFixed(2)}</span>
             </div>
