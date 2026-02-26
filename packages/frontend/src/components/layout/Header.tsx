@@ -39,8 +39,8 @@ export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
               className="h-14 w-auto object-contain"
             />
             <div>
-              <h1 className="text-xl font-bold text-iron-50 leading-tight">WizQueue</h1>
-              <p className="text-xs text-iron-400">3D Printing Queue Manager</p>
+              <h1 className="text-xl font-bold text-iron-50 leading-tight">Wiz3d Tools</h1>
+              <p className="text-xs text-iron-400">3D Printing Business Suite</p>
             </div>
           </div>
 

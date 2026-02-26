@@ -29,10 +29,10 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
   };
 
   const statusColors = {
-    pending: 'bg-gray-300 text-black dark:bg-gray-600 dark:text-black',
-    printing: 'bg-yellow-400 text-black dark:bg-yellow-400 dark:text-black',
-    completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    pending: 'bg-[#2d2d2d] text-[#d1d5db]',
+    printing: 'bg-[#ff9900] text-[#0a0a0a]',
+    completed: 'bg-[#166534] text-[#86efac]',
+    cancelled: 'bg-[#7f1d1d] text-[#fca5a5]',
   };
 
   const handleDelete = () => {
@@ -60,7 +60,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
         <div className="flex items-start gap-4">
           {/* Drag Handle */}
           <button
-            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 pt-1"
+            className="cursor-grab active:cursor-grabbing text-[#6b7280] hover:text-[#d1d5db] pt-1"
             {...attributes}
             {...listeners}
           >
@@ -78,14 +78,14 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-xl font-semibold text-[#e5e5e5]">
                   {item.productName}
                 </h3>
                 {item.details && (
-                  <p className="text-base text-gray-700 dark:text-white mt-2">{item.details}</p>
+                  <p className="text-base text-[#d1d5db] mt-2">{item.details}</p>
                 )}
                 {item.notes && (
-                  <p className="text-base text-gray-500 dark:text-gray-400 mt-2 italic">
+                  <p className="text-base text-[#9ca3af] mt-2 italic">
                     Note: {item.notes}
                   </p>
                 )}
@@ -93,14 +93,14 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
 
               {/* Quantity Badge */}
               <div className="flex-shrink-0">
-                <span className="inline-flex items-center px-4 py-2 rounded-full text-base font-medium bg-black text-white dark:bg-white dark:text-black">
+                <span className="inline-flex items-center px-4 py-2 rounded-full text-base font-medium bg-[#2d2d2d] text-[#ff9900] border border-[#3a3a3a]">
                   Qty: {item.quantity}
                 </span>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#2d2d2d]">
               <div className="flex items-center gap-3">
                 {/* Status Dropdown */}
                 <select
@@ -117,7 +117,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
                 </select>
 
                 {item.priority > 0 && (
-                  <span className="text-sm text-primary-600 dark:text-primary-400 font-medium">
+                  <span className="text-sm text-[#ff9900] font-medium">
                     Priority: {item.priority}
                   </span>
                 )}
@@ -127,13 +127,13 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="text-primary-600 hover:text-primary-700 dark:text-white dark:hover:text-gray-200 text-base font-medium"
+                  className="btn-secondary btn-sm"
                 >
                   Edit
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-base font-medium"
+                  className="btn-danger btn-sm"
                 >
                   Delete
                 </button>

@@ -17,6 +17,9 @@ RUN npm run build -w @wizqueue/shared
 # Build backend
 RUN npm run build -w @wizqueue/backend
 
+# Copy static assets into dist
+RUN cp -r /app/packages/backend/src/assets /app/packages/backend/dist/assets 2>/dev/null || true
+
 # Production image
 FROM node:22-alpine
 

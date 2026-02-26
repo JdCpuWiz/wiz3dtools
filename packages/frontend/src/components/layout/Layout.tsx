@@ -18,7 +18,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onUploadClick }) => {
         style={{ backgroundColor: '#1a1a1a', borderColor: '#2d2d2d' }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-iron-400">
-          WizQueue — Wiz3D Prints Queue Manager
+          Wiz3d Tools — 3D Printing Business Suite
         </div>
       </footer>
     </div>
