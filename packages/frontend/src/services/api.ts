@@ -7,6 +7,14 @@ import type {
   InvoiceUploadResponse,
   InvoiceProcessingStatus,
   ApiResponse,
+  Customer,
+  CreateCustomerDto,
+  UpdateCustomerDto,
+  SalesInvoice,
+  CreateSalesInvoiceDto,
+  UpdateSalesInvoiceDto,
+  InvoiceLineItem,
+  CreateLineItemDto,
 } from '@wizqueue/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -122,5 +130,93 @@ export const uploadApi = {
       throw new Error('Invoice not found');
     }
     return response.data.data;
+  },
+};
+
+// Customer API
+export const customerApi = {
+  getAll: async (): Promise<Customer[]> => {
+    const response = await api.get<ApiResponse<Customer[]>>('/customers');
+    return response.data.data || [];
+  },
+
+  getById: async (id: number): Promise<Customer> => {
+    const response = await api.get<ApiResponse<Customer>>(`/customers/${id}`);
+    if (!response.data.data) throw new Error('Customer not found');
+    return response.data.data;
+  },
+
+  create: async (data: CreateCustomerDto): Promise<Customer> => {
+    const response = await api.post<ApiResponse<Customer>>('/customers', data);
+    if (!response.data.data) throw new Error('Failed to create customer');
+    return response.data.data;
+  },
+
+  update: async (id: number, data: UpdateCustomerDto): Promise<Customer> => {
+    const response = await api.put<ApiResponse<Customer>>(`/customers/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update customer');
+    return response.data.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/customers/${id}`);
+  },
+};
+
+// Sales Invoice API
+export const salesInvoiceApi = {
+  getAll: async (): Promise<SalesInvoice[]> => {
+    const response = await api.get<ApiResponse<SalesInvoice[]>>('/sales-invoices');
+    return response.data.data || [];
+  },
+
+  getById: async (id: number): Promise<SalesInvoice> => {
+    const response = await api.get<ApiResponse<SalesInvoice>>(`/sales-invoices/${id}`);
+    if (!response.data.data) throw new Error('Invoice not found');
+    return response.data.data;
+  },
+
+  create: async (data: CreateSalesInvoiceDto): Promise<SalesInvoice> => {
+    const response = await api.post<ApiResponse<SalesInvoice>>('/sales-invoices', data);
+    if (!response.data.data) throw new Error('Failed to create invoice');
+    return response.data.data;
+  },
+
+  update: async (id: number, data: UpdateSalesInvoiceDto): Promise<SalesInvoice> => {
+    const response = await api.put<ApiResponse<SalesInvoice>>(`/sales-invoices/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update invoice');
+    return response.data.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/sales-invoices/${id}`);
+  },
+
+  addLineItem: async (invoiceId: number, data: CreateLineItemDto): Promise<InvoiceLineItem> => {
+    const response = await api.post<ApiResponse<InvoiceLineItem>>(`/sales-invoices/${invoiceId}/line-items`, data);
+    if (!response.data.data) throw new Error('Failed to add line item');
+    return response.data.data;
+  },
+
+  updateLineItem: async (invoiceId: number, itemId: number, data: Partial<CreateLineItemDto>): Promise<InvoiceLineItem> => {
+    const response = await api.put<ApiResponse<InvoiceLineItem>>(`/sales-invoices/${invoiceId}/line-items/${itemId}`, data);
+    if (!response.data.data) throw new Error('Failed to update line item');
+    return response.data.data;
+  },
+
+  deleteLineItem: async (invoiceId: number, itemId: number): Promise<void> => {
+    await api.delete(`/sales-invoices/${invoiceId}/line-items/${itemId}`);
+  },
+
+  sendEmail: async (id: number): Promise<void> => {
+    await api.post(`/sales-invoices/${id}/send`);
+  },
+
+  sendToQueue: async (id: number, lineItemIds?: number[]): Promise<void> => {
+    await api.post(`/sales-invoices/${id}/send-to-queue`, { lineItemIds });
+  },
+
+  downloadPdf: (id: number): string => {
+    return `${API_BASE_URL}/sales-invoices/${id}/pdf`;
   },
 };

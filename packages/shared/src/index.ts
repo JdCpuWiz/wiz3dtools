@@ -21,3 +21,20 @@ export type {
   ApiError,
   PaginatedResponse,
 } from './types/api';
+
+// Customer types
+export type {
+  Customer,
+  CreateCustomerDto,
+  UpdateCustomerDto,
+} from './types/customer';
+
+// Sales invoice types
+export type {
+  SalesInvoice,
+  SalesInvoiceStatus,
+  InvoiceLineItem,
+  CreateSalesInvoiceDto,
+  UpdateSalesInvoiceDto,
+  CreateLineItemDto,
+} from './types/sales-invoice';

@@ -6,6 +6,8 @@ import { testOllamaConnection } from './config/ollama.js';
 import { errorHandler } from './middleware/error-handler.js';
 import queueRoutes from './routes/queue.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import customerRoutes from './routes/customer.routes.js';
+import salesInvoiceRoutes from './routes/sales-invoice.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -51,6 +53,8 @@ app.get('/health', async (_req: Request, res: Response) => {
 // API Routes
 app.use('/api/queue', queueRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/sales-invoices', salesInvoiceRoutes);
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {
