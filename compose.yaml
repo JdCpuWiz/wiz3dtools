@@ -29,11 +29,9 @@ services:
       - COMPANY_PHONE=${COMPANY_PHONE}
       - COMPANY_ADDRESS=${COMPANY_ADDRESS}
     volumes:
-      - uploads:/app/uploads
+      - ${UPLOADS_PATH:-./uploads}:/app/uploads
     networks:
       - wizqueue
-    depends_on:
-      - ollama
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -42,7 +40,7 @@ services:
       context: .
       dockerfile: infrastructure/docker/frontend.Dockerfile
       args:
-        - VITE_API_URL=/api
+        - VITE_API_URL=${VITE_API_URL:-/api}
     container_name: wizqueue-frontend
     restart: unless-stopped
     ports:
@@ -51,31 +49,6 @@ services:
       - wizqueue
     depends_on:
       - backend
-
-  ollama:
-    image: ollama/ollama:latest
-    container_name: wizqueue-ollama
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama:/root/.ollama
-    networks:
-      - wizqueue
-    # Uncomment if you have GPU support
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
-
-volumes:
-  uploads:
-    driver: local
-  ollama:
-    driver: local
 
 networks:
   wizqueue:
