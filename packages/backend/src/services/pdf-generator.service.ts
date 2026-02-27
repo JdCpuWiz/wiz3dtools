@@ -181,16 +181,18 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
       doc.fillColor(DARK);
       const itemSubtotal = item.quantity * item.unitPrice;
       const textTop = rowY + 10;
+      // height: 10 clips text to one line (prevents bleed into next row)
+      const clip1 = { lineBreak: false, ellipsis: true, height: 10 };
       doc.fontSize(7);
-      doc.text(item.productName, colX.product + 4, textTop, { width: 133, ellipsis: true, lineBreak: false });
+      doc.text(item.productName, colX.product + 4, textTop, { ...clip1, width: 133 });
       if (item.sku) {
-        doc.fillColor('#888888').fontSize(6).text(item.sku, colX.product + 4, textTop + 12, { width: 133, ellipsis: true, lineBreak: false });
+        doc.fillColor('#888888').fontSize(6).text(item.sku, colX.product + 4, textTop + 12, { ...clip1, height: 9, width: 133 });
         doc.fillColor(DARK).fontSize(7);
       }
-      doc.text(item.details || '', colX.details + 4, textTop, { width: 155, ellipsis: true, lineBreak: false });
-      doc.text(String(item.quantity),          colX.qty + 4,      textTop, { width: 65,  lineBreak: false });
-      doc.text(formatCurrency(item.unitPrice), colX.price + 4,    textTop, { width: 75,  lineBreak: false });
-      doc.text(formatCurrency(itemSubtotal),   colX.subtotal + 4, textTop, { width: 100, lineBreak: false });
+      doc.text(item.details || '', colX.details + 4, textTop, { ...clip1, width: 155 });
+      doc.text(String(item.quantity),          colX.qty + 4,      textTop, { ...clip1, width: 65  });
+      doc.text(formatCurrency(item.unitPrice), colX.price + 4,    textTop, { ...clip1, width: 75  });
+      doc.text(formatCurrency(itemSubtotal),   colX.subtotal + 4, textTop, { ...clip1, width: 100 });
       // subtle row separator
       doc.moveTo(M, rowY + rowHeight).lineTo(R, rowY + rowHeight).lineWidth(0.3).strokeColor(MID_GRAY).stroke();
       rowY += rowHeight;
