@@ -162,13 +162,17 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     doc.font('Helvetica').fontSize(9).fillColor(DARK);
 
     invoice.lineItems.forEach((item: InvoiceLineItem, idx: number) => {
-      const rowHeight = 22;
+      const rowHeight = item.sku ? 34 : 22;
       if (idx % 2 === 0) {
         doc.fillColor(LIGHT_GRAY).rect(50, rowY, 495, rowHeight).fill();
       }
       doc.fillColor(DARK);
       const itemSubtotal = item.quantity * item.unitPrice;
       doc.text(item.productName, colX.product + 4, rowY + 7, { width: 115, ellipsis: true });
+      if (item.sku) {
+        doc.fillColor('#888888').fontSize(8).text(item.sku, colX.product + 4, rowY + 18, { width: 115, ellipsis: true });
+        doc.fillColor(DARK).fontSize(9);
+      }
       doc.text(item.details || '', colX.details + 4, rowY + 7, { width: 155, ellipsis: true });
       doc.text(String(item.quantity), colX.qty + 4, rowY + 7, { width: 55 });
       doc.text(formatCurrency(item.unitPrice), colX.price + 4, rowY + 7, { width: 75 });

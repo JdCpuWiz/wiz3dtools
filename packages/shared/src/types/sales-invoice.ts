@@ -7,6 +7,7 @@ export interface InvoiceLineItem {
   invoiceId: number;
   productId: number | null;
   productName: string;
+  sku: string | null;
   details: string | null;
   quantity: number;
   unitPrice: number;
@@ -34,6 +35,7 @@ export interface SalesInvoice {
 export interface CreateLineItemDto {
   productId?: number;
   productName: string;
+  sku?: string;
   details?: string;
   quantity: number;
   unitPrice: number;

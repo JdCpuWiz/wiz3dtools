@@ -49,7 +49,10 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onDele
 
   return (
     <tr style={{ borderTop: '1px solid #2d2d2d' }} className="transition-colors hover:bg-iron-800/20">
-      <td className="px-3 py-2.5 text-sm font-medium text-iron-50">{item.productName}</td>
+      <td className="px-3 py-2.5 text-sm font-medium text-iron-50">
+        {item.productName}
+        {item.sku && <span className="block font-mono text-xs text-iron-500 mt-0.5">{item.sku}</span>}
+      </td>
       <td className="px-3 py-2.5 text-sm text-iron-400">{item.details || '—'}</td>
       <td className="px-3 py-2.5 text-sm text-iron-200">{item.quantity}</td>
       <td className="px-3 py-2.5 text-sm text-iron-200">${item.unitPrice.toFixed(2)}</td>

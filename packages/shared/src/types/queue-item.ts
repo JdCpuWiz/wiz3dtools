@@ -3,6 +3,7 @@ export type QueueItemStatus = 'pending' | 'printing' | 'completed' | 'cancelled'
 export interface QueueItem {
   id: number;
   productName: string;
+  sku: string | null;
   details: string | null;
   quantity: number;
   position: number;
@@ -16,6 +17,7 @@ export interface QueueItem {
 
 export interface CreateQueueItemDto {
   productName: string;
+  sku?: string;
   details?: string;
   quantity: number;
   position?: number;
@@ -27,6 +29,7 @@ export interface CreateQueueItemDto {
 
 export interface UpdateQueueItemDto {
   productName?: string;
+  sku?: string;
   details?: string;
   quantity?: number;
   position?: number;

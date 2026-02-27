@@ -82,7 +82,7 @@ export const InvoiceDetail: React.FC = () => {
   const applyProduct = (productId: number) => {
     const p = products.find((pr) => pr.id === productId);
     if (!p) return;
-    setNewItem({ productId: p.id, productName: p.name, unitPrice: p.unitPrice, details: p.description || '', quantity: newItem.quantity });
+    setNewItem({ productId: p.id, productName: p.name, sku: p.sku || undefined, unitPrice: p.unitPrice, details: p.description || '', quantity: newItem.quantity });
   };
 
   const handleAddItem = async () => {

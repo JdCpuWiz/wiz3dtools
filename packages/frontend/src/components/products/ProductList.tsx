@@ -40,6 +40,7 @@ export const ProductList: React.FC = () => {
             <thead>
               <tr>
                 <th>Name</th>
+                <th className="hidden sm:table-cell">SKU</th>
                 <th className="hidden sm:table-cell">Description</th>
                 <th>Unit Price</th>
                 <th>Units Sold</th>
@@ -51,6 +52,7 @@ export const ProductList: React.FC = () => {
               {products.map((product) => (
                 <tr key={product.id}>
                   <td className="font-medium text-iron-50">{product.name}</td>
+                  <td className="text-iron-400 hidden sm:table-cell font-mono text-xs">{product.sku || '—'}</td>
                   <td className="text-iron-400 hidden sm:table-cell">
                     {product.description
                       ? product.description.length > 60

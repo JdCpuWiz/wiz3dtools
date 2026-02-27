@@ -53,6 +53,13 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
           error={errors.productName?.message}
         />
 
+        {item.sku && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SKU</label>
+            <p className="font-mono text-sm text-iron-400">{item.sku}</p>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Details

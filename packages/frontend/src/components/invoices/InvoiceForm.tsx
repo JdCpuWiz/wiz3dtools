@@ -45,7 +45,7 @@ export const InvoiceForm: React.FC = () => {
     if (!product) return;
     setLineItems((prev) => prev.map((li) =>
       li._key === key
-        ? { ...li, productId: product.id, productName: product.name, unitPrice: product.unitPrice, details: product.description || li.details }
+        ? { ...li, productId: product.id, productName: product.name, sku: product.sku || undefined, unitPrice: product.unitPrice, details: product.description || li.details }
         : li,
     ));
   };
@@ -143,6 +143,7 @@ export const InvoiceForm: React.FC = () => {
                 <tr style={{ background: 'linear-gradient(to bottom, #4a4a4a, #3a3a3a)' }}>
                   {products.length > 0 && <th className="text-left px-3 py-2 font-semibold text-iron-100 w-36">Product</th>}
                   <th className="text-left px-3 py-2 font-semibold text-iron-100">Name</th>
+                  <th className="text-left px-3 py-2 font-semibold text-iron-100 w-24 hidden sm:table-cell">SKU</th>
                   <th className="text-left px-3 py-2 font-semibold text-iron-100">Details</th>
                   <th className="text-left px-3 py-2 font-semibold text-iron-100 w-16">Qty</th>
                   <th className="text-left px-3 py-2 font-semibold text-iron-100 w-28">Unit Price</th>
@@ -176,6 +177,9 @@ export const InvoiceForm: React.FC = () => {
                         style={inputSt}
                         placeholder="Name"
                       />
+                    </td>
+                    <td className="px-3 py-2 hidden sm:table-cell">
+                      <span className="font-mono text-xs text-iron-400">{li.sku || '—'}</span>
                     </td>
                     <td className="px-3 py-2">
                       <textarea

@@ -81,6 +81,9 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
                 <h3 className="text-xl font-semibold text-[#e5e5e5]">
                   {item.productName}
                 </h3>
+                {item.sku && (
+                  <span className="inline-block mt-1 font-mono text-xs px-1.5 py-0.5 rounded" style={{ background: '#2d2d2d', color: '#9ca3af' }}>{item.sku}</span>
+                )}
                 {item.details && (
                   <p className="text-base text-[#d1d5db] mt-2">{item.details}</p>
                 )}

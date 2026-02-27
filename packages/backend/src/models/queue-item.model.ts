@@ -9,7 +9,7 @@ export class QueueItemModel {
   static async findAll(): Promise<QueueItem[]> {
     const query = `
       SELECT
-        id, product_name as "productName", details, quantity, position,
+        id, product_name as "productName", sku, details, quantity, position,
         status, invoice_id as "invoiceId", priority, notes,
         created_at as "createdAt", updated_at as "updatedAt"
       FROM queue_items
@@ -22,7 +22,7 @@ export class QueueItemModel {
   static async findById(id: number): Promise<QueueItem | null> {
     const query = `
       SELECT
-        id, product_name as "productName", details, quantity, position,
+        id, product_name as "productName", sku, details, quantity, position,
         status, invoice_id as "invoiceId", priority, notes,
         created_at as "createdAt", updated_at as "updatedAt"
       FROM queue_items
@@ -38,18 +38,19 @@ export class QueueItemModel {
 
     const query = `
       INSERT INTO queue_items (
-        product_name, details, quantity, position, status,
+        product_name, sku, details, quantity, position, status,
         invoice_id, priority, notes
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING
-        id, product_name as "productName", details, quantity, position,
+        id, product_name as "productName", sku, details, quantity, position,
         status, invoice_id as "invoiceId", priority, notes,
         created_at as "createdAt", updated_at as "updatedAt"
     `;
 
     const values = [
       data.productName,
+      data.sku || null,
       data.details || null,
       data.quantity,
       position,
@@ -74,18 +75,19 @@ export class QueueItemModel {
       for (const item of items) {
         const query = `
           INSERT INTO queue_items (
-            product_name, details, quantity, position, status,
+            product_name, sku, details, quantity, position, status,
             invoice_id, priority, notes
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           RETURNING
-            id, product_name as "productName", details, quantity, position,
+            id, product_name as "productName", sku, details, quantity, position,
             status, invoice_id as "invoiceId", priority, notes,
             created_at as "createdAt", updated_at as "updatedAt"
         `;
 
         const values = [
           item.productName,
+          item.sku || null,
           item.details || null,
           item.quantity,
           item.position !== undefined ? item.position : position++,
@@ -117,6 +119,10 @@ export class QueueItemModel {
     if (data.productName !== undefined) {
       fields.push(`product_name = $${paramCount++}`);
       values.push(data.productName);
+    }
+    if (data.sku !== undefined) {
+      fields.push(`sku = $${paramCount++}`);
+      values.push(data.sku ?? null);
     }
     if (data.details !== undefined) {
       fields.push(`details = $${paramCount++}`);
@@ -154,7 +160,7 @@ export class QueueItemModel {
       SET ${fields.join(', ')}
       WHERE id = $${paramCount}
       RETURNING
-        id, product_name as "productName", details, quantity, position,
+        id, product_name as "productName", sku, details, quantity, position,
         status, invoice_id as "invoiceId", priority, notes,
         created_at as "createdAt", updated_at as "updatedAt"
     `;

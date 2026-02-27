@@ -3,7 +3,7 @@ import type { InvoiceLineItem, CreateLineItemDto } from '@wizqueue/shared';
 
 const SELECT_FIELDS = `
   id, invoice_id as "invoiceId", product_id as "productId",
-  product_name as "productName", details, quantity,
+  product_name as "productName", sku, details, quantity,
   unit_price as "unitPrice", queue_item_id as "queueItemId",
   created_at as "createdAt"
 `;
@@ -28,10 +28,10 @@ export class InvoiceLineItemModel {
 
   static async create(invoiceId: number, data: CreateLineItemDto): Promise<InvoiceLineItem> {
     const result = await pool.query(
-      `INSERT INTO invoice_line_items (invoice_id, product_id, product_name, details, quantity, unit_price)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO invoice_line_items (invoice_id, product_id, product_name, sku, details, quantity, unit_price)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING ${SELECT_FIELDS}`,
-      [invoiceId, data.productId || null, data.productName, data.details || null, data.quantity, data.unitPrice],
+      [invoiceId, data.productId || null, data.productName, data.sku || null, data.details || null, data.quantity, data.unitPrice],
     );
     const row = result.rows[0];
     return { ...row, unitPrice: parseFloat(row.unitPrice) };
@@ -43,6 +43,7 @@ export class InvoiceLineItemModel {
     let i = 1;
 
     if (data.productName !== undefined) { fields.push(`product_name = $${i++}`); values.push(data.productName); }
+    if (data.sku !== undefined) { fields.push(`sku = $${i++}`); values.push(data.sku ?? null); }
     if (data.details !== undefined) { fields.push(`details = $${i++}`); values.push(data.details ?? null); }
     if (data.quantity !== undefined) { fields.push(`quantity = $${i++}`); values.push(data.quantity); }
     if (data.unitPrice !== undefined) { fields.push(`unit_price = $${i++}`); values.push(data.unitPrice); }

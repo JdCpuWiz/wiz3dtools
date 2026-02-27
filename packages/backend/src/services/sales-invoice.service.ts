@@ -70,6 +70,7 @@ export class SalesInvoiceService {
 
       const queueItem = await QueueItemModel.create({
         productName: lineItem.productName,
+        sku: lineItem.sku || undefined,
         details: lineItem.details || undefined,
         quantity: lineItem.quantity,
         status: 'pending',
