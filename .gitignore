@@ -48,3 +48,6 @@ coverage/
 .cache/
 temp/
 tmp/
+
+# Data import files (contain customer PII)
+data_import/
