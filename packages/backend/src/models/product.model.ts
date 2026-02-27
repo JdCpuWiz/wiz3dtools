@@ -54,6 +54,15 @@ export class ProductModel {
   }
 
   static async delete(id: number): Promise<boolean> {
+    const check = await pool.query(
+      'SELECT COUNT(*) AS count FROM invoice_line_items WHERE product_id = $1',
+      [id],
+    );
+    if (parseInt(check.rows[0].count, 10) > 0) {
+      const err = new Error('Product is used in invoices and cannot be deleted. Mark it as inactive instead.');
+      (err as any).statusCode = 409;
+      throw err;
+    }
     const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
     return (result.rowCount || 0) > 0;
   }

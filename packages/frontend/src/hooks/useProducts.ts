@@ -36,7 +36,12 @@ export const useProducts = (activeOnly = false) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Product deleted');
     },
-    onError: (error: Error) => toast.error(`Failed: ${error.message}`),
+    onError: (error: Error) => {
+      // Suppress toast for 409 "used in invoices" — ProductList handles that case
+      if (!error.message.includes('used in invoices')) {
+        toast.error(`Failed: ${error.message}`);
+      }
+    },
   });
 
   return {

@@ -85,9 +85,16 @@ export const ProductList: React.FC = () => {
                         Edit
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm(`Delete product "${product.name}"?`)) {
-                            deleteProduct(product.id);
+                        onClick={async () => {
+                          if (!confirm(`Delete product "${product.name}"?`)) return;
+                          try {
+                            await deleteProduct(product.id);
+                          } catch (err: any) {
+                            if (err.message?.includes('used in invoices')) {
+                              if (confirm(`"${product.name}" is used in invoices and cannot be deleted.\n\nMark it as inactive instead?`)) {
+                                update(product.id, { active: false });
+                              }
+                            }
                           }
                         }}
                         className="btn-danger btn-sm text-xs"

@@ -9,6 +9,13 @@ export function errorHandler(
 ): void {
   console.error('Error:', err);
 
+  // Errors with an explicit HTTP status code (e.g. 409 Conflict)
+  const explicitStatus = (err as any).statusCode as number | undefined;
+  if (explicitStatus) {
+    res.status(explicitStatus).json({ success: false, error: err.message, message: err.message });
+    return;
+  }
+
   // Multer errors
   if (err.message?.includes('File too large')) {
     res.status(413).json({

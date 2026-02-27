@@ -250,7 +250,12 @@ export const productApi = {
   },
 
   delete: async (id: number): Promise<void> => {
-    await api.delete(`/products/${id}`);
+    try {
+      await api.delete(`/products/${id}`);
+    } catch (error: any) {
+      const message = error.response?.data?.message || error.response?.data?.error || error.message;
+      throw new Error(message);
+    }
   },
 
   suggestSku: async (name: string, excludeId?: number): Promise<string> => {

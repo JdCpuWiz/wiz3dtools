@@ -10,17 +10,27 @@ const { Client } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '../../../.env') });
+// Load environment variables — check several locations
+const envCandidates = [
+  path.join(__dirname, '../../../.env'),
+  path.join(__dirname, '../../../.env.example'),
+  path.join(__dirname, '../.env'),
+];
+for (const p of envCandidates) {
+  if (fs.existsSync(p)) { dotenv.config({ path: p }); break; }
+}
 
 async function runMigrations() {
-  const client = new Client({
-    host: process.env.DATABASE_HOST,
-    port: process.env.DATABASE_PORT,
-    database: process.env.DATABASE_NAME,
-    user: process.env.DATABASE_USER,
-    password: process.env.DATABASE_PASSWORD,
-  });
+  const clientConfig = process.env.DATABASE_URL
+    ? { connectionString: process.env.DATABASE_URL }
+    : {
+        host: process.env.DATABASE_HOST,
+        port: process.env.DATABASE_PORT,
+        database: process.env.DATABASE_NAME,
+        user: process.env.DATABASE_USER,
+        password: process.env.DATABASE_PASSWORD,
+      };
+  const client = new Client(clientConfig);
 
   try {
     console.log('Connecting to database...');
