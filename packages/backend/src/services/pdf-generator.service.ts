@@ -35,7 +35,12 @@ function calcTotals(invoice: SalesInvoice): { subtotal: number; shippingCost: nu
 
 export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    // 1/4" margins: 1pt = 1/72", so 0.25" = 18pt
+    const M = 18;          // margin (left & right)
+    const R = 595 - M;     // right edge (A4 = 595pt wide)
+    const CW = R - M;      // content width = 559pt
+
+    const doc = new PDFDocument({ margin: M, size: 'A4' });
     const chunks: Buffer[] = [];
 
     doc.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -63,9 +68,9 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     // Calculate box height from content
     const infoBlockH = 22 + companyInfoLines.length * 13; // name(22px) + info lines
     const contentH = Math.max(LOGO_H, infoBlockH);
-    const COMPANY_BOX_X = 42;
-    const COMPANY_BOX_TOP = 38;
-    const COMPANY_BOX_W = 290;
+    const COMPANY_BOX_X = M - 8;        // 10pt — slightly inside margin
+    const COMPANY_BOX_TOP = 12;
+    const COMPANY_BOX_W = 318;
     const COMPANY_BOX_H = BOX_PAD + contentH + BOX_PAD;
 
     // Draw box background first, then overlay logo and text
@@ -90,8 +95,8 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     }
 
     // ── Invoice title + number (right aligned) ─────────────────────────────
-    const INV_X = 350;
-    const INV_W = 195;
+    const INV_W = 229;
+    const INV_X = R - INV_W;   // right-flush to page edge
     doc.fillColor(DARK).fontSize(28).font('Helvetica-Bold')
       .text('INVOICE', INV_X, COMPANY_BOX_TOP, { align: 'right', width: INV_W });
     doc.fontSize(11).font('Helvetica').fillColor(ORANGE)
@@ -119,8 +124,8 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     }
 
     // ── Divider ────────────────────────────────────────────────────────────
-    const dividerY = Math.max(COMPANY_BOX_TOP + COMPANY_BOX_H, 130) + 10;
-    doc.moveTo(50, dividerY).lineTo(545, dividerY).lineWidth(1.5).strokeColor(ORANGE).stroke();
+    const dividerY = Math.max(COMPANY_BOX_TOP + COMPANY_BOX_H, 115) + 10;
+    doc.moveTo(M, dividerY).lineTo(R, dividerY).lineWidth(1.5).strokeColor(ORANGE).stroke();
 
     // ── Bill To (light grey box) ───────────────────────────────────────────
     const billBoxTop = dividerY + 12;
@@ -138,57 +143,60 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
       billLines.push('N/A');
     }
 
+    const BILL_BOX_W = 270;
     const billBoxH = BOX_PAD + 14 + billLines.length * 14 + BOX_PAD;
-    doc.roundedRect(50, billBoxTop, 250, billBoxH, 6).fill(BOX_BG);
+    doc.roundedRect(M, billBoxTop, BILL_BOX_W, billBoxH, 6).fill(BOX_BG);
 
+    const billTextX = M + 12;
     let billY = billBoxTop + BOX_PAD;
-    doc.fillColor(ORANGE).fontSize(9).font('Helvetica-Bold').text('BILL TO', 62, billY);
+    doc.fillColor(ORANGE).fontSize(9).font('Helvetica-Bold').text('BILL TO', billTextX, billY);
     billY += 14;
     doc.fillColor(DARK).font('Helvetica').fontSize(9);
     for (const line of billLines) {
-      doc.text(line, 62, billY, { width: 226 });
+      doc.text(line, billTextX, billY, { width: BILL_BOX_W - 24 });
       billY += 14;
     }
 
     // ── Line Items Table ───────────────────────────────────────────────────
     const tableY = billBoxTop + billBoxH + 18;
-    const colX = { product: 50, details: 170, qty: 330, price: 390, subtotal: 470 };
+    // Columns — product and details get the extra width from wider margins
+    const colX = { product: M, details: M + 142, qty: M + 302, price: M + 372, subtotal: M + 452 };
 
-    doc.fillColor(ORANGE).rect(50, tableY, 495, 22).fill();
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold');
-    doc.text('PRODUCT', colX.product + 4, tableY + 6);
-    doc.text('DETAILS', colX.details + 4, tableY + 6);
-    doc.text('QTY', colX.qty + 4, tableY + 6);
-    doc.text('UNIT PRICE', colX.price + 4, tableY + 6);
-    doc.text('SUBTOTAL', colX.subtotal + 4, tableY + 6);
+    doc.fillColor(ORANGE).rect(M, tableY, CW, 22).fill();
+    doc.fillColor('white').fontSize(8).font('Helvetica-Bold');
+    doc.text('PRODUCT',    colX.product + 4,   tableY + 7);
+    doc.text('DETAILS',    colX.details + 4,   tableY + 7);
+    doc.text('QTY',        colX.qty + 4,       tableY + 7);
+    doc.text('UNIT PRICE', colX.price + 4,     tableY + 7);
+    doc.text('SUBTOTAL',   colX.subtotal + 4,  tableY + 7);
 
     let rowY = tableY + 22;
-    doc.font('Helvetica').fontSize(8).fillColor(DARK);
+    doc.font('Helvetica').fontSize(7).fillColor(DARK);
 
     invoice.lineItems.forEach((item: InvoiceLineItem, idx: number) => {
-      const rowHeight = item.sku ? 50 : 36;
+      const rowHeight = item.sku ? 46 : 32;
       if (idx % 2 === 0) {
-        doc.fillColor(LIGHT_GRAY).rect(50, rowY, 495, rowHeight).fill();
+        doc.fillColor(LIGHT_GRAY).rect(M, rowY, CW, rowHeight).fill();
       }
       doc.fillColor(DARK);
       const itemSubtotal = item.quantity * item.unitPrice;
-      const textTop = rowY + 12;
-      doc.fontSize(8);
-      doc.text(item.productName, colX.product + 4, textTop, { width: 115, ellipsis: true, lineBreak: false });
+      const textTop = rowY + 10;
+      doc.fontSize(7);
+      doc.text(item.productName, colX.product + 4, textTop, { width: 133, ellipsis: true, lineBreak: false });
       if (item.sku) {
-        doc.fillColor('#888888').fontSize(7).text(item.sku, colX.product + 4, textTop + 13, { width: 115, ellipsis: true, lineBreak: false });
-        doc.fillColor(DARK).fontSize(8);
+        doc.fillColor('#888888').fontSize(6).text(item.sku, colX.product + 4, textTop + 12, { width: 133, ellipsis: true, lineBreak: false });
+        doc.fillColor(DARK).fontSize(7);
       }
       doc.text(item.details || '', colX.details + 4, textTop, { width: 155, ellipsis: true, lineBreak: false });
-      doc.text(String(item.quantity), colX.qty + 4, textTop, { width: 55, lineBreak: false });
-      doc.text(formatCurrency(item.unitPrice), colX.price + 4, textTop, { width: 75, lineBreak: false });
-      doc.text(formatCurrency(itemSubtotal), colX.subtotal + 4, textTop, { width: 70, lineBreak: false });
+      doc.text(String(item.quantity),          colX.qty + 4,      textTop, { width: 65,  lineBreak: false });
+      doc.text(formatCurrency(item.unitPrice), colX.price + 4,    textTop, { width: 75,  lineBreak: false });
+      doc.text(formatCurrency(itemSubtotal),   colX.subtotal + 4, textTop, { width: 100, lineBreak: false });
       // subtle row separator
-      doc.moveTo(50, rowY + rowHeight).lineTo(545, rowY + rowHeight).lineWidth(0.3).strokeColor(MID_GRAY).stroke();
+      doc.moveTo(M, rowY + rowHeight).lineTo(R, rowY + rowHeight).lineWidth(0.3).strokeColor(MID_GRAY).stroke();
       rowY += rowHeight;
     });
 
-    doc.moveTo(50, rowY).lineTo(545, rowY).lineWidth(0.5).strokeColor(MID_GRAY).stroke();
+    doc.moveTo(M, rowY).lineTo(R, rowY).lineWidth(0.5).strokeColor(MID_GRAY).stroke();
 
     // ── Totals (light grey box) ────────────────────────────────────────────
     const { subtotal, shippingCost, taxAmount, total } = calcTotals(invoice);
@@ -198,30 +206,30 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     totalsRows++; // tax or exempt
 
     const totalsBoxTop = rowY + 10;
-    const totalsBoxX = 340;
-    const totalsBoxW = 205;
+    const totalsBoxW = 220;
+    const totalsBoxX = R - totalsBoxW;
     const totalsBoxH = BOX_PAD + totalsRows * 18 + 6 + 26 + BOX_PAD; // pad + rows + gap + total row + pad
 
     doc.roundedRect(totalsBoxX, totalsBoxTop, totalsBoxW, totalsBoxH, 6).fill(BOX_BG);
 
     let tY = totalsBoxTop + BOX_PAD;
     const labelX = totalsBoxX + 8;
-    const valueX = totalsBoxX + 105;
-    const valueW = totalsBoxW - 113;
+    const valueX = totalsBoxX + 110;
+    const valueW = totalsBoxW - 118;
 
     doc.fillColor(DARK).fontSize(9).font('Helvetica');
-    doc.text('Subtotal:', labelX, tY, { width: 95 });
+    doc.text('Subtotal:', labelX, tY, { width: 100 });
     doc.text(formatCurrency(subtotal), valueX, tY, { width: valueW, align: 'right' });
     tY += 18;
 
     if (shippingCost > 0) {
-      doc.text('Shipping:', labelX, tY, { width: 95 });
+      doc.text('Shipping:', labelX, tY, { width: 100 });
       doc.text(formatCurrency(shippingCost), valueX, tY, { width: valueW, align: 'right' });
       tY += 18;
     }
 
     if (!invoice.taxExempt) {
-      doc.text(`IA Sales Tax (${(invoice.taxRate * 100).toFixed(0)}%):`, labelX, tY, { width: 95 });
+      doc.text(`IA Sales Tax (${(invoice.taxRate * 100).toFixed(0)}%):`, labelX, tY, { width: 100 });
       doc.text(formatCurrency(taxAmount), valueX, tY, { width: valueW, align: 'right' });
       tY += 18;
     } else {
@@ -232,7 +240,7 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     tY += 4;
     doc.fillColor(ORANGE).roundedRect(totalsBoxX + 4, tY, totalsBoxW - 8, 24, 4).fill();
     doc.fillColor('white').font('Helvetica-Bold').fontSize(11);
-    doc.text('TOTAL:', labelX, tY + 6, { width: 95 });
+    doc.text('TOTAL:', labelX, tY + 6, { width: 100 });
     doc.text(formatCurrency(total), valueX, tY + 6, { width: valueW, align: 'right' });
 
     rowY = totalsBoxTop + totalsBoxH + 12;
@@ -244,12 +252,12 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
 
     if (paymentLines.length > 0) {
       const payBoxH = BOX_PAD + 14 + paymentLines.length * 13 + BOX_PAD;
-      doc.roundedRect(50, rowY, 495, payBoxH, 6).fill(BOX_BG);
-      doc.fillColor(ORANGE).fontSize(9).font('Helvetica-Bold').text('PAYMENT', 62, rowY + BOX_PAD);
+      doc.roundedRect(M, rowY, CW, payBoxH, 6).fill(BOX_BG);
+      doc.fillColor(ORANGE).fontSize(9).font('Helvetica-Bold').text('PAYMENT', M + 12, rowY + BOX_PAD);
       doc.fillColor(DARK).font('Helvetica').fontSize(9);
       let pY = rowY + BOX_PAD + 14;
       for (const line of paymentLines) {
-        doc.text(line, 62, pY, { width: 471 });
+        doc.text(line, M + 12, pY, { width: CW - 24 });
         pY += 13;
       }
       rowY += payBoxH + 8;
@@ -257,11 +265,11 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
 
     // ── Notes (light grey box) ─────────────────────────────────────────────
     if (invoice.notes) {
-      const noteLines = Math.max(1, Math.ceil(invoice.notes.length / 85));
+      const noteLines = Math.max(1, Math.ceil(invoice.notes.length / 95));
       const notesBoxH = BOX_PAD + 14 + noteLines * 14 + BOX_PAD;
-      doc.roundedRect(50, rowY, 495, notesBoxH, 6).fill(BOX_BG);
-      doc.fillColor(ORANGE).fontSize(9).font('Helvetica-Bold').text('NOTES', 62, rowY + BOX_PAD);
-      doc.fillColor(DARK).font('Helvetica').text(invoice.notes, 62, rowY + BOX_PAD + 14, { width: 471 });
+      doc.roundedRect(M, rowY, CW, notesBoxH, 6).fill(BOX_BG);
+      doc.fillColor(ORANGE).fontSize(9).font('Helvetica-Bold').text('NOTES', M + 12, rowY + BOX_PAD);
+      doc.fillColor(DARK).font('Helvetica').text(invoice.notes, M + 12, rowY + BOX_PAD + 14, { width: CW - 24 });
     }
 
     doc.end();
