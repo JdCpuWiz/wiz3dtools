@@ -173,27 +173,65 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     let rowY = tableY + 22;
     doc.font('Helvetica').fontSize(7).fillColor(DARK);
 
+    // Column content widths (col start + 4pt left pad, right pad ~4pt)
+    const COL_W = {
+      product:  133,  // colX.details  - colX.product  - 8 (≈ M+142 - M - 9)
+      details:  155,  // colX.qty      - colX.details  - 9
+      qty:       65,
+      price:     75,
+      subtotal: 100,
+    };
+    const VPAD = 10; // top & bottom padding inside each row
+
     invoice.lineItems.forEach((item: InvoiceLineItem, idx: number) => {
-      const rowHeight = item.sku ? 46 : 32;
+      // ── Measure row height before drawing anything ────────────────────────
+      doc.fontSize(7);
+      const productH  = doc.heightOfString(item.productName, { width: COL_W.product });
+      const detailsH  = item.details ? doc.heightOfString(item.details, { width: COL_W.details }) : 0;
+
+      let skuH = 0;
+      if (item.sku) {
+        doc.fontSize(6);
+        skuH = doc.heightOfString(item.sku, { width: COL_W.product }) + 3; // 3pt gap below product name
+        doc.fontSize(7);
+      }
+
+      const leftColH   = productH + skuH;
+      const rowContent = Math.max(leftColH, detailsH, 12); // minimum 12pt content
+      const rowHeight  = Math.ceil(rowContent) + VPAD * 2;
+
+      // ── Draw row background ───────────────────────────────────────────────
       if (idx % 2 === 0) {
         doc.fillColor(LIGHT_GRAY).rect(M, rowY, CW, rowHeight).fill();
       }
       doc.fillColor(DARK);
+
       const itemSubtotal = item.quantity * item.unitPrice;
-      const textTop = rowY + 10;
-      // height: 10 clips text to one line (prevents bleed into next row)
-      const clip1 = { lineBreak: false, ellipsis: true, height: 10 };
+      const textTop = rowY + VPAD;
+      const clip1 = { lineBreak: false, ellipsis: true, height: 10 }; // single-line columns
+
+      // ── Product name (wraps freely) ───────────────────────────────────────
       doc.fontSize(7);
-      doc.text(item.productName, colX.product + 4, textTop, { ...clip1, width: 133 });
+      doc.text(item.productName, colX.product + 4, textTop, { width: COL_W.product });
+
+      // ── SKU (single line, below product name) ─────────────────────────────
       if (item.sku) {
-        doc.fillColor('#888888').fontSize(6).text(item.sku, colX.product + 4, textTop + 12, { ...clip1, height: 9, width: 133 });
+        doc.fillColor('#888888').fontSize(6)
+          .text(item.sku, colX.product + 4, textTop + productH + 3, { ...clip1, height: 9, width: COL_W.product });
         doc.fillColor(DARK).fontSize(7);
       }
-      doc.text(item.details || '', colX.details + 4, textTop, { ...clip1, width: 155 });
-      doc.text(String(item.quantity),          colX.qty + 4,      textTop, { ...clip1, width: 65  });
-      doc.text(formatCurrency(item.unitPrice), colX.price + 4,    textTop, { ...clip1, width: 75  });
-      doc.text(formatCurrency(itemSubtotal),   colX.subtotal + 4, textTop, { ...clip1, width: 100 });
-      // subtle row separator
+
+      // ── Details (wraps freely) ────────────────────────────────────────────
+      if (item.details) {
+        doc.text(item.details, colX.details + 4, textTop, { width: COL_W.details });
+      }
+
+      // ── Numeric columns (single line) ─────────────────────────────────────
+      doc.text(String(item.quantity),          colX.qty + 4,      textTop, { ...clip1, width: COL_W.qty      });
+      doc.text(formatCurrency(item.unitPrice), colX.price + 4,    textTop, { ...clip1, width: COL_W.price    });
+      doc.text(formatCurrency(itemSubtotal),   colX.subtotal + 4, textTop, { ...clip1, width: COL_W.subtotal });
+
+      // ── Row separator ─────────────────────────────────────────────────────
       doc.moveTo(M, rowY + rowHeight).lineTo(R, rowY + rowHeight).lineWidth(0.3).strokeColor(MID_GRAY).stroke();
       rowY += rowHeight;
     });
