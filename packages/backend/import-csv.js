@@ -15,54 +15,64 @@ import dotenv from 'dotenv';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Load .env (try backend dir first, then repo root)
+// Load .env — check several locations
 const envPaths = [
   resolve(__dirname, '.env'),
   resolve(__dirname, '../../.env'),
+  resolve(__dirname, '../../.env.example'),
 ];
 for (const p of envPaths) {
   if (existsSync(p)) { dotenv.config({ path: p }); break; }
 }
 
-// ── DB connection ───────────────────────────────────────────────────────────
-const pool = new pg.Pool({
-  host: process.env.DATABASE_HOST || 'localhost',
-  port: parseInt(process.env.DATABASE_PORT || '5432'),
-  database: process.env.DATABASE_NAME,
-  user: process.env.DATABASE_USER,
-  password: process.env.DATABASE_PASSWORD,
-});
+// ── DB connection (supports DATABASE_URL or individual vars) ─────────────────
+const poolConfig = process.env.DATABASE_URL
+  ? { connectionString: process.env.DATABASE_URL }
+  : {
+      host: process.env.DATABASE_HOST || 'localhost',
+      port: parseInt(process.env.DATABASE_PORT || '5432'),
+      database: process.env.DATABASE_NAME,
+      user: process.env.DATABASE_USER,
+      password: process.env.DATABASE_PASSWORD,
+    };
+const pool = new pg.Pool(poolConfig);
 
-// ── CSV parser ──────────────────────────────────────────────────────────────
+// ── CSV parser (handles quoted multiline fields) ────────────────────────────
 function parseCSV(content) {
-  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const rows = [];
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    const fields = [];
-    let field = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        if (inQuotes && line[i + 1] === '"') { field += '"'; i++; }
-        else { inQuotes = !inQuotes; }
-      } else if (ch === ',' && !inQuotes) {
-        fields.push(field.trim());
-        field = '';
-      } else {
-        field += ch;
-      }
+  let fields = [];
+  let field = '';
+  let inQuotes = false;
+  const text = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (inQuotes && text[i + 1] === '"') { field += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (ch === ',' && !inQuotes) {
+      fields.push(field.trim());
+      field = '';
+    } else if (ch === '\n' && !inQuotes) {
+      fields.push(field.trim());
+      if (fields.some(f => f !== '')) rows.push(fields);
+      fields = [];
+      field = '';
+    } else {
+      field += ch;
     }
-    fields.push(field.trim());
-    rows.push(fields);
   }
+  // last field / last line with no trailing newline
+  fields.push(field.trim());
+  if (fields.some(f => f !== '')) rows.push(fields);
   return rows;
 }
 
 function toRecords(rows) {
   if (rows.length < 2) return [];
-  const headers = rows[0].map(h => h.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''));
+  const headers = rows[0].map(h =>
+    h.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+  );
   return rows.slice(1).map(row => {
     const rec = {};
     headers.forEach((h, i) => { rec[h] = row[i] ?? ''; });
@@ -70,10 +80,11 @@ function toRecords(rows) {
   });
 }
 
-// ── Header aliases ──────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────────
 function pick(rec, ...aliases) {
   for (const a of aliases) {
-    const v = rec[a.toLowerCase().replace(/\s+/g, '_')];
+    const key = a.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const v = rec[key];
     if (v !== undefined && v !== '') return v;
   }
   return null;
@@ -96,18 +107,42 @@ function toDate(v) {
   return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
 }
 
+/** Normalise invoice numbers: 7 / 07 / 0007 / INV-0007 → INV-0007 */
+function normalizeInvNum(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (/^INV-/i.test(s)) return s.toUpperCase();
+  const n = parseInt(s);
+  return isNaN(n) ? s.toUpperCase() : `INV-${String(n).padStart(4, '0')}`;
+}
+
 // ── Importers ───────────────────────────────────────────────────────────────
 
 async function importCustomers(records) {
   console.log(`\nImporting ${records.length} customers…`);
   let ok = 0, skip = 0, err = 0;
   for (const r of records) {
-    const contactName = pick(r, 'contact_name', 'name', 'full_name', 'customer_name', 'contact');
-    const businessName = pick(r, 'business_name', 'company', 'company_name', 'business', 'organisation', 'organization');
+    // clients.csv: "Name" = business name, "First Name"+"Last Name" = contact
+    const businessName =
+      pick(r, 'name', 'business_name', 'company', 'company_name', 'organisation', 'organization');
+    const firstName = pick(r, 'first_name', 'firstname');
+    const lastName  = pick(r, 'last_name', 'lastname');
+    let contactName = pick(r, 'contact_name', 'full_name', 'customer_name', 'contact');
+    if (!contactName && (firstName || lastName)) {
+      contactName = [firstName, lastName].filter(Boolean).join(' ');
+    }
+    // If only one "name" field and no separate first/last, use it as contact too
+    if (!contactName) contactName = businessName;
+
     if (!contactName && !businessName) {
       console.warn('  SKIP (no name):', JSON.stringify(r));
       skip++; continue;
     }
+
+    // State/Province header normalises to "stateprovince" (slash stripped)
+    const state = pick(r, 'stateprovince', 'state_province', 'state', 'province', 'region');
+    const phone = pick(r, 'client_phone', 'phone', 'phone_number', 'telephone', 'mobile', 'cell');
+
     try {
       await pool.query(`
         INSERT INTO customers
@@ -116,21 +151,22 @@ async function importCustomers(records) {
            postal_code, country, notes)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       `, [
-        contactName || businessName,
-        businessName || null,
+        contactName,
+        businessName !== contactName ? businessName : null,
         pick(r, 'email', 'email_address') || null,
-        pick(r, 'phone', 'phone_number', 'telephone', 'mobile', 'cell') || null,
-        pick(r, 'address_line1', 'address1', 'address', 'street', 'street_address') || null,
+        phone || null,
+        pick(r, 'street', 'address_line1', 'address1', 'address', 'street_address') || null,
         pick(r, 'address_line2', 'address2', 'suite', 'apt', 'unit') || null,
         pick(r, 'city', 'town', 'suburb') || null,
-        pick(r, 'state_province', 'state', 'province', 'region') || null,
+        state || null,
         pick(r, 'postal_code', 'zip', 'zip_code', 'postcode') || null,
-        pick(r, 'country') || 'New Zealand',
+        pick(r, 'country') || 'USA',
         pick(r, 'notes', 'comments', 'additional_notes') || null,
       ]);
+      console.log(`  OK: ${businessName || contactName}`);
       ok++;
     } catch (e) {
-      console.error('  ERR:', e.message, '→', JSON.stringify(r));
+      console.error('  ERR:', e.message || e, '→', JSON.stringify(r));
       err++;
     }
   }
@@ -141,28 +177,31 @@ async function importProducts(records) {
   console.log(`\nImporting ${records.length} products…`);
   let ok = 0, skip = 0, err = 0;
   for (const r of records) {
-    const name = pick(r, 'name', 'product_name', 'item_name', 'product', 'title', 'item');
+    const name = pick(r, 'product', 'name', 'product_name', 'item_name', 'item', 'title');
     if (!name) { console.warn('  SKIP (no name):', JSON.stringify(r)); skip++; continue; }
-    const priceRaw = pick(r, 'unit_price', 'price', 'unit_cost', 'cost', 'amount', 'rate');
+    const priceRaw = pick(r, 'price', 'unit_price', 'unit_cost', 'cost', 'amount', 'rate');
     const price = toFloat(priceRaw) ?? 0;
     const activeRaw = pick(r, 'active', 'is_active', 'enabled', 'status');
     const active = activeRaw !== null ? (toBool(activeRaw) ?? true) : true;
+    const sku = pick(r, 'sku', 'item_code', 'product_code', 'code', 'part_number') || null;
     try {
-      await pool.query(`
-        INSERT INTO products (name, description, sku, unit_price, active)
-        VALUES ($1,$2,$3,$4,$5)
-        ON CONFLICT (sku) WHERE sku IS NOT NULL DO UPDATE
-          SET name = EXCLUDED.name,
-              description = EXCLUDED.description,
-              unit_price = EXCLUDED.unit_price,
-              active = EXCLUDED.active
-      `, [
-        name,
-        pick(r, 'description', 'desc', 'details', 'product_description') || null,
-        pick(r, 'sku', 'item_code', 'product_code', 'code', 'part_number') || null,
-        price,
-        active,
-      ]);
+      if (sku) {
+        await pool.query(`
+          INSERT INTO products (name, description, sku, unit_price, active)
+          VALUES ($1,$2,$3,$4,$5)
+          ON CONFLICT (sku) WHERE sku IS NOT NULL DO UPDATE
+            SET name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                unit_price = EXCLUDED.unit_price,
+                active = EXCLUDED.active
+        `, [name, pick(r, 'notes', 'description', 'desc', 'details') || null, sku, price, active]);
+      } else {
+        await pool.query(`
+          INSERT INTO products (name, description, sku, unit_price, active)
+          VALUES ($1,$2,$3,$4,$5)
+        `, [name, pick(r, 'notes', 'description', 'desc', 'details') || null, null, price, active]);
+      }
+      console.log(`  OK: ${name} @ $${price}`);
       ok++;
     } catch (e) {
       console.error('  ERR:', e.message, '→', JSON.stringify(r));
@@ -190,71 +229,69 @@ async function importInvoices(records) {
   };
 
   for (const r of records) {
-    const customerName = pick(r, 'customer_name', 'customer', 'client', 'client_name', 'bill_to', 'billed_to');
+    // invoices.csv: "Client Name", "Invoice Invoice Number", "Invoice Status" etc.
+    const customerName = pick(r, 'client_name', 'customer_name', 'customer', 'client', 'bill_to');
     const customerEmail = pick(r, 'customer_email', 'client_email');
     const customer = findCustomer(customerName, customerEmail);
 
-    const statusRaw = (pick(r, 'status', 'invoice_status') || 'draft').toLowerCase();
+    const rawNum = pick(r, 'invoice_invoice_number', 'invoice_number', 'invoice_no', 'inv_number', 'number');
+    const invNum = normalizeInvNum(rawNum);
+    if (!invNum) { console.warn('  SKIP (no invoice number):', JSON.stringify(r)); skip++; continue; }
+
+    const statusRaw = (pick(r, 'invoice_status', 'status') || 'draft').toLowerCase();
     const validStatuses = ['draft', 'sent', 'paid', 'cancelled'];
     const status = validStatuses.includes(statusRaw) ? statusRaw : 'draft';
 
-    const taxRateRaw = pick(r, 'tax_rate', 'tax', 'tax_percent', 'vat', 'gst', 'sales_tax');
-    let taxRate = toFloat(taxRateRaw);
-    // If stored as percentage (e.g. 7 instead of 0.07) convert it
-    if (taxRate !== null && taxRate > 1) taxRate = taxRate / 100;
-    taxRate = taxRate ?? 0.07;
+    // Tax rate: "Invoice Tax Rate 1" = 7.00 means 7% → store as 0.07
+    const taxRateRaw = toFloat(pick(r, 'invoice_tax_rate_1', 'tax_rate', 'tax', 'tax_percent', 'vat', 'gst'));
+    let taxRate = taxRateRaw ?? 0.07;
+    if (taxRate > 1) taxRate = taxRate / 100;
 
-    const taxExemptRaw = pick(r, 'tax_exempt', 'exempt', 'tax_free');
-    const taxExempt = toBool(taxExemptRaw) ?? false;
+    // Tax exempt when rate is 0
+    const taxExempt = taxRate === 0;
+    // If exempt, keep the default 7% rate so it shows correctly when toggled
+    if (taxExempt) taxRate = 0.07;
 
     const shipping = toFloat(pick(r, 'shipping', 'shipping_cost', 'freight', 'delivery')) ?? 0;
-    const dueDate = toDate(pick(r, 'due_date', 'due', 'payment_due', 'due_by'));
-    const notes = pick(r, 'notes', 'comments', 'memo', 'description') || null;
-
-    // Optional: override invoice number (if blank, DB sequence generates one)
-    const invoiceNumber = pick(r, 'invoice_number', 'invoice_no', 'inv_number', 'inv_no', 'number');
+    const dueDate = toDate(pick(r, 'invoice_due_date', 'due_date', 'due', 'payment_due', 'due_by'));
+    const invoiceDate = toDate(pick(r, 'invoice_date', 'date', 'created_date', 'invoice_created'));
+    const notes = pick(r, 'notes', 'comments', 'memo') || null;
 
     try {
-      let invNum = invoiceNumber;
-      if (!invNum) {
-        const seq = await pool.query(`SELECT nextval('sales_invoice_number_seq') as n`);
-        invNum = `INV-${String(seq.rows[0].n).padStart(4, '0')}`;
-      }
-
       const { rows: [inv] } = await pool.query(`
         INSERT INTO sales_invoices
           (invoice_number, customer_id, status, tax_rate, tax_exempt,
-           shipping_cost, notes, due_date)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+           shipping_cost, notes, due_date, created_at, updated_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,
+          COALESCE($9::date, CURRENT_TIMESTAMP),
+          COALESCE($9::date, CURRENT_TIMESTAMP))
         ON CONFLICT (invoice_number) DO NOTHING
         RETURNING id, invoice_number
-      `, [invNum, customer?.id || null, status, taxRate, taxExempt, shipping, notes, dueDate]);
+      `, [invNum, customer?.id || null, status, taxRate, taxExempt, shipping, notes, dueDate,
+          invoiceDate]);
 
       if (!inv) {
-        console.warn(`  SKIP (duplicate invoice_number ${invNum})`);
+        console.warn(`  SKIP (duplicate): ${invNum}`);
         skip++; continue;
       }
 
-      // Inline line item fields (single-line-item invoices)
-      const itemName = pick(r, 'item_name', 'product_name', 'item', 'product', 'description', 'service');
-      const itemQty = toFloat(pick(r, 'quantity', 'qty', 'units')) ?? 1;
-      const itemPrice = toFloat(pick(r, 'unit_price', 'price', 'rate', 'unit_cost', 'amount'));
-      const itemSku = pick(r, 'sku', 'item_code', 'product_code');
-
-      if (itemName && itemPrice !== null) {
-        await pool.query(`
-          INSERT INTO invoice_line_items (invoice_id, product_name, sku, quantity, unit_price)
-          VALUES ($1,$2,$3,$4,$5)
-        `, [inv.id, itemName, itemSku || null, itemQty, itemPrice]);
-      }
-
-      console.log(`  OK: ${inv.invoice_number}${customer ? ` → ${customer.contact_name}` : ''}`);
+      console.log(`  OK: ${invNum}${customer ? ` → ${customerName}` : ' (no customer match)'} [${status}]`);
       ok++;
     } catch (e) {
       console.error('  ERR:', e.message, '→', JSON.stringify(r));
       err++;
     }
   }
+
+  // Advance the sequence past the highest imported invoice number
+  await pool.query(`
+    SELECT setval('sales_invoice_number_seq',
+      GREATEST(
+        (SELECT COALESCE(MAX(CAST(SUBSTRING(invoice_number FROM 5) AS INTEGER)), 0) FROM sales_invoices),
+        nextval('sales_invoice_number_seq') - 1
+      )
+    )
+  `);
   console.log(`  Done: ${ok} inserted, ${skip} skipped, ${err} errors`);
 }
 
@@ -267,16 +304,19 @@ async function importLineItems(records) {
   const invMap = Object.fromEntries(invoices.map(i => [i.invoice_number.toUpperCase(), i.id]));
 
   for (const r of records) {
-    const invNum = (pick(r, 'invoice_number', 'invoice_no', 'inv_number', 'number') || '').toUpperCase();
-    const invoiceId = invMap[invNum];
+    const rawNum = pick(r, 'invoice_invoice_number', 'invoice_number', 'invoice_no', 'inv_number', 'number');
+    const invNum = normalizeInvNum(rawNum);
+    const invoiceId = invNum ? invMap[invNum] : null;
     if (!invoiceId) {
-      console.warn(`  SKIP (invoice not found: ${invNum})`);
+      console.warn(`  SKIP (invoice not found: ${rawNum} → ${invNum})`);
       skip++; continue;
     }
-    const itemName = pick(r, 'product_name', 'item_name', 'name', 'description', 'item', 'product');
-    if (!itemName) { console.warn('  SKIP (no product name)'); skip++; continue; }
 
-    const price = toFloat(pick(r, 'unit_price', 'price', 'rate', 'unit_cost', 'amount'));
+    // invoice_items.csv: "Item Product", "Item Quantity", "Item Cost", "Item Notes"
+    const itemName = pick(r, 'item_product', 'product_name', 'item_name', 'name', 'description', 'item', 'product');
+    if (!itemName) { console.warn('  SKIP (no product name):', JSON.stringify(r)); skip++; continue; }
+
+    const price = toFloat(pick(r, 'item_cost', 'unit_price', 'price', 'rate', 'cost', 'amount'));
     if (price === null) { console.warn(`  SKIP (no price for ${itemName})`); skip++; continue; }
 
     try {
@@ -288,10 +328,11 @@ async function importLineItems(records) {
         invoiceId,
         itemName,
         pick(r, 'sku', 'item_code', 'product_code') || null,
-        pick(r, 'details', 'description', 'notes') || null,
-        toFloat(pick(r, 'quantity', 'qty', 'units')) ?? 1,
+        pick(r, 'item_notes', 'details', 'description', 'notes') || null,
+        toFloat(pick(r, 'item_quantity', 'quantity', 'qty', 'units')) ?? 1,
         price,
       ]);
+      console.log(`  OK: ${invNum} — ${itemName}`);
       ok++;
     } catch (e) {
       console.error('  ERR:', e.message, '→', JSON.stringify(r));
