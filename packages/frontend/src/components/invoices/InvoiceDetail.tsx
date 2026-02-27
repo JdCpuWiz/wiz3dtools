@@ -96,7 +96,7 @@ export const InvoiceDetail: React.FC = () => {
   const cellInputClass = 'w-full px-2 py-1.5 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Header bar */}
       <div className="flex items-start gap-4 flex-wrap">
         <button onClick={() => navigate('/invoices')} className="text-sm text-iron-400 hover:text-iron-50 transition-colors pt-1">← Back</button>
@@ -228,8 +228,9 @@ export const InvoiceDetail: React.FC = () => {
 
               {showAddRow && (
                 <tr style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(230,138,0,0.05)' }}>
-                  {products.length > 0 && (
-                    <td className="px-3 py-2" colSpan={1}>
+                  {/* Product column: picker + name + SKU — all in one cell */}
+                  <td className="px-3 py-3 space-y-1.5">
+                    {products.length > 0 && (
                       <select
                         className={selectClass}
                         style={inputSt}
@@ -239,25 +240,38 @@ export const InvoiceDetail: React.FC = () => {
                         <option value="">— pick product —</option>
                         {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${p.unitPrice.toFixed(2)})</option>)}
                       </select>
-                    </td>
-                  )}
-                  <td className="px-3 py-2" colSpan={products.length > 0 ? 1 : 2}>
-                    <input value={newItem.productName} onChange={(e) => setNewItem((p) => ({ ...p, productName: e.target.value }))} className={cellInputClass} style={inputSt} placeholder="Product name" autoFocus />
+                    )}
+                    <input
+                      value={newItem.productName}
+                      onChange={(e) => setNewItem((p) => ({ ...p, productName: e.target.value }))}
+                      className={cellInputClass}
+                      style={inputSt}
+                      placeholder="Product name"
+                      autoFocus={products.length === 0}
+                    />
+                    {newItem.sku && <span className="block font-mono text-xs text-iron-500">{newItem.sku}</span>}
                   </td>
-                  <td className="px-3 py-2">
-                    <input value={newItem.details || ''} onChange={(e) => setNewItem((p) => ({ ...p, details: e.target.value }))} className={cellInputClass} style={inputSt} placeholder="Details" />
+                  <td className="px-3 py-3">
+                    <textarea
+                      value={newItem.details || ''}
+                      onChange={(e) => setNewItem((p) => ({ ...p, details: e.target.value }))}
+                      className={cellInputClass}
+                      style={inputSt}
+                      placeholder="Details"
+                      rows={3}
+                    />
                   </td>
-                  <td className="px-3 py-2">
-                    <input type="number" min={1} value={newItem.quantity} onChange={(e) => setNewItem((p) => ({ ...p, quantity: parseInt(e.target.value) || 1 }))} className={`${cellInputClass} w-14`} style={inputSt} />
+                  <td className="px-3 py-3">
+                    <input type="number" min={1} value={newItem.quantity} onChange={(e) => setNewItem((p) => ({ ...p, quantity: parseInt(e.target.value) || 1 }))} className={`${cellInputClass} w-16`} style={inputSt} />
                   </td>
-                  <td className="px-3 py-2">
-                    <input type="number" min={0} step={0.01} value={newItem.unitPrice} onChange={(e) => setNewItem((p) => ({ ...p, unitPrice: parseFloat(e.target.value) || 0 }))} className={`${cellInputClass} w-20`} style={inputSt} />
+                  <td className="px-3 py-3">
+                    <input type="number" min={0} step={0.01} value={newItem.unitPrice} onChange={(e) => setNewItem((p) => ({ ...p, unitPrice: parseFloat(e.target.value) || 0 }))} className={`${cellInputClass} w-24`} style={inputSt} />
                   </td>
-                  <td className="px-3 py-2 text-right font-medium" style={{ color: '#ff9900' }}>
+                  <td className="px-3 py-3 text-right font-medium" style={{ color: '#ff9900' }}>
                     ${(newItem.quantity * newItem.unitPrice).toFixed(2)}
                   </td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-1">
+                  <td className="px-3 py-3">
+                    <div className="flex flex-col gap-1">
                       <button onClick={handleAddItem} className="btn-primary btn-sm text-xs">Add</button>
                       <button onClick={() => setShowAddRow(false)} className="btn-secondary btn-sm text-xs">Cancel</button>
                     </div>
