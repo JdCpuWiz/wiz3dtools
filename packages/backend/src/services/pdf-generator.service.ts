@@ -161,20 +161,21 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     const tableY = billBoxTop + billBoxH + 18;
     // Columns — qty/price/subtotal shifted right 20pt for breathing room after details
     const colX = { product: M, details: M + 142, qty: M + 322, price: M + 392, subtotal: M + 472 };
-    // Right-aligned column widths (price/subtotal flush to right edge of their column)
-    const priceColW    = colX.subtotal - colX.price - 6;   // space between price start → subtotal start
-    const subtotalColW = R - colX.subtotal - 6;            // space from subtotal start → right margin
+    // Right-aligned column widths (qty/price/subtotal all flush to right of their column)
+    const qtyColW      = colX.price    - colX.qty      - 6;
+    const priceColW    = colX.subtotal - colX.price    - 6;
+    const subtotalColW = R             - colX.subtotal - 6;
 
     doc.fillColor(ORANGE).rect(M, tableY, CW, 22).fill();
     doc.fillColor('white').fontSize(8).font('Helvetica-Bold');
-    doc.text('PRODUCT',    colX.product + 4,  tableY + 7);
-    doc.text('DETAILS',    colX.details + 4,  tableY + 7);
-    doc.text('QTY',        colX.qty + 4,      tableY + 7);
-    doc.text('UNIT PRICE', colX.price,        tableY + 7, { align: 'right', width: priceColW    });
-    doc.text('SUBTOTAL',   colX.subtotal,     tableY + 7, { align: 'right', width: subtotalColW });
+    doc.text('PRODUCT',    colX.product + 4, tableY + 7);
+    doc.text('DETAILS',    colX.details + 4, tableY + 7);
+    doc.text('QTY',        colX.qty,         tableY + 7, { align: 'right', width: qtyColW      });
+    doc.text('UNIT PRICE', colX.price,       tableY + 7, { align: 'right', width: priceColW    });
+    doc.text('SUBTOTAL',   colX.subtotal,    tableY + 7, { align: 'right', width: subtotalColW });
 
     let rowY = tableY + 22;
-    doc.font('Helvetica').fontSize(7).fillColor(DARK);
+    doc.font('Helvetica').fontSize(8).fillColor(DARK);
 
     // Column content widths for wrapping / height measurement
     const COL_W = {
@@ -186,15 +187,15 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
 
     invoice.lineItems.forEach((item: InvoiceLineItem, idx: number) => {
       // ── Measure row height before drawing anything ────────────────────────
-      doc.fontSize(7);
+      doc.fontSize(8);
       const productH  = doc.heightOfString(item.productName, { width: COL_W.product });
       const detailsH  = item.details ? doc.heightOfString(item.details, { width: COL_W.details }) : 0;
 
       let skuH = 0;
       if (item.sku) {
-        doc.fontSize(6);
-        skuH = doc.heightOfString(item.sku, { width: COL_W.product }) + 3; // 3pt gap below product name
         doc.fontSize(7);
+        skuH = doc.heightOfString(item.sku, { width: COL_W.product }) + 3; // 3pt gap below product name
+        doc.fontSize(8);
       }
 
       const leftColH   = productH + skuH;
@@ -209,17 +210,17 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
 
       const itemSubtotal = item.quantity * item.unitPrice;
       const textTop = rowY + VPAD;
-      const clip1 = { lineBreak: false, ellipsis: true, height: 10 }; // single-line columns
+      const clip1 = { lineBreak: false, ellipsis: true, height: 12 }; // single-line columns
 
       // ── Product name (wraps freely) ───────────────────────────────────────
-      doc.fontSize(7);
+      doc.fontSize(8);
       doc.text(item.productName, colX.product + 4, textTop, { width: COL_W.product });
 
       // ── SKU (single line, below product name) ─────────────────────────────
       if (item.sku) {
-        doc.fillColor('#888888').fontSize(6)
-          .text(item.sku, colX.product + 4, textTop + productH + 3, { ...clip1, height: 9, width: COL_W.product });
-        doc.fillColor(DARK).fontSize(7);
+        doc.fillColor('#888888').fontSize(7)
+          .text(item.sku, colX.product + 4, textTop + productH + 3, { ...clip1, height: 10, width: COL_W.product });
+        doc.fillColor(DARK).fontSize(8);
       }
 
       // ── Details (wraps freely) ────────────────────────────────────────────
@@ -227,8 +228,8 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
         doc.text(item.details, colX.details + 4, textTop, { width: COL_W.details });
       }
 
-      // ── Numeric columns (single line) ─────────────────────────────────────
-      doc.text(String(item.quantity),          colX.qty + 4,  textTop, { ...clip1, width: COL_W.qty                              });
+      // ── Numeric columns (single line, all right-aligned) ──────────────────
+      doc.text(String(item.quantity),          colX.qty,      textTop, { ...clip1, width: qtyColW,      align: 'right' });
       doc.text(formatCurrency(item.unitPrice), colX.price,    textTop, { ...clip1, width: priceColW,    align: 'right' });
       doc.text(formatCurrency(itemSubtotal),   colX.subtotal, textTop, { ...clip1, width: subtotalColW, align: 'right' });
 
