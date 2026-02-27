@@ -159,27 +159,28 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
 
     // ── Line Items Table ───────────────────────────────────────────────────
     const tableY = billBoxTop + billBoxH + 18;
-    // Columns — product and details get the extra width from wider margins
-    const colX = { product: M, details: M + 142, qty: M + 302, price: M + 372, subtotal: M + 452 };
+    // Columns — qty/price/subtotal shifted right 20pt for breathing room after details
+    const colX = { product: M, details: M + 142, qty: M + 322, price: M + 392, subtotal: M + 472 };
+    // Right-aligned column widths (price/subtotal flush to right edge of their column)
+    const priceColW    = colX.subtotal - colX.price - 6;   // space between price start → subtotal start
+    const subtotalColW = R - colX.subtotal - 6;            // space from subtotal start → right margin
 
     doc.fillColor(ORANGE).rect(M, tableY, CW, 22).fill();
     doc.fillColor('white').fontSize(8).font('Helvetica-Bold');
-    doc.text('PRODUCT',    colX.product + 4,   tableY + 7);
-    doc.text('DETAILS',    colX.details + 4,   tableY + 7);
-    doc.text('QTY',        colX.qty + 4,       tableY + 7);
-    doc.text('UNIT PRICE', colX.price + 4,     tableY + 7);
-    doc.text('SUBTOTAL',   colX.subtotal + 4,  tableY + 7);
+    doc.text('PRODUCT',    colX.product + 4,  tableY + 7);
+    doc.text('DETAILS',    colX.details + 4,  tableY + 7);
+    doc.text('QTY',        colX.qty + 4,      tableY + 7);
+    doc.text('UNIT PRICE', colX.price,        tableY + 7, { align: 'right', width: priceColW    });
+    doc.text('SUBTOTAL',   colX.subtotal,     tableY + 7, { align: 'right', width: subtotalColW });
 
     let rowY = tableY + 22;
     doc.font('Helvetica').fontSize(7).fillColor(DARK);
 
-    // Column content widths (col start + 4pt left pad, right pad ~4pt)
+    // Column content widths for wrapping / height measurement
     const COL_W = {
-      product:  133,  // colX.details  - colX.product  - 8 (≈ M+142 - M - 9)
-      details:  155,  // colX.qty      - colX.details  - 9
-      qty:       65,
-      price:     75,
-      subtotal: 100,
+      product: 133,
+      details: colX.qty - colX.details - 10,  // widens as qty shifts right (~170pt)
+      qty:      62,
     };
     const VPAD = 10; // top & bottom padding inside each row
 
@@ -227,9 +228,9 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
       }
 
       // ── Numeric columns (single line) ─────────────────────────────────────
-      doc.text(String(item.quantity),          colX.qty + 4,      textTop, { ...clip1, width: COL_W.qty      });
-      doc.text(formatCurrency(item.unitPrice), colX.price + 4,    textTop, { ...clip1, width: COL_W.price    });
-      doc.text(formatCurrency(itemSubtotal),   colX.subtotal + 4, textTop, { ...clip1, width: COL_W.subtotal });
+      doc.text(String(item.quantity),          colX.qty + 4,  textTop, { ...clip1, width: COL_W.qty                              });
+      doc.text(formatCurrency(item.unitPrice), colX.price,    textTop, { ...clip1, width: priceColW,    align: 'right' });
+      doc.text(formatCurrency(itemSubtotal),   colX.subtotal, textTop, { ...clip1, width: subtotalColW, align: 'right' });
 
       // ── Row separator ─────────────────────────────────────────────────────
       doc.moveTo(M, rowY + rowHeight).lineTo(R, rowY + rowHeight).lineWidth(0.3).strokeColor(MID_GRAY).stroke();
