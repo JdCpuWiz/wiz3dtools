@@ -185,7 +185,19 @@ export const InvoiceDetail: React.FC = () => {
             </div>
           )}
           <div className="mt-3 pt-3 text-xs text-iron-400 space-y-0.5" style={{ borderTop: '1px solid #2d2d2d' }}>
-            <div className="flex justify-between"><span>Tax:</span><span>{invoice.taxExempt ? 'Exempt' : `${(invoice.taxRate * 100).toFixed(0)}%`}</span></div>
+            <div className="flex justify-between items-center">
+              <span>Tax:</span>
+              <div className="flex items-center gap-2">
+                <span>{invoice.taxExempt ? 'Exempt' : `${(invoice.taxRate * 100).toFixed(0)}%`}</span>
+                <button
+                  onClick={() => update(invoiceId, { taxExempt: !invoice.taxExempt })}
+                  className="px-1.5 py-0.5 rounded text-xs transition-colors"
+                  style={{ background: 'rgba(230,138,0,0.15)', color: '#ff9900' }}
+                >
+                  {invoice.taxExempt ? 'Remove exempt' : 'Set exempt'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

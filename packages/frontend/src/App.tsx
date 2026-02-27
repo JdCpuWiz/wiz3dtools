@@ -10,11 +10,62 @@ import { ProductForm } from './components/products/ProductForm';
 import { InvoiceList } from './components/invoices/InvoiceList';
 import { InvoiceForm } from './components/invoices/InvoiceForm';
 import { InvoiceDetail } from './components/invoices/InvoiceDetail';
+import { useQueue } from './hooks/useQueue';
 
 export type QueueFilter = 'all' | 'pending' | 'printing';
 
+const inputSt = { background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)', border: 'none', boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)' };
+
+function AddItemForm({ onClose }: { onClose: () => void }) {
+  const { create } = useQueue();
+  const [productName, setProductName] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [details, setDetails] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const handleSubmit = () => {
+    if (!productName.trim()) return;
+    create({ productName, quantity, details: details || undefined, notes: notes || undefined });
+    onClose();
+  };
+
+  const cellInput = 'w-full px-3 py-2 rounded-lg text-iron-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500';
+
+  return (
+    <div className="card space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-iron-50">Add Queue Item</h3>
+        <button onClick={onClose} className="text-iron-500 hover:text-iron-300 text-lg leading-none">×</button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium text-iron-100 mb-1">Product Name *</label>
+          <input value={productName} onChange={(e) => setProductName(e.target.value)} className={cellInput} style={inputSt} placeholder="e.g. Benchy, Phone Stand" autoFocus />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-iron-100 mb-1">Quantity</label>
+          <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value) || 1)} className={cellInput} style={inputSt} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-iron-100 mb-1">Details</label>
+          <input value={details} onChange={(e) => setDetails(e.target.value)} className={cellInput} style={inputSt} placeholder="Color, size, material…" />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium text-iron-100 mb-1">Notes</label>
+          <input value={notes} onChange={(e) => setNotes(e.target.value)} className={cellInput} style={inputSt} placeholder="Additional instructions…" />
+        </div>
+      </div>
+      <div className="flex justify-end gap-3">
+        <button onClick={onClose} className="btn-secondary btn-sm">Cancel</button>
+        <button onClick={handleSubmit} disabled={!productName.trim()} className="btn-primary btn-sm">Add to Queue</button>
+      </div>
+    </div>
+  );
+}
+
 function QueueView() {
   const [showUpload, setShowUpload] = useState(false);
+  const [showAddItem, setShowAddItem] = useState(false);
   const [queueFilter, setQueueFilter] = useState<QueueFilter>('all');
 
   if (showUpload) {
@@ -28,20 +79,28 @@ function QueueView() {
   return (
     <Layout onUploadClick={() => setShowUpload(true)}>
       <div className="space-y-6">
-        {/* Queue Filter Tabs */}
-        <div className="inline-flex p-1 rounded-xl" style={{ background: 'rgba(10,10,10,0.6)' }}>
-          {(['all', 'pending', 'printing'] as QueueFilter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setQueueFilter(f)}
-              className={`px-6 py-2 text-sm font-medium transition-all duration-200 ${
-                queueFilter === f ? 'nav-tab-active' : 'nav-tab-inactive'
-              }`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+        {/* Filter tabs + Add Item button */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="inline-flex p-1 rounded-xl" style={{ background: 'rgba(10,10,10,0.6)' }}>
+            {(['all', 'pending', 'printing'] as QueueFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setQueueFilter(f)}
+                className={`px-6 py-2 text-sm font-medium transition-all duration-200 ${
+                  queueFilter === f ? 'nav-tab-active' : 'nav-tab-inactive'
+                }`}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowAddItem((v) => !v)} className="btn-secondary btn-sm">
+            {showAddItem ? 'Cancel' : '+ Add Item'}
+          </button>
         </div>
+
+        {showAddItem && <AddItemForm onClose={() => setShowAddItem(false)} />}
+
         <QueueList filter={queueFilter} />
       </div>
     </Layout>

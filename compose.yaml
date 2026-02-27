@@ -28,6 +28,9 @@ services:
       - COMPANY_EMAIL=${COMPANY_EMAIL}
       - COMPANY_PHONE=${COMPANY_PHONE}
       - COMPANY_ADDRESS=${COMPANY_ADDRESS}
+      - COMPANY_WEBSITE=${COMPANY_WEBSITE}
+      - PAYMENT_PAYPAL=${PAYMENT_PAYPAL}
+      - PAYMENT_VENMO=${PAYMENT_VENMO}
     volumes:
       - ${UPLOADS_PATH:-./uploads}:/app/uploads
     networks:

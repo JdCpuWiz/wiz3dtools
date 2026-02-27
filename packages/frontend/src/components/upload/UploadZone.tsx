@@ -86,9 +86,12 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onClose }) => {
     return (
       <div className="space-y-6">
         <div className="card">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Review Extracted Products
-          </h2>
+          <div className="flex items-center gap-4 mb-4">
+            <button onClick={() => { handleReset(); onClose?.(); }} className="text-sm text-iron-400 hover:text-iron-50 transition-colors">← Back</button>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Review Extracted Products
+            </h2>
+          </div>
           <p className="text-base text-gray-600 dark:text-gray-400 mb-6">
             {extractedProducts.length} products extracted from {selectedFile?.name}
           </p>
@@ -173,9 +176,10 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onClose }) => {
   // Show upload zone
   return (
     <div className="card">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-        Upload Invoice
-      </h2>
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={() => onClose?.()} className="text-sm text-iron-400 hover:text-iron-50 transition-colors">← Back</button>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Upload Invoice</h2>
+      </div>
 
       <div
         onDragOver={handleDragOver}

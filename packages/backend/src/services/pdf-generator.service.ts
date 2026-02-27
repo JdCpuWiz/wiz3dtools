@@ -46,6 +46,9 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     const companyEmail = process.env.COMPANY_EMAIL || '';
     const companyPhone = process.env.COMPANY_PHONE || '';
     const companyAddress = process.env.COMPANY_ADDRESS || '';
+    const companyWebsite = process.env.COMPANY_WEBSITE || '';
+    const paymentPaypal = process.env.PAYMENT_PAYPAL || '';
+    const paymentVenmo = process.env.PAYMENT_VENMO || '';
 
     // ── Company Info Box (top-left, light grey) ────────────────────────────
     const LOGO_W = 50;
@@ -228,6 +231,25 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     doc.text(formatCurrency(total), valueX, tY + 6, { width: valueW, align: 'right' });
 
     rowY = totalsBoxTop + totalsBoxH + 12;
+
+    // ── Payment Info (light grey box) ──────────────────────────────────────
+    const paymentLines: string[] = [];
+    if (companyWebsite) paymentLines.push(`Website: ${companyWebsite}`);
+    if (paymentPaypal) paymentLines.push(`PayPal: ${paymentPaypal}`);
+    if (paymentVenmo) paymentLines.push(`Venmo: ${paymentVenmo}`);
+
+    if (paymentLines.length > 0) {
+      const payBoxH = BOX_PAD + 14 + paymentLines.length * 13 + BOX_PAD;
+      doc.roundedRect(50, rowY, 495, payBoxH, 6).fill(BOX_BG);
+      doc.fillColor(ORANGE).fontSize(9).font('Helvetica-Bold').text('PAYMENT', 62, rowY + BOX_PAD);
+      doc.fillColor(DARK).font('Helvetica').fontSize(9);
+      let pY = rowY + BOX_PAD + 14;
+      for (const line of paymentLines) {
+        doc.text(line, 62, pY, { width: 471 });
+        pY += 13;
+      }
+      rowY += payBoxH + 8;
+    }
 
     // ── Notes (light grey box) ─────────────────────────────────────────────
     if (invoice.notes) {

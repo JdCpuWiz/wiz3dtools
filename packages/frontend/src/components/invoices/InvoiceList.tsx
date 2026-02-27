@@ -1,17 +1,25 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSalesInvoices } from '../../hooks/useSalesInvoices';
 import { StatusBadge } from '../common/StatusBadge';
-import type { SalesInvoice } from '@wizqueue/shared';
+import type { SalesInvoice, SalesInvoiceStatus } from '@wizqueue/shared';
+
+type InvoiceFilter = 'all' | SalesInvoiceStatus;
 
 function calcTotal(invoice: SalesInvoice): number {
   const sub = invoice.lineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0);
-  return sub + (invoice.taxExempt ? 0 : sub * invoice.taxRate);
+  return sub + (invoice.taxExempt ? 0 : sub * invoice.taxRate) + (invoice.shippingCost || 0);
 }
 
 export const InvoiceList: React.FC = () => {
   const navigate = useNavigate();
   const { invoices, isLoading, delete: deleteInvoice } = useSalesInvoices();
+  const [filter, setFilter] = useState<InvoiceFilter>('all');
+
+  const filtered = useMemo(() =>
+    filter === 'all' ? invoices : invoices.filter((inv) => inv.status === filter),
+    [invoices, filter]
+  );
 
   if (isLoading) {
     return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" /></div>;
@@ -24,10 +32,22 @@ export const InvoiceList: React.FC = () => {
         <button onClick={() => navigate('/invoices/new')} className="btn-primary btn-sm">+ New Invoice</button>
       </div>
 
-      {invoices.length === 0 ? (
+      <div className="inline-flex p-1 rounded-xl" style={{ background: 'rgba(10,10,10,0.6)' }}>
+        {(['all', 'draft', 'sent', 'paid', 'cancelled'] as InvoiceFilter[]).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-4 py-1.5 text-sm font-medium transition-all duration-200 ${filter === f ? 'nav-tab-active' : 'nav-tab-inactive'}`}
+          >
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
         <div className="text-center py-16 card">
-          <p className="text-lg font-medium text-iron-50">No invoices yet</p>
-          <p className="text-sm mt-1 text-iron-400">Create your first invoice to get started</p>
+          <p className="text-lg font-medium text-iron-50">{filter === 'all' ? 'No invoices yet' : `No ${filter} invoices`}</p>
+          <p className="text-sm mt-1 text-iron-400">{filter === 'all' ? 'Create your first invoice to get started' : 'Try a different filter'}</p>
         </div>
       ) : (
         <div className="card-surface">
@@ -43,7 +63,7 @@ export const InvoiceList: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {invoices.map((invoice) => (
+              {filtered.map((invoice) => (
                 <tr
                   key={invoice.id}
                   className="cursor-pointer"
