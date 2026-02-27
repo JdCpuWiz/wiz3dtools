@@ -163,25 +163,26 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     doc.text('SUBTOTAL', colX.subtotal + 4, tableY + 6);
 
     let rowY = tableY + 22;
-    doc.font('Helvetica').fontSize(9).fillColor(DARK);
+    doc.font('Helvetica').fontSize(8).fillColor(DARK);
 
     invoice.lineItems.forEach((item: InvoiceLineItem, idx: number) => {
-      const rowHeight = item.sku ? 44 : 30;
+      const rowHeight = item.sku ? 50 : 36;
       if (idx % 2 === 0) {
         doc.fillColor(LIGHT_GRAY).rect(50, rowY, 495, rowHeight).fill();
       }
       doc.fillColor(DARK);
       const itemSubtotal = item.quantity * item.unitPrice;
-      const textTop = rowY + 10;
-      doc.text(item.productName, colX.product + 4, textTop, { width: 115, ellipsis: true });
+      const textTop = rowY + 12;
+      doc.fontSize(8);
+      doc.text(item.productName, colX.product + 4, textTop, { width: 115, ellipsis: true, lineBreak: false });
       if (item.sku) {
-        doc.fillColor('#888888').fontSize(8).text(item.sku, colX.product + 4, textTop + 13, { width: 115, ellipsis: true });
-        doc.fillColor(DARK).fontSize(9);
+        doc.fillColor('#888888').fontSize(7).text(item.sku, colX.product + 4, textTop + 13, { width: 115, ellipsis: true, lineBreak: false });
+        doc.fillColor(DARK).fontSize(8);
       }
-      doc.text(item.details || '', colX.details + 4, textTop, { width: 155, ellipsis: true });
-      doc.text(String(item.quantity), colX.qty + 4, textTop, { width: 55 });
-      doc.text(formatCurrency(item.unitPrice), colX.price + 4, textTop, { width: 75 });
-      doc.text(formatCurrency(itemSubtotal), colX.subtotal + 4, textTop, { width: 70 });
+      doc.text(item.details || '', colX.details + 4, textTop, { width: 155, ellipsis: true, lineBreak: false });
+      doc.text(String(item.quantity), colX.qty + 4, textTop, { width: 55, lineBreak: false });
+      doc.text(formatCurrency(item.unitPrice), colX.price + 4, textTop, { width: 75, lineBreak: false });
+      doc.text(formatCurrency(itemSubtotal), colX.subtotal + 4, textTop, { width: 70, lineBreak: false });
       // subtle row separator
       doc.moveTo(50, rowY + rowHeight).lineTo(545, rowY + rowHeight).lineWidth(0.3).strokeColor(MID_GRAY).stroke();
       rowY += rowHeight;
