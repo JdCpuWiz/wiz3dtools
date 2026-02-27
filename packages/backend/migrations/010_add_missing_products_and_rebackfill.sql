@@ -1,6 +1,6 @@
 -- Add products that appeared in imported line items but were missing from the catalog.
 -- Prices marked with unit_price = 0 should be corrected manually in the UI.
-INSERT INTO products (name, unit_price, is_active, created_at, updated_at)
+INSERT INTO products (name, unit_price, active, created_at, updated_at)
 VALUES
   ('Custom 3D Printed Phone Stand',        0.00,  true,  NOW(), NOW()),
   ('3D Printed Phone Stand - 4 color $17.50', 17.50, true,  NOW(), NOW()),
