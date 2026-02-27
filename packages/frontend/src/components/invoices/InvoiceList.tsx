@@ -78,7 +78,7 @@ export const InvoiceList: React.FC = () => {
                   <td><StatusBadge status={invoice.status} /></td>
                   <td className="text-right font-semibold text-iron-50">${calcTotal(invoice).toFixed(2)}</td>
                   <td className="text-iron-400 hidden md:table-cell">
-                    {new Date(invoice.createdAt).toLocaleDateString('en-NZ')}
+                    {new Date(invoice.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                   </td>
                   <td onClick={(e) => e.stopPropagation()}>
                     {invoice.status === 'draft' && (
