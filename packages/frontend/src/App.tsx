@@ -11,6 +11,7 @@ import { InvoiceList } from './components/invoices/InvoiceList';
 import { InvoiceForm } from './components/invoices/InvoiceForm';
 import { InvoiceDetail } from './components/invoices/InvoiceDetail';
 import { useQueue } from './hooks/useQueue';
+import { useProducts } from './hooks/useProducts';
 
 export type QueueFilter = 'all' | 'pending' | 'printing';
 
@@ -18,18 +19,29 @@ const inputSt = { background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)', bo
 
 function AddItemForm({ onClose }: { onClose: () => void }) {
   const { create } = useQueue();
+  const { products } = useProducts(true); // active only
   const [productName, setProductName] = useState('');
+  const [sku, setSku] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [details, setDetails] = useState('');
   const [notes, setNotes] = useState('');
 
+  const applyProduct = (productId: number) => {
+    const p = products.find((pr) => pr.id === productId);
+    if (!p) return;
+    setProductName(p.name);
+    setSku(p.sku || '');
+    setDetails(p.description || '');
+  };
+
   const handleSubmit = () => {
     if (!productName.trim()) return;
-    create({ productName, quantity, details: details || undefined, notes: notes || undefined });
+    create({ productName, sku: sku || undefined, quantity, details: details || undefined, notes: notes || undefined });
     onClose();
   };
 
   const cellInput = 'w-full px-3 py-2 rounded-lg text-iron-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500';
+  const selectSt = { background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)', border: 'none', boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)' };
 
   return (
     <div className="card space-y-4">
@@ -38,9 +50,26 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
         <button onClick={onClose} className="text-iron-500 hover:text-iron-300 text-lg leading-none">×</button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {products.length > 0 && (
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-iron-100 mb-1">Pick from Product Catalog</label>
+            <select
+              className={cellInput}
+              style={selectSt}
+              defaultValue=""
+              onChange={(e) => e.target.value && applyProduct(parseInt(e.target.value))}
+            >
+              <option value="">— select a product to auto-fill —</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}{p.sku ? ` (${p.sku})` : ''}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-iron-100 mb-1">Product Name *</label>
-          <input value={productName} onChange={(e) => setProductName(e.target.value)} className={cellInput} style={inputSt} placeholder="e.g. Benchy, Phone Stand" autoFocus />
+          <input value={productName} onChange={(e) => setProductName(e.target.value)} className={cellInput} style={inputSt} placeholder="e.g. Benchy, Phone Stand" autoFocus={products.length === 0} />
+          {sku && <span className="block font-mono text-xs text-iron-500 mt-1">{sku}</span>}
         </div>
         <div>
           <label className="block text-sm font-medium text-iron-100 mb-1">Quantity</label>

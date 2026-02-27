@@ -58,6 +58,7 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     if (companyEmail) companyInfoLines.push(companyEmail);
     if (companyPhone) companyInfoLines.push(companyPhone);
     if (companyAddress) companyInfoLines.push(companyAddress);
+    if (companyWebsite) companyInfoLines.push(companyWebsite);
 
     // Calculate box height from content
     const infoBlockH = 22 + companyInfoLines.length * 13; // name(22px) + info lines
@@ -234,7 +235,6 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
 
     // ── Payment Info (light grey box) ──────────────────────────────────────
     const paymentLines: string[] = [];
-    if (companyWebsite) paymentLines.push(`Website: ${companyWebsite}`);
     if (paymentPaypal) paymentLines.push(`PayPal: ${paymentPaypal}`);
     if (paymentVenmo) paymentLines.push(`Venmo: ${paymentVenmo}`);
 
