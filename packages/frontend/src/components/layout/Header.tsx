@@ -5,17 +5,18 @@ interface HeaderProps {
   onUploadClick?: () => void;
 }
 
-// Nav order: Customers → Products → Invoices → Queue
+// Nav order: Dashboard → Customers → Products → Invoices → Queue
 const navItems = [
+  { to: '/', label: 'Dashboard', exact: true },
   { to: '/customers', label: 'Customers', exact: false },
   { to: '/products', label: 'Products', exact: false },
   { to: '/invoices', label: 'Invoices', exact: false },
-  { to: '/', label: 'Queue', exact: true },
+  { to: '/queue', label: 'Queue', exact: false },
 ];
 
 export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
   const location = useLocation();
-  const isQueueView = location.pathname === '/';
+  const isQueueView = location.pathname === '/queue';
 
   return (
     <header

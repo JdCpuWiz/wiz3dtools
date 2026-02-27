@@ -11,7 +11,10 @@ interface QueueItemProps {
 
 export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const { delete: deleteItem, updateStatus } = useQueue();
+  const [partialQty, setPartialQty] = useState<number | null>(null);
+  const [editingQty, setEditingQty] = useState(false);
+  const [qtyValue, setQtyValue] = useState(item.quantity);
+  const { delete: deleteItem, updateStatus, update } = useQueue();
 
   const {
     attributes,
@@ -42,12 +45,38 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
   };
 
   const handleStatusChange = (newStatus: string) => {
-    // Auto-delete when status changes to completed
     if (newStatus === 'completed') {
-      deleteItem(item.id);
+      if (item.quantity > 1) {
+        setPartialQty(item.quantity);
+      } else {
+        deleteItem(item.id);
+      }
     } else {
       updateStatus({ id: item.id, status: newStatus });
     }
+  };
+
+  const handlePartialComplete = () => {
+    if (partialQty === null) return;
+    if (partialQty >= item.quantity) {
+      deleteItem(item.id);
+    } else if (partialQty > 0) {
+      update({ id: item.id, data: { quantity: item.quantity - partialQty } });
+    }
+    setPartialQty(null);
+  };
+
+  const handleQtySave = () => {
+    const val = Math.max(1, qtyValue);
+    if (val !== item.quantity) {
+      update({ id: item.id, data: { quantity: val } });
+    }
+    setEditingQty(false);
+  };
+
+  const handleQtyKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') handleQtySave();
+    if (e.key === 'Escape') { setQtyValue(item.quantity); setEditingQty(false); }
   };
 
   return (
@@ -94,13 +123,56 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
                 )}
               </div>
 
-              {/* Quantity Badge */}
+              {/* Quantity Badge — click to edit inline */}
               <div className="flex-shrink-0">
-                <span className="inline-flex items-center px-4 py-2 rounded-full text-base font-medium bg-[#2d2d2d] text-[#ff9900] border border-[#3a3a3a]">
-                  Qty: {item.quantity}
-                </span>
+                {editingQty ? (
+                  <div className="inline-flex items-center gap-1">
+                    <span className="text-sm text-[#9ca3af]">Qty:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={qtyValue}
+                      onChange={(e) => setQtyValue(Number(e.target.value))}
+                      onBlur={handleQtySave}
+                      onKeyDown={handleQtyKeyDown}
+                      autoFocus
+                      className="w-16 px-2 py-1 rounded text-sm font-medium bg-[#1a1a1a] text-[#ff9900] border border-[#e68a00] text-center focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setQtyValue(item.quantity); setEditingQty(true); }}
+                    title="Click to edit quantity"
+                    className="inline-flex items-center px-4 py-2 rounded-full text-base font-medium bg-[#2d2d2d] text-[#ff9900] border border-[#3a3a3a] hover:border-[#e68a00] transition-colors cursor-pointer"
+                  >
+                    Qty: {item.quantity}
+                  </button>
+                )}
               </div>
             </div>
+
+            {/* Partial complete UI */}
+            {partialQty !== null && (
+              <div className="mt-3 p-3 rounded-lg bg-[#1a1a1a] border border-[#3a3a3a] flex items-center gap-3 flex-wrap">
+                <span className="text-sm text-[#d1d5db]">Complete how many?</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={item.quantity}
+                  value={partialQty}
+                  onChange={(e) => setPartialQty(Number(e.target.value))}
+                  autoFocus
+                  className="w-16 px-2 py-1 rounded text-sm font-medium bg-[#2d2d2d] text-[#ff9900] border border-[#e68a00] text-center focus:outline-none"
+                />
+                <span className="text-sm text-[#9ca3af]">of {item.quantity}</span>
+                <button onClick={handlePartialComplete} className="btn-primary btn-sm">
+                  {partialQty >= item.quantity ? 'Complete All' : 'Confirm'}
+                </button>
+                <button onClick={() => setPartialQty(null)} className="btn-secondary btn-sm">
+                  Cancel
+                </button>
+              </div>
+            )}
 
             {/* Footer */}
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#2d2d2d]">

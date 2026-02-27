@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { QueueList } from './components/queue/QueueList';
 import { UploadZone } from './components/upload/UploadZone';
@@ -10,6 +10,7 @@ import { ProductForm } from './components/products/ProductForm';
 import { InvoiceList } from './components/invoices/InvoiceList';
 import { InvoiceForm } from './components/invoices/InvoiceForm';
 import { InvoiceDetail } from './components/invoices/InvoiceDetail';
+import { Dashboard } from './components/dashboard/Dashboard';
 import { useQueue } from './hooks/useQueue';
 import { useProducts } from './hooks/useProducts';
 
@@ -140,7 +141,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<QueueView />} />
+        <Route path="/" element={<Layout><Dashboard /></Layout>} />
+        <Route path="/queue" element={<QueueView />} />
         <Route path="/invoices" element={<Layout><InvoiceList /></Layout>} />
         <Route path="/invoices/new" element={<Layout><InvoiceForm /></Layout>} />
         <Route path="/invoices/:id" element={<Layout><InvoiceDetail /></Layout>} />
@@ -150,6 +152,7 @@ function App() {
         <Route path="/products" element={<Layout><ProductList /></Layout>} />
         <Route path="/products/new" element={<Layout><ProductForm /></Layout>} />
         <Route path="/products/:id" element={<Layout><ProductForm /></Layout>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
