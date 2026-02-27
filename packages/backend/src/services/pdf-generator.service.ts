@@ -102,10 +102,16 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     doc.fillColor(statusColors[invoice.status] || DARK).fontSize(10)
       .text(invoice.status.toUpperCase(), INV_X, COMPANY_BOX_TOP + 52, { align: 'right', width: INV_W });
 
+    // Date fields: right-align label column so colons line up, left-align value
+    const DATE_LABEL_W = 68;
+    const DATE_VAL_X = INV_X + DATE_LABEL_W + 4;
+    const DATE_VAL_W = INV_W - DATE_LABEL_W - 4;
     doc.fillColor(DARK).fontSize(9).font('Helvetica');
-    doc.text(`Issue Date: ${formatDate(invoice.createdAt)}`, INV_X, COMPANY_BOX_TOP + 70, { align: 'right', width: INV_W });
+    doc.text('Issue Date:', INV_X, COMPANY_BOX_TOP + 70, { width: DATE_LABEL_W, align: 'right' });
+    doc.text(formatDate(invoice.createdAt), DATE_VAL_X, COMPANY_BOX_TOP + 70, { width: DATE_VAL_W });
     if (invoice.dueDate) {
-      doc.text(`Due Date: ${formatDate(invoice.dueDate)}`, INV_X, COMPANY_BOX_TOP + 83, { align: 'right', width: INV_W });
+      doc.text('Due Date:', INV_X, COMPANY_BOX_TOP + 83, { width: DATE_LABEL_W, align: 'right' });
+      doc.text(formatDate(invoice.dueDate), DATE_VAL_X, COMPANY_BOX_TOP + 83, { width: DATE_VAL_W });
     }
 
     // ── Divider ────────────────────────────────────────────────────────────

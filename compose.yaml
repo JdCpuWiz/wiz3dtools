@@ -19,6 +19,15 @@ services:
       - OLLAMA_MODEL=${OLLAMA_MODEL:-minicpm-v:8b}
       - UPLOAD_DIR=/app/uploads
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10485760}
+      - SMTP_HOST=${SMTP_HOST:-smtp.mail.me.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
+      - COMPANY_NAME=${COMPANY_NAME:-Wiz3D Prints}
+      - COMPANY_EMAIL=${COMPANY_EMAIL}
+      - COMPANY_PHONE=${COMPANY_PHONE}
+      - COMPANY_ADDRESS=${COMPANY_ADDRESS}
     volumes:
       - uploads:/app/uploads
     networks:
