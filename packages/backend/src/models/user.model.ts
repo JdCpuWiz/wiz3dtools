@@ -46,4 +46,50 @@ export class UserModel {
     );
     return result.rows[0];
   }
+
+  static async findAll(): Promise<User[]> {
+    const result = await pool.query(
+      `SELECT ${SELECT_FIELDS} FROM users ORDER BY created_at ASC`,
+    );
+    return result.rows;
+  }
+
+  static async update(id: number, data: { email?: string | null; role?: string }): Promise<User | null> {
+    const fields: string[] = [];
+    const values: unknown[] = [];
+    let i = 1;
+
+    if (data.email !== undefined) {
+      fields.push(`email = $${i++}`);
+      values.push(data.email ?? null);
+    }
+    if (data.role !== undefined) {
+      fields.push(`role = $${i++}`);
+      values.push(data.role);
+    }
+
+    if (fields.length === 0) return this.findById(id);
+
+    fields.push(`updated_at = NOW()`);
+    values.push(id);
+
+    const result = await pool.query(
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${i} RETURNING ${SELECT_FIELDS}`,
+      values,
+    );
+    return result.rows[0] || null;
+  }
+
+  static async updatePassword(id: number, passwordHash: string): Promise<boolean> {
+    const result = await pool.query(
+      `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`,
+      [passwordHash, id],
+    );
+    return (result.rowCount || 0) > 0;
+  }
+
+  static async delete(id: number): Promise<boolean> {
+    const result = await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    return (result.rowCount || 0) > 0;
+  }
 }

@@ -11,6 +11,7 @@ import uploadRoutes from './routes/upload.routes.js';
 import customerRoutes from './routes/customer.routes.js';
 import salesInvoiceRoutes from './routes/sales-invoice.routes.js';
 import productRoutes from './routes/product.routes.js';
+import usersRoutes from './routes/users.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -65,6 +66,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/sales-invoices', salesInvoiceRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/users', usersRoutes);
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {

@@ -6,8 +6,7 @@ interface HeaderProps {
   onUploadClick?: () => void;
 }
 
-// Nav order: Dashboard → Customers → Products → Invoices → Queue
-const navItems = [
+const BASE_NAV_ITEMS = [
   { to: '/', label: 'Dashboard', exact: true },
   { to: '/customers', label: 'Customers', exact: false },
   { to: '/products', label: 'Products', exact: false },
@@ -19,6 +18,11 @@ export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  const navItems = [
+    ...BASE_NAV_ITEMS,
+    ...(user?.role === 'admin' ? [{ to: '/admin/users', label: 'Admin', exact: false }] : []),
+  ];
   const isQueueView = location.pathname === '/queue';
 
   const handleLogout = () => {

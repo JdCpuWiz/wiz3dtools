@@ -14,6 +14,7 @@ import { InvoiceList } from './components/invoices/InvoiceList';
 import { InvoiceForm } from './components/invoices/InvoiceForm';
 import { InvoiceDetail } from './components/invoices/InvoiceDetail';
 import { Dashboard } from './components/dashboard/Dashboard';
+import { UsersPage } from './components/admin/UsersPage';
 import { useQueue } from './hooks/useQueue';
 import { useProducts } from './hooks/useProducts';
 
@@ -157,6 +158,7 @@ function App() {
           <Route path="/products" element={<ProtectedRoute><Layout><ProductList /></Layout></ProtectedRoute>} />
           <Route path="/products/new" element={<ProtectedRoute><Layout><ProductForm /></Layout></ProtectedRoute>} />
           <Route path="/products/:id" element={<ProtectedRoute><Layout><ProductForm /></Layout></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute><Layout><UsersPage /></Layout></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

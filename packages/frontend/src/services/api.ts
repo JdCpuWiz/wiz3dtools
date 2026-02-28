@@ -18,6 +18,7 @@ import type {
   Product,
   CreateProductDto,
   UpdateProductDto,
+  User,
 } from '@wizqueue/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -278,5 +279,33 @@ export const productApi = {
     if (excludeId) params.set('excludeId', String(excludeId));
     const response = await api.get<ApiResponse<string>>(`/products/suggest-sku?${params.toString()}`);
     return response.data.data || '';
+  },
+};
+
+// Users API (admin only)
+export const userApi = {
+  getAll: async (): Promise<User[]> => {
+    const response = await api.get<ApiResponse<User[]>>('/users');
+    return response.data.data || [];
+  },
+
+  create: async (data: { username: string; password: string; email?: string; role?: string }): Promise<User> => {
+    const response = await api.post<ApiResponse<User>>('/users', data);
+    if (!response.data.data) throw new Error('Failed to create user');
+    return response.data.data;
+  },
+
+  update: async (id: number, data: { email?: string | null; role?: string }): Promise<User> => {
+    const response = await api.put<ApiResponse<User>>(`/users/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update user');
+    return response.data.data;
+  },
+
+  resetPassword: async (id: number, password: string): Promise<void> => {
+    await api.post(`/users/${id}/reset-password`, { password });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/users/${id}`);
   },
 };
