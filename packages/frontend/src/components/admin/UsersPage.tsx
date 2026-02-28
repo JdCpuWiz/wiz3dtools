@@ -192,7 +192,7 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
               className="text-iron-300 hover:text-iron-50 text-left group flex items-center gap-1"
             >
               <span>{user.email || <span className="text-iron-500 italic">—</span>}</span>
-              <svg className="w-3.5 h-3.5 text-iron-500 group-hover:text-iron-300 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-iron-500 group-hover:text-iron-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.536-6.536a2 2 0 112.829 2.829L11.828 15.828A2 2 0 0110 16.414V17h.586a2 2 0 001.414-.586l.536-.535" />
               </svg>
             </button>
