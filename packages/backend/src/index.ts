@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import { testConnection as testDbConnection } from './config/database.js';
 import { testOllamaConnection } from './config/ollama.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { requireAuth } from './middleware/auth.middleware.js';
+import authRoutes from './routes/auth.routes.js';
 import queueRoutes from './routes/queue.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import customerRoutes from './routes/customer.routes.js';
@@ -51,7 +53,13 @@ app.get('/health', async (_req: Request, res: Response) => {
   });
 });
 
-// API Routes
+// Auth routes (public — must be before requireAuth middleware)
+app.use('/api/auth', authRoutes);
+
+// Protect all subsequent /api/* routes
+app.use('/api', requireAuth);
+
+// Protected API Routes
 app.use('/api/queue', queueRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/customers', customerRoutes);

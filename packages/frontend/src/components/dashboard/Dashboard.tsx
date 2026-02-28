@@ -4,6 +4,7 @@ import { useQueue } from '../../hooks/useQueue';
 import { useSalesInvoices } from '../../hooks/useSalesInvoices';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useProducts } from '../../hooks/useProducts';
+import type { SalesInvoice } from '@wizqueue/shared';
 
 interface StatCardProps {
   title: string;
@@ -50,6 +51,15 @@ export const Dashboard: React.FC = () => {
   const sent = invoices.filter((i) => i.status === 'sent').length;
   const paid = invoices.filter((i) => i.status === 'paid').length;
   const cancelled = invoices.filter((i) => i.status === 'cancelled').length;
+
+  const calcTotal = (inv: SalesInvoice): number => {
+    const subtotal = inv.lineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0);
+    const taxAmount = inv.taxExempt ? 0 : subtotal * inv.taxRate;
+    return subtotal + taxAmount + (Number(inv.shippingCost) || 0);
+  };
+  const paidRevenue = invoices.filter((i) => i.status === 'paid').reduce((s, i) => s + calcTotal(i), 0);
+  const outstanding = invoices.filter((i) => i.status === 'sent').reduce((s, i) => s + calcTotal(i), 0);
+  const fmt = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
   const activeProducts = products.filter((p) => p.active).length;
 
@@ -104,6 +114,22 @@ export const Dashboard: React.FC = () => {
           </div>
           {invoices.length === 0 && (
             <p className="text-sm text-[#6b7280] mt-2">No invoices yet</p>
+          )}
+          {(paidRevenue > 0 || outstanding > 0) && (
+            <div className="mt-3 pt-3 border-t border-[#2d2d2d] space-y-1">
+              {paidRevenue > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#9ca3af]">Paid Revenue</span>
+                  <span className="text-sm font-semibold" style={{ color: '#86efac' }}>{fmt(paidRevenue)}</span>
+                </div>
+              )}
+              {outstanding > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#9ca3af]">Outstanding</span>
+                  <span className="text-sm font-semibold" style={{ color: '#93c5fd' }}>{fmt(outstanding)}</span>
+                </div>
+              )}
+            </div>
           )}
         </StatCard>
 

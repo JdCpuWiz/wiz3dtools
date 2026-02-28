@@ -31,6 +31,7 @@ services:
       - COMPANY_WEBSITE=${COMPANY_WEBSITE}
       - PAYMENT_PAYPAL=${PAYMENT_PAYPAL}
       - PAYMENT_VENMO=${PAYMENT_VENMO}
+      - JWT_SECRET=${JWT_SECRET}
     volumes:
       - ${UPLOADS_PATH:-./uploads}:/app/uploads
     networks:

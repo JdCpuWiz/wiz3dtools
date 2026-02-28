@@ -32,9 +32,18 @@ export const api = axios.create({
   timeout: 120000, // 2 minute timeout for file uploads
 });
 
-// Log all requests for debugging
+// Log all requests for debugging; attach JWT if present
 api.interceptors.request.use((config) => {
   console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+  const raw = localStorage.getItem('wiz3d_auth');
+  if (raw) {
+    try {
+      const { token } = JSON.parse(raw);
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+    } catch {
+      // ignore
+    }
+  }
   return config;
 });
 
@@ -47,6 +56,12 @@ api.interceptors.response.use(
     console.error(`❌ API Error: ${error.config?.url}`, error.message);
     if (error.response) {
       console.error('Response data:', error.response.data);
+      if (error.response.status === 401) {
+        localStorage.removeItem('wiz3d_auth');
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login';
+        }
+      }
     }
     return Promise.reject(error);
   }

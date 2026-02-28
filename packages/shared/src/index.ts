@@ -45,3 +45,11 @@ export type {
   UpdateSalesInvoiceDto,
   CreateLineItemDto,
 } from './types/sales-invoice';
+
+// Auth types
+export type {
+  User,
+  LoginDto,
+  RegisterDto,
+  AuthResponse,
+} from './types/auth';

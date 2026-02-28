@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { LoginPage } from './components/auth/LoginPage';
 import { Layout } from './components/layout/Layout';
 import { QueueList } from './components/queue/QueueList';
 import { UploadZone } from './components/upload/UploadZone';
@@ -140,20 +143,23 @@ function QueueView() {
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout><Dashboard /></Layout>} />
-        <Route path="/queue" element={<QueueView />} />
-        <Route path="/invoices" element={<Layout><InvoiceList /></Layout>} />
-        <Route path="/invoices/new" element={<Layout><InvoiceForm /></Layout>} />
-        <Route path="/invoices/:id" element={<Layout><InvoiceDetail /></Layout>} />
-        <Route path="/customers" element={<Layout><CustomerList /></Layout>} />
-        <Route path="/customers/new" element={<Layout><CustomerForm /></Layout>} />
-        <Route path="/customers/:id" element={<Layout><CustomerForm /></Layout>} />
-        <Route path="/products" element={<Layout><ProductList /></Layout>} />
-        <Route path="/products/new" element={<Layout><ProductForm /></Layout>} />
-        <Route path="/products/:id" element={<Layout><ProductForm /></Layout>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+          <Route path="/queue" element={<ProtectedRoute><QueueView /></ProtectedRoute>} />
+          <Route path="/invoices" element={<ProtectedRoute><Layout><InvoiceList /></Layout></ProtectedRoute>} />
+          <Route path="/invoices/new" element={<ProtectedRoute><Layout><InvoiceForm /></Layout></ProtectedRoute>} />
+          <Route path="/invoices/:id" element={<ProtectedRoute><Layout><InvoiceDetail /></Layout></ProtectedRoute>} />
+          <Route path="/customers" element={<ProtectedRoute><Layout><CustomerList /></Layout></ProtectedRoute>} />
+          <Route path="/customers/new" element={<ProtectedRoute><Layout><CustomerForm /></Layout></ProtectedRoute>} />
+          <Route path="/customers/:id" element={<ProtectedRoute><Layout><CustomerForm /></Layout></ProtectedRoute>} />
+          <Route path="/products" element={<ProtectedRoute><Layout><ProductList /></Layout></ProtectedRoute>} />
+          <Route path="/products/new" element={<ProtectedRoute><Layout><ProductForm /></Layout></ProtectedRoute>} />
+          <Route path="/products/:id" element={<ProtectedRoute><Layout><ProductForm /></Layout></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

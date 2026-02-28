@@ -1,5 +1,6 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 interface HeaderProps {
   onUploadClick?: () => void;
@@ -16,7 +17,14 @@ const navItems = [
 
 export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const isQueueView = location.pathname === '/queue';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <header
@@ -75,6 +83,12 @@ export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
               >
                 Upload Invoice
               </button>
+            )}
+            {user && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[#9ca3af] hidden sm:inline">{user.username}</span>
+                <button onClick={handleLogout} className="btn-secondary btn-sm">Sign Out</button>
+              </div>
             )}
           </div>
         </div>
