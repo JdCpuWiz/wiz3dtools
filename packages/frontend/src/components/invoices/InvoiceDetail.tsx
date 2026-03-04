@@ -111,14 +111,26 @@ export const InvoiceDetail: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <a
-            href={salesInvoiceApi.downloadPdf(invoiceId)}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            onClick={async () => {
+              const raw = localStorage.getItem('wiz3d_auth');
+              const token = raw ? JSON.parse(raw).token : null;
+              const res = await fetch(salesInvoiceApi.downloadPdf(invoiceId), {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+              });
+              if (!res.ok) return;
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `invoice-${invoiceId}.pdf`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
             className="btn-secondary btn-sm text-sm"
           >
             Download PDF
-          </a>
+          </button>
           <button
             onClick={() => sendToQueue(invoiceId)}
             className="btn-sm text-sm font-medium px-3 py-1.5 rounded-lg transition-all"
