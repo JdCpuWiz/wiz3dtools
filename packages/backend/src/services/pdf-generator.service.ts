@@ -185,6 +185,21 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     };
     const VPAD = 10; // top & bottom padding inside each row
 
+    const PAGE_H = 841.89;
+    const SAFE_BOTTOM = PAGE_H - M - 18; // leave 18pt bottom margin
+
+    const drawTableHeader = (y: number) => {
+      doc.fillColor(ORANGE).rect(M, y, CW, 22).fill();
+      doc.fillColor('white').fontSize(8).font('Helvetica-Bold');
+      doc.text('PRODUCT',    colX.product + 4, y + 7);
+      doc.text('DETAILS',    colX.details + 4, y + 7);
+      doc.text('QTY',        colX.qty,         y + 7, { align: 'right', width: qtyColW      });
+      doc.text('UNIT PRICE', colX.price,       y + 7, { align: 'right', width: priceColW    });
+      doc.text('SUBTOTAL',   colX.subtotal,    y + 7, { align: 'right', width: subtotalColW });
+      doc.font('Helvetica').fontSize(8).fillColor(DARK);
+    };
+
+    let rowIdx = 0; // separate from forEach idx so it resets visually per-page
     invoice.lineItems.forEach((item: InvoiceLineItem, idx: number) => {
       // ── Measure row height before drawing anything ────────────────────────
       doc.fontSize(8);
@@ -202,8 +217,17 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
       const rowContent = Math.max(leftColH, detailsH, 12); // minimum 12pt content
       const rowHeight  = Math.ceil(rowContent) + VPAD * 2;
 
+      // ── Page break if row won't fit ───────────────────────────────────────
+      if (rowY + rowHeight > SAFE_BOTTOM) {
+        doc.addPage();
+        rowY = M;
+        drawTableHeader(rowY);
+        rowY += 22;
+        rowIdx = 0;
+      }
+
       // ── Draw row background ───────────────────────────────────────────────
-      if (idx % 2 === 0) {
+      if (rowIdx % 2 === 0) {
         doc.fillColor(LIGHT_GRAY).rect(M, rowY, CW, rowHeight).fill();
       }
       doc.fillColor(DARK);
@@ -236,6 +260,7 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
       // ── Row separator ─────────────────────────────────────────────────────
       doc.moveTo(M, rowY + rowHeight).lineTo(R, rowY + rowHeight).lineWidth(0.3).strokeColor(MID_GRAY).stroke();
       rowY += rowHeight;
+      rowIdx++;
     });
 
     doc.moveTo(M, rowY).lineTo(R, rowY).lineWidth(0.5).strokeColor(MID_GRAY).stroke();
@@ -246,6 +271,12 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     let totalsRows = 1; // subtotal
     if (shippingCost > 0) totalsRows++;
     totalsRows++; // tax or exempt
+
+    const totalsBoxH_est = BOX_PAD + totalsRows * 18 + 6 + 26 + BOX_PAD;
+    if (rowY + 10 + totalsBoxH_est > SAFE_BOTTOM) {
+      doc.addPage();
+      rowY = M;
+    }
 
     const totalsBoxTop = rowY + 10;
     const totalsBoxW = 220;
