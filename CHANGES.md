@@ -63,6 +63,10 @@ Running log of completed work and what's still planned.
   - Date labels right-aligned so colons line up; date values left-aligned beside them
 - **Docker fix** — `compose.yaml` was missing `COMPANY_*` and `SMTP_*` env var forwards; company details were silently blank in all Docker deployments
 
+### Session 6 — PDF download auth fix + page overflow fix
+- **PDF download auth** — changed `<a href>` link to `fetch()` with `Authorization: Bearer` header + blob download; plain links can't send JWT tokens
+- **PDF page overflow** — invoices with many line items were producing ~15 mostly-blank pages (one element per page); added page break detection in line items loop, re-draws table header on continuation pages, added overflow check before totals section
+
 ---
 
 ## Outstanding / Planned
