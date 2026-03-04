@@ -200,7 +200,7 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     };
 
     let rowIdx = 0; // separate from forEach idx so it resets visually per-page
-    invoice.lineItems.forEach((item: InvoiceLineItem, idx: number) => {
+    invoice.lineItems.forEach((item: InvoiceLineItem) => {
       // ── Measure row height before drawing anything ────────────────────────
       doc.fontSize(8);
       const productH  = doc.heightOfString(item.productName, { width: COL_W.product });
