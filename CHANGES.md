@@ -67,6 +67,14 @@ Running log of completed work and what's still planned.
 - **PDF download auth** — changed `<a href>` link to `fetch()` with `Authorization: Bearer` header + blob download; plain links can't send JWT tokens
 - **PDF page overflow** — invoices with many line items were producing ~15 mostly-blank pages (one element per page); added page break detection in line items loop, re-draws table header on continuation pages, added overflow check before totals section
 
+### Session 7 — Queue status counters, completed tracking, filter UX overhaul
+- **Status counter card** — Printing / Pending / Completed / In Queue counts displayed in a shaded card at top of queue screen; numbers in status colours (amber/blue/green/white)
+- **Counter boxes as filter tabs** — clicking any counter box filters the queue list to that status; active box shows orange underline + highlight; replaces the old All/Pending/Printing tab strip
+- **Completed items tracked in DB** — marking an item complete now sets `status='completed'` instead of deleting the row; fixes qty=1 complete doing nothing and partial complete deleting the row
+- **Completed filter** — new "Completed" view shows all historically completed items
+- **All view sorting** — printing items bubble to the top of the active queue; rest in position order
+- **Header cleanup** — removed redundant "Print Queue (N items)" heading; drag-and-drop hint moved inline; counters left → Add Item → hint
+
 ---
 
 ## Outstanding / Planned
@@ -74,7 +82,6 @@ Running log of completed work and what's still planned.
 ### Queue improvements
 - [ ] **Include product SKU on invoicing screen** — show SKU on invoice line items, queue cards, and printed PDF
 - [ ] **Add single item to queue manually** — button/form to add one item without an invoice
-- [ ] **Partial complete** — for items with qty > 1, mark a portion as done (e.g. 3 of 5 printed)
 - [ ] **Manually edit queue item qty** — change the quantity on an existing queue item
 - [ ] **Upload screen back navigation** — a way to return to queue without closing the upload modal
 - [ ] **Ability to change the tax exemption status on an invoice** — toggleable on existing invoices

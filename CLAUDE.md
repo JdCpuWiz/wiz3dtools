@@ -208,7 +208,7 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 | Path | Component | Notes |
 |---|---|---|
 | `/` | `Dashboard` | Revenue stats, queue summary, customer/product counts |
-| `/queue` | `QueueView` (inline in App.tsx) | Queue with All/Pending/Printing filter tabs |
+| `/queue` | `QueueView` (inline in App.tsx) | Queue with counter boxes as filter tabs (Printing/Pending/Completed/In Queue) |
 | `/customers` | `CustomerList` | |
 | `/customers/new` | `CustomerForm` | |
 | `/customers/:id` | `CustomerForm` | Edit mode |
@@ -254,8 +254,8 @@ components/
   dashboard/
     Dashboard.tsx       Stat cards: queue, invoices (revenue), customers, products
   queue/
-    QueueList.tsx
-    QueueItem.tsx
+    QueueList.tsx       Filter: 'all' shows pending+printing (printing sorted first); 'completed' shows history
+    QueueItem.tsx       Completing an item sets status='completed' (keeps row in DB); never deletes on complete
     QueueItemEdit.tsx
   upload/
     UploadZone.tsx
