@@ -139,13 +139,22 @@ function QueueView() {
           <button onClick={() => setShowAddItem((v) => !v)} className="btn-secondary btn-sm">
             {showAddItem ? 'Cancel' : '+ Add Item'}
           </button>
-          <div className="flex items-center gap-4 ml-2 text-sm" style={{ color: '#9ca3af' }}>
-            <span><span style={{ color: '#f59e0b' }} className="font-semibold">{counts.printing}</span> printing</span>
-            <span><span style={{ color: '#60a5fa' }} className="font-semibold">{counts.pending}</span> pending</span>
-            <span><span style={{ color: '#4ade80' }} className="font-semibold">{counts.completed}</span> completed</span>
-            <span className="pl-3" style={{ borderLeft: '1px solid #374151' }}>
-              <span style={{ color: '#e5e5e5' }} className="font-semibold">{counts.total}</span> total in queue
-            </span>
+          <div className="card ml-2 py-2 px-4 flex items-stretch gap-0" style={{ background: 'linear-gradient(to bottom, #3a3a3a, #2d2d2d)' }}>
+            {[
+              { label: 'Printing', value: counts.printing, color: '#f59e0b' },
+              { label: 'Pending',  value: counts.pending,  color: '#60a5fa' },
+              { label: 'Completed',value: counts.completed,color: '#4ade80' },
+              { label: 'In Queue', value: counts.total,    color: '#e5e5e5' },
+            ].map((s, i, arr) => (
+              <div
+                key={s.label}
+                className="flex flex-col items-center justify-center px-5"
+                style={i < arr.length - 1 ? { borderRight: '1px solid #4a4a4a' } : undefined}
+              >
+                <span className="text-xs font-medium uppercase tracking-wide" style={{ color: '#e5e5e5' }}>{s.label}</span>
+                <span className="text-2xl font-bold mt-0.5" style={{ color: s.color }}>{s.value}</span>
+              </div>
+            ))}
           </div>
         </div>
 
