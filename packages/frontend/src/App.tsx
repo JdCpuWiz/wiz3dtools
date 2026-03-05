@@ -121,12 +121,8 @@ function QueueView() {
   return (
     <Layout onUploadClick={() => setShowUpload(true)}>
       <div className="space-y-6">
-        {/* Add Item button + counter/filter boxes */}
+        {/* Counter/filter boxes + Add Item button + hint */}
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={() => setShowAddItem((v) => !v)} className="btn-secondary btn-sm">
-            {showAddItem ? 'Cancel' : '+ Add Item'}
-          </button>
-          <span className="text-sm" style={{ color: '#6b7280' }}>Drag and drop to reorder</span>
           <div className="card py-0 px-0 flex items-stretch overflow-hidden" style={{ background: 'linear-gradient(to bottom, #3a3a3a, #2d2d2d)' }}>
             {([
               { label: 'Printing', value: counts.printing, color: '#f59e0b', filter: 'printing' as QueueFilter },
@@ -149,6 +145,10 @@ function QueueView() {
               </button>
             ))}
           </div>
+          <button onClick={() => setShowAddItem((v) => !v)} className="btn-secondary btn-sm">
+            {showAddItem ? 'Cancel' : '+ Add Item'}
+          </button>
+          <span className="text-sm" style={{ color: '#6b7280' }}>Drag and drop to reorder</span>
         </div>
 
         {showAddItem && <AddItemForm onClose={() => setShowAddItem(false)} />}

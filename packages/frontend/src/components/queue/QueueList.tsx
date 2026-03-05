@@ -26,7 +26,10 @@ export const QueueList: React.FC<QueueListProps> = ({ filter }) => {
 
   // Filter items based on selected tab
   const filteredItems = useMemo(() => {
-    if (filter === 'all') return items.filter(i => i.status !== 'completed' && i.status !== 'cancelled');
+    if (filter === 'all') {
+      const active = items.filter(i => i.status !== 'completed' && i.status !== 'cancelled');
+      return [...active].sort((a, b) => (a.status === 'printing' ? -1 : b.status === 'printing' ? 1 : 0));
+    }
     return items.filter(item => item.status === filter);
   }, [items, filter]);
 
