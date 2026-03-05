@@ -18,7 +18,7 @@ import { UsersPage } from './components/admin/UsersPage';
 import { useQueue } from './hooks/useQueue';
 import { useProducts } from './hooks/useProducts';
 
-export type QueueFilter = 'all' | 'pending' | 'printing';
+export type QueueFilter = 'all' | 'pending' | 'printing' | 'completed';
 
 const inputSt = { background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)', border: 'none', boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)' };
 
@@ -121,39 +121,32 @@ function QueueView() {
   return (
     <Layout onUploadClick={() => setShowUpload(true)}>
       <div className="space-y-6">
-        {/* Filter tabs + Add Item button */}
+        {/* Add Item button + counter/filter boxes */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="inline-flex p-1 rounded-xl" style={{ background: 'rgba(10,10,10,0.6)' }}>
-            {(['all', 'pending', 'printing'] as QueueFilter[]).map((f) => (
-              <button
-                key={f}
-                onClick={() => setQueueFilter(f)}
-                className={`px-6 py-2 text-sm font-medium transition-all duration-200 ${
-                  queueFilter === f ? 'nav-tab-active' : 'nav-tab-inactive'
-                }`}
-              >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
           <button onClick={() => setShowAddItem((v) => !v)} className="btn-secondary btn-sm">
             {showAddItem ? 'Cancel' : '+ Add Item'}
           </button>
-          <div className="card ml-2 py-2 px-4 flex items-stretch gap-0" style={{ background: 'linear-gradient(to bottom, #3a3a3a, #2d2d2d)' }}>
-            {[
-              { label: 'Printing', value: counts.printing, color: '#f59e0b' },
-              { label: 'Pending',  value: counts.pending,  color: '#60a5fa' },
-              { label: 'Completed',value: counts.completed,color: '#4ade80' },
-              { label: 'In Queue', value: counts.total,    color: '#e5e5e5' },
-            ].map((s, i, arr) => (
-              <div
+          <span className="text-sm" style={{ color: '#6b7280' }}>Drag and drop to reorder</span>
+          <div className="card py-0 px-0 flex items-stretch overflow-hidden" style={{ background: 'linear-gradient(to bottom, #3a3a3a, #2d2d2d)' }}>
+            {([
+              { label: 'Printing', value: counts.printing, color: '#f59e0b', filter: 'printing' as QueueFilter },
+              { label: 'Pending',  value: counts.pending,  color: '#60a5fa', filter: 'pending'  as QueueFilter },
+              { label: 'Completed',value: counts.completed,color: '#4ade80', filter: 'completed' as QueueFilter },
+              { label: 'In Queue', value: counts.total,    color: '#e5e5e5', filter: 'all'      as QueueFilter },
+            ]).map((s, i, arr) => (
+              <button
                 key={s.label}
-                className="flex flex-col items-center justify-center px-5"
-                style={i < arr.length - 1 ? { borderRight: '1px solid #4a4a4a' } : undefined}
+                onClick={() => setQueueFilter(s.filter)}
+                className="flex flex-col items-center justify-center px-6 py-2 transition-colors duration-150 cursor-pointer"
+                style={{
+                  borderRight: i < arr.length - 1 ? '1px solid #4a4a4a' : undefined,
+                  background: queueFilter === s.filter ? 'rgba(255,153,0,0.12)' : undefined,
+                  boxShadow: queueFilter === s.filter ? 'inset 0 -2px 0 #ff9900' : undefined,
+                }}
               >
                 <span className="text-xs font-medium uppercase tracking-wide" style={{ color: '#e5e5e5' }}>{s.label}</span>
                 <span className="text-2xl font-bold mt-0.5" style={{ color: s.color }}>{s.value}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>

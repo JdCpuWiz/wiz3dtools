@@ -26,7 +26,7 @@ export const QueueList: React.FC<QueueListProps> = ({ filter }) => {
 
   // Filter items based on selected tab
   const filteredItems = useMemo(() => {
-    if (filter === 'all') return items;
+    if (filter === 'all') return items.filter(i => i.status !== 'completed' && i.status !== 'cancelled');
     return items.filter(item => item.status === filter);
   }, [items, filter]);
 
@@ -142,15 +142,6 @@ export const QueueList: React.FC<QueueListProps> = ({ filter }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
-          {filter === 'all' ? 'Print Queue' : filter.charAt(0).toUpperCase() + filter.slice(1)} ({filteredItems.length} items)
-        </h2>
-        <p className="text-base text-gray-500 dark:text-gray-400">
-          Drag and drop to reorder
-        </p>
-      </div>
-
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

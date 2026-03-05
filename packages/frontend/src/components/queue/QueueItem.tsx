@@ -49,7 +49,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
       if (item.quantity > 1) {
         setPartialQty(item.quantity);
       } else {
-        deleteItem(item.id);
+        updateStatus({ id: item.id, status: 'completed' });
       }
     } else {
       updateStatus({ id: item.id, status: newStatus });
@@ -59,7 +59,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
   const handlePartialComplete = () => {
     if (partialQty === null) return;
     if (partialQty >= item.quantity) {
-      deleteItem(item.id);
+      updateStatus({ id: item.id, status: 'completed' });
     } else if (partialQty > 0) {
       update({ id: item.id, data: { quantity: item.quantity - partialQty } });
     }
