@@ -101,6 +101,14 @@ function QueueView() {
   const [showUpload, setShowUpload] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
   const [queueFilter, setQueueFilter] = useState<QueueFilter>('all');
+  const { items } = useQueue();
+
+  const counts = {
+    pending: items.filter((i) => i.status === 'pending').length,
+    printing: items.filter((i) => i.status === 'printing').length,
+    completed: items.filter((i) => i.status === 'completed').length,
+    total: items.filter((i) => i.status !== 'completed' && i.status !== 'cancelled').length,
+  };
 
   if (showUpload) {
     return (
@@ -131,6 +139,14 @@ function QueueView() {
           <button onClick={() => setShowAddItem((v) => !v)} className="btn-secondary btn-sm">
             {showAddItem ? 'Cancel' : '+ Add Item'}
           </button>
+          <div className="flex items-center gap-4 ml-2 text-sm" style={{ color: '#9ca3af' }}>
+            <span><span style={{ color: '#f59e0b' }} className="font-semibold">{counts.printing}</span> printing</span>
+            <span><span style={{ color: '#60a5fa' }} className="font-semibold">{counts.pending}</span> pending</span>
+            <span><span style={{ color: '#4ade80' }} className="font-semibold">{counts.completed}</span> completed</span>
+            <span className="pl-3" style={{ borderLeft: '1px solid #374151' }}>
+              <span style={{ color: '#e5e5e5' }} className="font-semibold">{counts.total}</span> total in queue
+            </span>
+          </div>
         </div>
 
         {showAddItem && <AddItemForm onClose={() => setShowAddItem(false)} />}
