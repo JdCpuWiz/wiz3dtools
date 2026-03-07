@@ -67,6 +67,12 @@ Running log of completed work and what's still planned.
 - **PDF download auth** — changed `<a href>` link to `fetch()` with `Authorization: Bearer` header + blob download; plain links can't send JWT tokens
 - **PDF page overflow** — invoices with many line items were producing ~15 mostly-blank pages (one element per page); added page break detection in line items loop, re-draws table header on continuation pages, added overflow check before totals section
 
+### Session 8 — Queue counter quantity fix + edit modal bug fixes
+- **Counter sums quantity** — Printing/Pending/Completed/In Queue counters now sum `item.quantity` instead of counting rows; items with qty > 1 were being undercounted
+- **Edit modal pre-fill fixed** — clicking Edit on a queue item now correctly pre-fills all fields (product name, qty, priority, details, notes)
+  - Root cause: `Input` component (`components/common/Input.tsx`) was not using `React.forwardRef`, so react-hook-form's `register()` ref never reached the DOM input; `reset()` worked on textareas (direct elements) but silently failed on `Input` wrappers
+  - Fix: `Input` now uses `React.forwardRef`; edit form uses `reset()` in `useEffect([item.id])`; `QueueItemEdit` conditionally rendered so it remounts fresh on each open
+
 ### Session 7 — Queue status counters, completed tracking, filter UX overhaul
 - **Status counter card** — Printing / Pending / Completed / In Queue counts displayed in a shaded card at top of queue screen; numbers in status colours (amber/blue/green/white)
 - **Counter boxes as filter tabs** — clicking any counter box filters the queue list to that status; active box shows orange underline + highlight; replaces the old All/Pending/Printing tab strip
