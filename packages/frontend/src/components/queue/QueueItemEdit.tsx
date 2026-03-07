@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Modal } from '../common/Modal';
 import { Input } from '../common/Input';
@@ -22,16 +22,19 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
-  } = useForm<UpdateQueueItemDto>({
-    defaultValues: {
+  } = useForm<UpdateQueueItemDto>();
+
+  useEffect(() => {
+    reset({
       productName: item.productName,
       details: item.details || '',
       quantity: item.quantity,
       priority: item.priority,
       notes: item.notes || '',
-    },
-  });
+    });
+  }, [item.id]);
 
   const onSubmit = (data: UpdateQueueItemDto) => {
     update(
