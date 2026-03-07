@@ -104,10 +104,10 @@ function QueueView() {
   const { items } = useQueue();
 
   const counts = {
-    pending: items.filter((i) => i.status === 'pending').length,
-    printing: items.filter((i) => i.status === 'printing').length,
-    completed: items.filter((i) => i.status === 'completed').length,
-    total: items.filter((i) => i.status !== 'completed' && i.status !== 'cancelled').length,
+    pending: items.filter((i) => i.status === 'pending').reduce((s, i) => s + i.quantity, 0),
+    printing: items.filter((i) => i.status === 'printing').reduce((s, i) => s + i.quantity, 0),
+    completed: items.filter((i) => i.status === 'completed').reduce((s, i) => s + i.quantity, 0),
+    total: items.filter((i) => i.status !== 'completed' && i.status !== 'cancelled').reduce((s, i) => s + i.quantity, 0),
   };
 
   if (showUpload) {
