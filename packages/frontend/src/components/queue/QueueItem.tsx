@@ -218,11 +218,13 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
         </div>
       </div>
 
-      <QueueItemEdit
-        item={item}
-        isOpen={isEditing}
-        onClose={() => setIsEditing(false)}
-      />
+      {isEditing && (
+        <QueueItemEdit
+          item={item}
+          isOpen={isEditing}
+          onClose={() => setIsEditing(false)}
+        />
+      )}
     </>
   );
 };
