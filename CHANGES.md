@@ -67,6 +67,10 @@ Running log of completed work and what's still planned.
 - **PDF download auth** — changed `<a href>` link to `fetch()` with `Authorization: Bearer` header + blob download; plain links can't send JWT tokens
 - **PDF page overflow** — invoices with many line items were producing ~15 mostly-blank pages (one element per page); added page break detection in line items loop, re-draws table header on continuation pages, added overflow check before totals section
 
+### Session 9 — Paid invoice edit warning
+- **Paid invoice guard** — all edit actions on a paid invoice now prompt for confirmation before proceeding: change customer, change status, tax exempt toggle, shipping edit, add line item, edit/delete line items
+- `confirmIfPaid()` helper in `InvoiceDetail.tsx` — returns `true` immediately for non-paid invoices, shows `window.confirm` for paid ones
+
 ### Session 8 — Queue counter quantity fix + edit modal bug fixes
 - **Counter sums quantity** — Printing/Pending/Completed/In Queue counters now sum `item.quantity` instead of counting rows; items with qty > 1 were being undercounted
 - **Edit modal pre-fill fixed** — clicking Edit on a queue item now correctly pre-fills all fields (product name, qty, priority, details, notes)
@@ -87,21 +91,10 @@ Running log of completed work and what's still planned.
 
 ### Queue improvements
 - [ ] **Include product SKU on invoicing screen** — show SKU on invoice line items, queue cards, and printed PDF
-- [ ] **Add single item to queue manually** — button/form to add one item without an invoice
-- [ ] **Manually edit queue item qty** — change the quantity on an existing queue item
 - [ ] **Upload screen back navigation** — a way to return to queue without closing the upload modal
-- [ ] **Ability to change the tax exemption status on an invoice** — toggleable on existing invoices
-
-### Invoice / PDF improvements
-- [ ] **Add payment links to printed invoice** — include on PDF:
-      COMPANY_WEBSITE=https://showcase.wiz3dprints.com
-      COMPANY_PAYPAL=https://su.wiz3dprints.com/print-sorcerer
-      COMPANY_VENMO=https://su.wiz3dprints.com/forge-magic
-  (vars already in `.env.example`; need to forward in `compose.yaml` and render in PDF)
 
 ### Future ideas
 - [ ] Dashboard / summary page (items in queue, invoices outstanding, revenue this month)
-- [ ] Invoice status filter on invoice list (All / Draft / Sent / Paid)
 - [ ] Customer invoice history view
 - [ ] Product sales report / export
 - [ ] Bulk status update on queue items
