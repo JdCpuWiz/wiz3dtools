@@ -79,6 +79,11 @@ export const InvoiceDetail: React.FC = () => {
   const taxAmount = invoice.taxExempt ? 0 : subtotal * invoice.taxRate;
   const total = subtotal + (invoice.shippingCost || 0) + taxAmount;
 
+  const confirmIfPaid = () => {
+    if (invoice.status !== 'paid') return true;
+    return window.confirm('This invoice is marked as Paid. Are you sure you want to make changes?');
+  };
+
   const applyProduct = (productId: number) => {
     const p = products.find((pr) => pr.id === productId);
     if (!p) return;
@@ -87,6 +92,7 @@ export const InvoiceDetail: React.FC = () => {
 
   const handleAddItem = async () => {
     if (!newItem.productName.trim()) return;
+    if (!confirmIfPaid()) return;
     await addLineItem(newItem);
     setNewItem({ productName: '', quantity: 1, unitPrice: 0 });
     setShowAddRow(false);
@@ -157,7 +163,7 @@ export const InvoiceDetail: React.FC = () => {
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#ff9900' }}>Bill To</span>
             {!editingCustomer
-              ? <button onClick={() => setEditingCustomer(true)} className="text-xs text-primary-500 hover:text-primary-400">Change</button>
+              ? <button onClick={() => { if (confirmIfPaid()) setEditingCustomer(true); }} className="text-xs text-primary-500 hover:text-primary-400">Change</button>
               : <button onClick={() => setEditingCustomer(false)} className="text-xs text-iron-400">Cancel</button>
             }
           </div>
@@ -180,7 +186,7 @@ export const InvoiceDetail: React.FC = () => {
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#ff9900' }}>Status</span>
             {!editingStatus
-              ? <button onClick={() => setEditingStatus(true)} className="text-xs text-primary-500 hover:text-primary-400">Change</button>
+              ? <button onClick={() => { if (confirmIfPaid()) setEditingStatus(true); }} className="text-xs text-primary-500 hover:text-primary-400">Change</button>
               : <button onClick={() => setEditingStatus(false)} className="text-xs text-iron-400">Cancel</button>
             }
           </div>
@@ -202,7 +208,7 @@ export const InvoiceDetail: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span>{invoice.taxExempt ? 'Exempt' : `${(invoice.taxRate * 100).toFixed(0)}%`}</span>
                 <button
-                  onClick={() => update(invoiceId, { taxExempt: !invoice.taxExempt })}
+                  onClick={() => { if (confirmIfPaid()) update(invoiceId, { taxExempt: !invoice.taxExempt }); }}
                   className="px-1.5 py-0.5 rounded text-xs transition-colors"
                   style={{ background: 'rgba(230,138,0,0.15)', color: '#ff9900' }}
                 >
@@ -224,7 +230,7 @@ export const InvoiceDetail: React.FC = () => {
       <div className="card-surface">
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #2d2d2d' }}>
           <h3 className="font-semibold text-iron-50">Line Items</h3>
-          <button onClick={() => setShowAddRow(true)} className="btn-secondary btn-sm text-xs">+ Add Item</button>
+          <button onClick={() => { if (confirmIfPaid()) setShowAddRow(true); }} className="btn-secondary btn-sm text-xs">+ Add Item</button>
         </div>
 
         <div className="overflow-x-auto">
@@ -244,8 +250,8 @@ export const InvoiceDetail: React.FC = () => {
                 <LineItemRow
                   key={item.id}
                   item={item}
-                  onUpdate={(itemId, data) => updateLineItem(itemId, data)}
-                  onDelete={deleteLineItem}
+                  onUpdate={(itemId, data) => { if (confirmIfPaid()) updateLineItem(itemId, data); }}
+                  onDelete={(itemId) => { if (confirmIfPaid()) deleteLineItem(itemId); }}
                   onSendToQueue={(itemId) => sendToQueue(invoiceId, [itemId])}
                 />
               ))}
@@ -321,7 +327,7 @@ export const InvoiceDetail: React.FC = () => {
               <span className="text-iron-400">Shipping</span>
               <ShippingEdit
                 value={invoice.shippingCost || 0}
-                onSave={(v) => update(invoiceId, { shippingCost: v })}
+                onSave={(v) => { if (confirmIfPaid()) update(invoiceId, { shippingCost: v }); }}
                 inputSt={inputSt}
               />
             </div>
