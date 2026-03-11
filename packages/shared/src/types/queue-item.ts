@@ -1,3 +1,5 @@
+import type { ItemColor } from './color';
+
 export type QueueItemStatus = 'pending' | 'printing' | 'completed' | 'cancelled';
 
 export interface QueueItem {
@@ -11,6 +13,7 @@ export interface QueueItem {
   invoiceId: number | null;
   priority: number;
   notes: string | null;
+  colors: ItemColor[];
   createdAt: string;
   updatedAt: string;
 }

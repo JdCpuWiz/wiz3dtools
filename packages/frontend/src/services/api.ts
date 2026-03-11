@@ -19,6 +19,11 @@ import type {
   CreateProductDto,
   UpdateProductDto,
   User,
+  Color,
+  CreateColorDto,
+  UpdateColorDto,
+  ItemColor,
+  ItemColorDto,
 } from '@wizqueue/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -279,6 +284,46 @@ export const productApi = {
     if (excludeId) params.set('excludeId', String(excludeId));
     const response = await api.get<ApiResponse<string>>(`/products/suggest-sku?${params.toString()}`);
     return response.data.data || '';
+  },
+};
+
+// Colors API
+export const colorApi = {
+  getAll: async (): Promise<Color[]> => {
+    const response = await api.get<ApiResponse<Color[]>>('/colors');
+    return response.data.data || [];
+  },
+
+  create: async (data: CreateColorDto): Promise<Color> => {
+    const response = await api.post<ApiResponse<Color>>('/colors', data);
+    if (!response.data.data) throw new Error('Failed to create color');
+    return response.data.data;
+  },
+
+  update: async (id: number, data: UpdateColorDto): Promise<Color> => {
+    const response = await api.put<ApiResponse<Color>>(`/colors/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update color');
+    return response.data.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/colors/${id}`);
+  },
+
+  setLineItemColors: async (invoiceId: number, itemId: number, colors: ItemColorDto[]): Promise<ItemColor[]> => {
+    const response = await api.put<ApiResponse<ItemColor[]>>(
+      `/sales-invoices/${invoiceId}/line-items/${itemId}/colors`,
+      { colors },
+    );
+    return response.data.data || [];
+  },
+
+  setQueueItemColors: async (queueItemId: number, colors: ItemColorDto[]): Promise<ItemColor[]> => {
+    const response = await api.put<ApiResponse<ItemColor[]>>(
+      `/queue/${queueItemId}/colors`,
+      { colors },
+    );
+    return response.data.data || [];
   },
 };
 

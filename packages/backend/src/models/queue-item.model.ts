@@ -4,32 +4,37 @@ import type {
   CreateQueueItemDto,
   UpdateQueueItemDto,
 } from '@wizqueue/shared';
+import { QueueItemColorModel } from './item-color.model.js';
+
+const SELECT_FIELDS = `
+  id, product_name as "productName", sku, details, quantity, position,
+  status, invoice_id as "invoiceId", priority, notes,
+  created_at as "createdAt", updated_at as "updatedAt"
+`;
+
+async function attachColors(rows: QueueItem[]): Promise<QueueItem[]> {
+  return Promise.all(
+    rows.map(async (r) => {
+      const colors = await QueueItemColorModel.findByQueueItem(r.id);
+      return { ...r, colors };
+    }),
+  );
+}
 
 export class QueueItemModel {
   static async findAll(): Promise<QueueItem[]> {
-    const query = `
-      SELECT
-        id, product_name as "productName", sku, details, quantity, position,
-        status, invoice_id as "invoiceId", priority, notes,
-        created_at as "createdAt", updated_at as "updatedAt"
-      FROM queue_items
-      ORDER BY position ASC
-    `;
-    const result = await pool.query(query);
-    return result.rows;
+    const result = await pool.query(`SELECT ${SELECT_FIELDS} FROM queue_items ORDER BY position ASC`);
+    return attachColors(result.rows);
   }
 
   static async findById(id: number): Promise<QueueItem | null> {
-    const query = `
-      SELECT
-        id, product_name as "productName", sku, details, quantity, position,
-        status, invoice_id as "invoiceId", priority, notes,
-        created_at as "createdAt", updated_at as "updatedAt"
-      FROM queue_items
-      WHERE id = $1
-    `;
-    const result = await pool.query(query, [id]);
-    return result.rows[0] || null;
+    const result = await pool.query(
+      `SELECT ${SELECT_FIELDS} FROM queue_items WHERE id = $1`,
+      [id],
+    );
+    if (!result.rows[0]) return null;
+    const colors = await QueueItemColorModel.findByQueueItem(id);
+    return { ...result.rows[0], colors };
   }
 
   static async create(data: CreateQueueItemDto): Promise<QueueItem> {
@@ -61,7 +66,7 @@ export class QueueItemModel {
     ];
 
     const result = await pool.query(query, values);
-    return result.rows[0];
+    return { ...result.rows[0], colors: [] };
   }
 
   static async createMany(items: CreateQueueItemDto[]): Promise<QueueItem[]> {
@@ -98,7 +103,7 @@ export class QueueItemModel {
         ];
 
         const result = await client.query(query, values);
-        createdItems.push(result.rows[0]);
+        createdItems.push({ ...result.rows[0], colors: [] });
       }
 
       await client.query('COMMIT');
@@ -166,7 +171,9 @@ export class QueueItemModel {
     `;
 
     const result = await pool.query(query, values);
-    return result.rows[0] || null;
+    if (!result.rows[0]) return null;
+    const colors = await QueueItemColorModel.findByQueueItem(id);
+    return { ...result.rows[0], colors };
   }
 
   static async delete(id: number): Promise<boolean> {

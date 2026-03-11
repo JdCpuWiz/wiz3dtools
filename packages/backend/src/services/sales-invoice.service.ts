@@ -2,6 +2,7 @@ import { SalesInvoiceModel } from '../models/sales-invoice.model.js';
 import { InvoiceLineItemModel } from '../models/invoice-line-item.model.js';
 import { QueueItemModel } from '../models/queue-item.model.js';
 import { ProductModel } from '../models/product.model.js';
+import { QueueItemColorModel } from '../models/item-color.model.js';
 import type {
   SalesInvoice,
   CreateSalesInvoiceDto,
@@ -77,6 +78,11 @@ export class SalesInvoiceService {
       });
 
       await InvoiceLineItemModel.markSentToQueue(lineItem.id, queueItem.id);
+
+      // Copy colors from line item to queue item
+      if (lineItem.colors && lineItem.colors.length > 0) {
+        await QueueItemColorModel.copyFromLineItem(lineItem.id, queueItem.id);
+      }
 
       // Track units sold on the product
       if (lineItem.productId) {

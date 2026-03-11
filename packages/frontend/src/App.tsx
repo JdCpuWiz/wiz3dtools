@@ -15,21 +15,28 @@ import { InvoiceForm } from './components/invoices/InvoiceForm';
 import { InvoiceDetail } from './components/invoices/InvoiceDetail';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { UsersPage } from './components/admin/UsersPage';
+import { ColorsPage } from './components/admin/ColorsPage';
 import { useQueue } from './hooks/useQueue';
 import { useProducts } from './hooks/useProducts';
+import { useColors } from './hooks/useColors';
+import { ColorPicker } from './components/common/ColorPicker';
+import { colorApi } from './services/api';
+import type { ItemColorDto } from '@wizqueue/shared';
 
 export type QueueFilter = 'all' | 'pending' | 'printing' | 'completed';
 
 const inputSt = { background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)', border: 'none', boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)' };
 
 function AddItemForm({ onClose }: { onClose: () => void }) {
-  const { create } = useQueue();
+  const { create, invalidate } = useQueue();
   const { products } = useProducts(true); // active only
+  const { colors: availableColors } = useColors();
   const [productName, setProductName] = useState('');
   const [sku, setSku] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [details, setDetails] = useState('');
   const [notes, setNotes] = useState('');
+  const [draftColors, setDraftColors] = useState<ItemColorDto[]>([]);
 
   const applyProduct = (productId: number) => {
     const p = products.find((pr) => pr.id === productId);
@@ -39,9 +46,19 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
     setDetails(p.description || '');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!productName.trim()) return;
-    create({ productName, sku: sku || undefined, quantity, details: details || undefined, notes: notes || undefined });
+    create(
+      { productName, sku: sku || undefined, quantity, details: details || undefined, notes: notes || undefined },
+      {
+        onSuccess: async (newItem) => {
+          if (draftColors.length > 0) {
+            await colorApi.setQueueItemColors(newItem.id, draftColors);
+            invalidate();
+          }
+        },
+      }
+    );
     onClose();
   };
 
@@ -87,6 +104,10 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-iron-100 mb-1">Notes</label>
           <input value={notes} onChange={(e) => setNotes(e.target.value)} className={cellInput} style={inputSt} placeholder="Additional instructions…" />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium text-iron-100 mb-1" style={{ color: '#ff9900' }}>Print Colors</label>
+          <ColorPicker availableColors={availableColors} selected={draftColors} onChange={setDraftColors} maxColors={4} />
         </div>
       </div>
       <div className="flex justify-end gap-3">
@@ -177,6 +198,7 @@ function App() {
           <Route path="/products/new" element={<ProtectedRoute><Layout><ProductForm /></Layout></ProtectedRoute>} />
           <Route path="/products/:id" element={<ProtectedRoute><Layout><ProductForm /></Layout></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><Layout><UsersPage /></Layout></ProtectedRoute>} />
+          <Route path="/admin/colors" element={<ProtectedRoute><Layout><ColorsPage /></Layout></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

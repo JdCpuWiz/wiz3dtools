@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { salesInvoiceApi } from '../services/api';
+import { salesInvoiceApi, colorApi } from '../services/api';
 import type {
   CreateSalesInvoiceDto,
   UpdateSalesInvoiceDto,
   CreateLineItemDto,
+  ItemColorDto,
 } from '@wizqueue/shared';
 import toast from 'react-hot-toast';
 
@@ -117,6 +118,15 @@ export const useSalesInvoice = (id: number) => {
     onError: (error: Error) => toast.error(`Failed: ${error.message}`),
   });
 
+  const updateLineItemColorsMutation = useMutation({
+    mutationFn: ({ itemId, colors }: { itemId: number; colors: ItemColorDto[] }) =>
+      colorApi.setLineItemColors(id, itemId, colors),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-invoices', id] });
+    },
+    onError: (error: Error) => toast.error(`Failed to save colors: ${error.message}`),
+  });
+
   return {
     invoice: query.data,
     isLoading: query.isLoading,
@@ -125,5 +135,7 @@ export const useSalesInvoice = (id: number) => {
     updateLineItem: (itemId: number, data: Partial<CreateLineItemDto>) =>
       updateLineItemMutation.mutateAsync({ itemId, data }),
     deleteLineItem: (itemId: number) => deleteLineItemMutation.mutateAsync(itemId),
+    updateLineItemColors: (itemId: number, colors: ItemColorDto[]) =>
+      updateLineItemColorsMutation.mutateAsync({ itemId, colors }),
   };
 };

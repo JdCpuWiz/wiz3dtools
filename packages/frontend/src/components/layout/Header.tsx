@@ -21,7 +21,10 @@ export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
 
   const navItems = [
     ...BASE_NAV_ITEMS,
-    ...(user?.role === 'admin' ? [{ to: '/admin/users', label: 'Admin', exact: false }] : []),
+    ...(user?.role === 'admin' ? [
+      { to: '/admin/users', label: 'Users', exact: false },
+      { to: '/admin/colors', label: 'Colors', exact: false },
+    ] : []),
   ];
   const isQueueView = location.pathname === '/queue';
 

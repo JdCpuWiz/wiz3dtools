@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Modal } from '../common/Modal';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { useQueue } from '../../hooks/useQueue';
-import type { QueueItem, UpdateQueueItemDto } from '@wizqueue/shared';
+import { useColors } from '../../hooks/useColors';
+import { ColorPicker } from '../common/ColorPicker';
+import { colorApi } from '../../services/api';
+import type { QueueItem, UpdateQueueItemDto, ItemColorDto } from '@wizqueue/shared';
 
 interface QueueItemEditProps {
   item: QueueItem;
@@ -17,7 +20,9 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { update } = useQueue();
+  const { updateAsync, invalidate } = useQueue();
+  const { colors: availableColors } = useColors();
+  const [draftColors, setDraftColors] = useState<ItemColorDto[]>([]);
 
   const {
     register,
@@ -34,17 +39,21 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
       priority: item.priority,
       notes: item.notes || '',
     });
+    setDraftColors(
+      (item.colors || []).map((c) => ({
+        colorId: c.colorId,
+        isPrimary: c.isPrimary,
+        note: c.note,
+        sortOrder: c.sortOrder,
+      })),
+    );
   }, [item.id]);
 
-  const onSubmit = (data: UpdateQueueItemDto) => {
-    update(
-      { id: item.id, data },
-      {
-        onSuccess: () => {
-          onClose();
-        },
-      }
-    );
+  const onSubmit = async (data: UpdateQueueItemDto) => {
+    await updateAsync({ id: item.id, data });
+    await colorApi.setQueueItemColors(item.id, draftColors);
+    invalidate();
+    onClose();
   };
 
   return (
@@ -106,6 +115,19 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
             rows={2}
             className="input"
             placeholder="Additional notes or instructions..."
+          />
+        </div>
+
+        {/* Colors */}
+        <div>
+          <label className="block text-sm font-medium mb-2" style={{ color: '#ff9900' }}>
+            Print Colors
+          </label>
+          <ColorPicker
+            availableColors={availableColors}
+            selected={draftColors}
+            onChange={setDraftColors}
+            maxColors={4}
           />
         </div>
 

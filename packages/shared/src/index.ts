@@ -53,3 +53,12 @@ export type {
   RegisterDto,
   AuthResponse,
 } from './types/auth';
+
+// Color types
+export type {
+  Color,
+  ItemColor,
+  ItemColorDto,
+  CreateColorDto,
+  UpdateColorDto,
+} from './types/color';

@@ -1,4 +1,5 @@
 import type { Customer } from './customer';
+import type { ItemColor } from './color';
 
 export type SalesInvoiceStatus = 'draft' | 'sent' | 'paid' | 'cancelled';
 
@@ -12,6 +13,7 @@ export interface InvoiceLineItem {
   quantity: number;
   unitPrice: number;
   queueItemId: number | null;
+  colors: ItemColor[];
   createdAt: string;
 }
 

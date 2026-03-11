@@ -58,7 +58,7 @@ export const InvoiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const invoiceId = parseInt(id || '0');
 
-  const { invoice, isLoading, addLineItem, updateLineItem, deleteLineItem } = useSalesInvoice(invoiceId);
+  const { invoice, isLoading, addLineItem, updateLineItem, deleteLineItem, updateLineItemColors } = useSalesInvoice(invoiceId);
   const { sendEmail, sendToQueue, update, isSending } = useSalesInvoices();
   const { customers } = useCustomers();
   const { products } = useProducts(true);
@@ -251,6 +251,7 @@ export const InvoiceDetail: React.FC = () => {
                   key={item.id}
                   item={item}
                   onUpdate={(itemId, data) => { if (confirmIfPaid()) updateLineItem(itemId, data); }}
+                  onUpdateColors={(itemId, colors) => { if (confirmIfPaid()) updateLineItemColors(itemId, colors); }}
                   onDelete={(itemId) => { if (confirmIfPaid()) deleteLineItem(itemId); }}
                   onSendToQueue={(itemId) => sendToQueue(invoiceId, [itemId])}
                 />

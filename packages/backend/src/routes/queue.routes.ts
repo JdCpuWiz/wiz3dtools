@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { QueueController } from '../controllers/queue.controller.js';
+import { ColorController } from '../controllers/color.controller.js';
 
 const router = Router();
 const queueController = new QueueController();
+const colorController = new ColorController();
 
 // Get all queue items
 router.get('/', (req, res, next) => queueController.getAll(req, res, next));
@@ -27,5 +29,8 @@ router.patch('/reorder', (req, res, next) => queueController.reorder(req, res, n
 
 // Update queue item status
 router.patch('/:id/status', (req, res, next) => queueController.updateStatus(req, res, next));
+
+// Set colors on a queue item
+router.put('/:id/colors', (req, res, next) => colorController.setQueueItemColors(req, res, next));
 
 export default router;

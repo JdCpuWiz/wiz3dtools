@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { QueueItem as QueueItemType } from '@wizqueue/shared';
 import { useQueue } from '../../hooks/useQueue';
 import { QueueItemEdit } from './QueueItemEdit';
+import { ColorSwatch } from '../common/ColorPicker';
 
 interface QueueItemProps {
   item: QueueItemType;
@@ -120,6 +121,28 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
                   <p className="text-base text-[#9ca3af] mt-2 italic">
                     Note: {item.notes}
                   </p>
+                )}
+
+                {/* Color swatches */}
+                {(item.colors || []).length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    {(item.colors || []).map((c) => (
+                      <span
+                        key={c.id}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                        title={`${c.color?.name}${c.note ? ` — ${c.note}` : ''}`}
+                        style={
+                          c.isPrimary
+                            ? { background: 'rgba(255,153,0,0.12)', border: '1px solid rgba(255,153,0,0.3)', color: '#ff9900' }
+                            : { background: '#2d2d2d', border: '1px solid #3a3a3a', color: '#9ca3af' }
+                        }
+                      >
+                        <ColorSwatch hex={c.color?.hex || '#888'} name={c.color?.name || ''} size={12} />
+                        <span>{c.isPrimary ? <strong>{c.color?.name}</strong> : c.color?.name}</span>
+                        {c.note && <span style={{ opacity: 0.7 }}> · {c.note}</span>}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
 

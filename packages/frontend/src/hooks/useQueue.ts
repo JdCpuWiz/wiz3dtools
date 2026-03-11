@@ -89,8 +89,10 @@ export const useQueue = () => {
     create: createMutation.mutate,
     createBatch: createBatchMutation.mutate,
     update: updateMutation.mutate,
+    updateAsync: updateMutation.mutateAsync,
     delete: deleteMutation.mutate,
     reorder: reorderMutation.mutate,
     updateStatus: updateStatusMutation.mutate,
+    invalidate: () => queryClient.invalidateQueries({ queryKey: ['queue'] }),
   };
 };
