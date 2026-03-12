@@ -4,17 +4,23 @@ import { useForm } from 'react-hook-form';
 import { useSalesInvoices } from '../../hooks/useSalesInvoices';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useProducts } from '../../hooks/useProducts';
-import type { CreateLineItemDto } from '@wizqueue/shared';
+import { useColors } from '../../hooks/useColors';
+import { ColorPicker, ColorSwatch } from '../common/ColorPicker';
+import { colorApi } from '../../services/api';
+import type { CreateLineItemDto, ItemColorDto } from '@wizqueue/shared';
 
 interface LineItemDraft extends CreateLineItemDto {
   _key: number;
+  _colors: ItemColorDto[];
+  _showColors: boolean;
 }
 
 export const InvoiceForm: React.FC = () => {
   const navigate = useNavigate();
   const { create, isCreating } = useSalesInvoices();
   const { customers } = useCustomers();
-  const { products } = useProducts(true); // active only
+  const { products } = useProducts(true);
+  const { colors: availableColors } = useColors();
 
   const { register, handleSubmit } = useForm<{
     customerId: string;
@@ -25,19 +31,27 @@ export const InvoiceForm: React.FC = () => {
   }>();
 
   const [lineItems, setLineItems] = useState<LineItemDraft[]>([
-    { _key: Date.now(), productName: '', quantity: 1, unitPrice: 0 },
+    { _key: Date.now(), productName: '', quantity: 1, unitPrice: 0, _colors: [], _showColors: false },
   ]);
   const [shippingCost, setShippingCost] = useState(0);
 
   const addRow = () => setLineItems((prev) => [
     ...prev,
-    { _key: Date.now() + Math.random(), productName: '', quantity: 1, unitPrice: 0 },
+    { _key: Date.now() + Math.random(), productName: '', quantity: 1, unitPrice: 0, _colors: [], _showColors: false },
   ]);
 
   const removeRow = (key: number) => setLineItems((prev) => prev.filter((li) => li._key !== key));
 
   const updateRow = (key: number, field: keyof CreateLineItemDto, value: string | number | undefined) => {
     setLineItems((prev) => prev.map((li) => li._key === key ? { ...li, [field]: value } : li));
+  };
+
+  const updateColors = (key: number, colors: ItemColorDto[]) => {
+    setLineItems((prev) => prev.map((li) => li._key === key ? { ...li, _colors: colors } : li));
+  };
+
+  const toggleColors = (key: number) => {
+    setLineItems((prev) => prev.map((li) => li._key === key ? { ...li, _showColors: !li._showColors } : li));
   };
 
   const applyProduct = (key: number, productId: number) => {
@@ -59,15 +73,29 @@ export const InvoiceForm: React.FC = () => {
       return;
     }
     const taxRate = parseFloat(data.taxRate) / 100;
-    await create({
+    const invoice = await create({
       customerId: data.customerId ? parseInt(data.customerId) : undefined,
       taxRate,
       taxExempt: data.taxExempt,
       shippingCost,
       notes: data.notes || undefined,
       dueDate: data.dueDate || undefined,
-      lineItems: validItems.map(({ _key: _, ...rest }) => rest),
+      lineItems: validItems.map(({ _key: _, _colors: _c, _showColors: _s, ...rest }) => rest),
     });
+
+    // Save colors for each line item that has colors set
+    if (invoice && invoice.lineItems) {
+      const colorSaves = validItems
+        .map((draft, idx) => ({ draft, lineItem: invoice.lineItems[idx] }))
+        .filter(({ draft, lineItem }) => lineItem && draft._colors.length > 0);
+
+      await Promise.all(
+        colorSaves.map(({ draft, lineItem }) =>
+          colorApi.setLineItemColors(invoice.id, lineItem.id, draft._colors),
+        ),
+      );
+    }
+
     navigate('/invoices');
   };
 
@@ -148,75 +176,122 @@ export const InvoiceForm: React.FC = () => {
                   <th className="text-left px-3 py-2 font-semibold text-iron-100 w-16">Qty</th>
                   <th className="text-left px-3 py-2 font-semibold text-iron-100 w-28">Unit Price</th>
                   <th className="text-right px-3 py-2 font-semibold text-iron-100 w-24">Subtotal</th>
+                  <th className="px-3 py-2 w-24 text-left font-semibold text-iron-100">Colors</th>
                   <th className="px-3 py-2 w-10" />
                 </tr>
               </thead>
               <tbody>
-                {lineItems.map((li) => (
-                  <tr key={li._key} style={{ borderTop: '1px solid #2d2d2d' }}>
-                    {products.length > 0 && (
-                      <td className="px-3 py-2">
-                        <select
-                          className={selectClass}
-                          style={inputSt}
-                          value={li.productId || ''}
-                          onChange={(e) => e.target.value && applyProduct(li._key, parseInt(e.target.value))}
-                        >
-                          <option value="">— pick —</option>
-                          {products.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </td>
-                    )}
-                    <td className="px-3 py-2">
-                      <input
-                        value={li.productName}
-                        onChange={(e) => updateRow(li._key, 'productName', e.target.value)}
-                        className={cellInputClass}
-                        style={inputSt}
-                        placeholder="Name"
-                      />
-                    </td>
-                    <td className="px-3 py-2 hidden sm:table-cell">
-                      <span className="font-mono text-xs text-iron-400">{li.sku || '—'}</span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <textarea
-                        value={li.details || ''}
-                        onChange={(e) => updateRow(li._key, 'details', e.target.value)}
-                        className={cellInputClass}
-                        style={inputSt}
-                        placeholder="Details"
-                        rows={3}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number" min={1} value={li.quantity}
-                        onChange={(e) => updateRow(li._key, 'quantity', parseInt(e.target.value) || 1)}
-                        className={cellInputClass}
-                        style={inputSt}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number" min={0} step={0.01} value={li.unitPrice}
-                        onChange={(e) => updateRow(li._key, 'unitPrice', parseFloat(e.target.value) || 0)}
-                        className={cellInputClass}
-                        style={inputSt}
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right font-medium" style={{ color: '#ff9900' }}>
-                      ${(li.quantity * li.unitPrice).toFixed(2)}
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      {lineItems.length > 1 && (
-                        <button type="button" onClick={() => removeRow(li._key)} className="text-red-400 hover:text-red-300 font-bold text-lg leading-none">×</button>
+                {lineItems.map((li) => {
+                  const primaryColor = li._colors.find((c) => c.isPrimary);
+                  const primaryColorData = primaryColor ? availableColors.find((c) => c.id === primaryColor.colorId) : null;
+
+                  return (
+                    <React.Fragment key={li._key}>
+                      <tr style={{ borderTop: '1px solid #2d2d2d' }}>
+                        {products.length > 0 && (
+                          <td className="px-3 py-2">
+                            <select
+                              className={selectClass}
+                              style={inputSt}
+                              value={li.productId || ''}
+                              onChange={(e) => e.target.value && applyProduct(li._key, parseInt(e.target.value))}
+                            >
+                              <option value="">— pick —</option>
+                              {products.map((p) => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
+                        <td className="px-3 py-2">
+                          <input
+                            value={li.productName}
+                            onChange={(e) => updateRow(li._key, 'productName', e.target.value)}
+                            className={cellInputClass}
+                            style={inputSt}
+                            placeholder="Name"
+                          />
+                        </td>
+                        <td className="px-3 py-2 hidden sm:table-cell">
+                          <span className="font-mono text-xs text-iron-400">{li.sku || '—'}</span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <textarea
+                            value={li.details || ''}
+                            onChange={(e) => updateRow(li._key, 'details', e.target.value)}
+                            className={cellInputClass}
+                            style={inputSt}
+                            placeholder="Details"
+                            rows={3}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="number" min={1} value={li.quantity}
+                            onChange={(e) => updateRow(li._key, 'quantity', parseInt(e.target.value) || 1)}
+                            className={cellInputClass}
+                            style={inputSt}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="number" min={0} step={0.01} value={li.unitPrice}
+                            onChange={(e) => updateRow(li._key, 'unitPrice', parseFloat(e.target.value) || 0)}
+                            className={cellInputClass}
+                            style={inputSt}
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium" style={{ color: '#ff9900' }}>
+                          ${(li.quantity * li.unitPrice).toFixed(2)}
+                        </td>
+                        {/* Colors cell */}
+                        <td className="px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleColors(li._key)}
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors"
+                            style={
+                              li._colors.length > 0
+                                ? { background: 'rgba(255,153,0,0.12)', border: '1px solid rgba(255,153,0,0.3)', color: '#ff9900' }
+                                : { background: '#2d2d2d', border: '1px solid #3a3a3a', color: '#9ca3af' }
+                            }
+                          >
+                            {primaryColorData && (
+                              <ColorSwatch hex={primaryColorData.hex} name={primaryColorData.name} size={12} />
+                            )}
+                            {li._colors.length > 0 ? `${li._colors.length} color${li._colors.length > 1 ? 's' : ''}` : '+ Colors'}
+                          </button>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          {lineItems.length > 1 && (
+                            <button type="button" onClick={() => removeRow(li._key)} className="text-red-400 hover:text-red-300 font-bold text-lg leading-none">×</button>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* Color picker expansion row */}
+                      {li._showColors && (
+                        <tr style={{ background: 'rgba(255,153,0,0.03)', borderBottom: '1px solid #2d2d2d' }}>
+                          <td colSpan={products.length > 0 ? 9 : 8} className="px-4 pb-3 pt-2">
+                            <div style={{ borderTop: '1px solid #2d2d2d', paddingTop: 8 }}>
+                              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#ff9900' }}>
+                                Print Colors — 1 primary + up to 3 more
+                              </span>
+                              <div className="mt-2">
+                                <ColorPicker
+                                  availableColors={availableColors}
+                                  selected={li._colors}
+                                  onChange={(colors) => updateColors(li._key, colors)}
+                                  maxColors={4}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                  </tr>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
