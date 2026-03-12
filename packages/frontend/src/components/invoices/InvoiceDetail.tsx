@@ -292,6 +292,23 @@ export const InvoiceDetail: React.FC = () => {
                         autoFocus={products.length === 0}
                       />
                       {newItem.sku && <span className="block font-mono text-xs text-iron-500">{newItem.sku}</span>}
+                      <button
+                        type="button"
+                        onClick={() => setShowAddColors((v) => !v)}
+                        className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded mt-1"
+                        style={
+                          newItemColors.length > 0
+                            ? { background: 'rgba(255,153,0,0.15)', color: '#ff9900', border: '1px solid rgba(255,153,0,0.3)' }
+                            : { background: '#2d2d2d', color: '#9ca3af', border: '1px solid #3a3a3a' }
+                        }
+                      >
+                        {newItemColors.length > 0 && (() => {
+                          const primary = newItemColors.find((c) => c.isPrimary);
+                          const col = primary ? availableColors.find((c) => c.id === primary.colorId) : null;
+                          return col ? <ColorSwatch hex={col.hex} name={col.name} size={10} /> : null;
+                        })()}
+                        {newItemColors.length > 0 ? `${newItemColors.length} color${newItemColors.length > 1 ? 's' : ''}` : '+ Colors'}
+                      </button>
                     </td>
                     <td className="px-3 py-3">
                       <textarea
@@ -315,22 +332,6 @@ export const InvoiceDetail: React.FC = () => {
                     <td className="px-3 py-3">
                       <div className="flex flex-col gap-1">
                         <button onClick={handleAddItem} className="btn-primary btn-sm text-xs">Add</button>
-                        <button
-                          onClick={() => setShowAddColors((v) => !v)}
-                          className="btn-sm text-xs inline-flex items-center gap-1"
-                          style={
-                            newItemColors.length > 0
-                              ? { background: 'rgba(255,153,0,0.15)', color: '#ff9900', border: '1px solid rgba(255,153,0,0.3)', borderRadius: 6, padding: '2px 8px' }
-                              : { background: '#2d2d2d', color: '#9ca3af', border: '1px solid #3a3a3a', borderRadius: 6, padding: '2px 8px' }
-                          }
-                        >
-                          {newItemColors.length > 0 && (() => {
-                            const primary = newItemColors.find((c) => c.isPrimary);
-                            const col = primary ? availableColors.find((c) => c.id === primary.colorId) : null;
-                            return col ? <ColorSwatch hex={col.hex} name={col.name} size={10} /> : null;
-                          })()}
-                          {newItemColors.length > 0 ? `${newItemColors.length} color${newItemColors.length > 1 ? 's' : ''}` : '+ Colors'}
-                        </button>
                         <button onClick={() => { setShowAddRow(false); setNewItemColors([]); setShowAddColors(false); }} className="btn-secondary btn-sm text-xs">Cancel</button>
                       </div>
                     </td>
