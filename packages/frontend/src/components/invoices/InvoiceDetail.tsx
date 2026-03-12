@@ -6,7 +6,9 @@ import { LineItemRow } from './LineItemRow';
 import { salesInvoiceApi } from '../../services/api';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useProducts } from '../../hooks/useProducts';
-import type { CreateLineItemDto, SalesInvoiceStatus } from '@wizqueue/shared';
+import { useColors } from '../../hooks/useColors';
+import { ColorPicker, ColorSwatch } from '../common/ColorPicker';
+import type { CreateLineItemDto, SalesInvoiceStatus, ItemColorDto } from '@wizqueue/shared';
 
 const inputSt: React.CSSProperties = {
   background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)',
@@ -62,9 +64,12 @@ export const InvoiceDetail: React.FC = () => {
   const { sendEmail, sendToQueue, update, isSending } = useSalesInvoices();
   const { customers } = useCustomers();
   const { products } = useProducts(true);
+  const { colors: availableColors } = useColors();
 
   const [showAddRow, setShowAddRow] = useState(false);
   const [newItem, setNewItem] = useState<CreateLineItemDto>({ productName: '', quantity: 1, unitPrice: 0 });
+  const [newItemColors, setNewItemColors] = useState<ItemColorDto[]>([]);
+  const [showAddColors, setShowAddColors] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(false);
 
@@ -93,8 +98,13 @@ export const InvoiceDetail: React.FC = () => {
   const handleAddItem = async () => {
     if (!newItem.productName.trim()) return;
     if (!confirmIfPaid()) return;
-    await addLineItem(newItem);
+    const created = await addLineItem(newItem);
+    if (newItemColors.length > 0) {
+      await updateLineItemColors(created.id, newItemColors);
+    }
     setNewItem({ productName: '', quantity: 1, unitPrice: 0 });
+    setNewItemColors([]);
+    setShowAddColors(false);
     setShowAddRow(false);
   };
 
@@ -258,56 +268,93 @@ export const InvoiceDetail: React.FC = () => {
               ))}
 
               {showAddRow && (
-                <tr style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(230,138,0,0.05)' }}>
-                  {/* Product column: picker + name + SKU — all in one cell */}
-                  <td className="px-3 py-3 space-y-1.5">
-                    {products.length > 0 && (
-                      <select
-                        className={selectClass}
+                <>
+                  <tr style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(230,138,0,0.05)' }}>
+                    {/* Product column: picker + name + SKU — all in one cell */}
+                    <td className="px-3 py-3 space-y-1.5">
+                      {products.length > 0 && (
+                        <select
+                          className={selectClass}
+                          style={inputSt}
+                          value={newItem.productId || ''}
+                          onChange={(e) => e.target.value && applyProduct(parseInt(e.target.value))}
+                        >
+                          <option value="">— pick product —</option>
+                          {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${p.unitPrice.toFixed(2)})</option>)}
+                        </select>
+                      )}
+                      <input
+                        value={newItem.productName}
+                        onChange={(e) => setNewItem((p) => ({ ...p, productName: e.target.value }))}
+                        className={cellInputClass}
                         style={inputSt}
-                        value={newItem.productId || ''}
-                        onChange={(e) => e.target.value && applyProduct(parseInt(e.target.value))}
-                      >
-                        <option value="">— pick product —</option>
-                        {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${p.unitPrice.toFixed(2)})</option>)}
-                      </select>
-                    )}
-                    <input
-                      value={newItem.productName}
-                      onChange={(e) => setNewItem((p) => ({ ...p, productName: e.target.value }))}
-                      className={cellInputClass}
-                      style={inputSt}
-                      placeholder="Product name"
-                      autoFocus={products.length === 0}
-                    />
-                    {newItem.sku && <span className="block font-mono text-xs text-iron-500">{newItem.sku}</span>}
-                  </td>
-                  <td className="px-3 py-3">
-                    <textarea
-                      value={newItem.details || ''}
-                      onChange={(e) => setNewItem((p) => ({ ...p, details: e.target.value }))}
-                      className={cellInputClass}
-                      style={inputSt}
-                      placeholder="Details"
-                      rows={3}
-                    />
-                  </td>
-                  <td className="px-3 py-3">
-                    <input type="number" min={1} value={newItem.quantity} onChange={(e) => setNewItem((p) => ({ ...p, quantity: parseInt(e.target.value) || 1 }))} className={`${cellInputClass} w-16`} style={inputSt} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <input type="number" min={0} step={0.01} value={newItem.unitPrice} onChange={(e) => setNewItem((p) => ({ ...p, unitPrice: parseFloat(e.target.value) || 0 }))} className={`${cellInputClass} w-24`} style={inputSt} />
-                  </td>
-                  <td className="px-3 py-3 text-right font-medium" style={{ color: '#ff9900' }}>
-                    ${(newItem.quantity * newItem.unitPrice).toFixed(2)}
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex flex-col gap-1">
-                      <button onClick={handleAddItem} className="btn-primary btn-sm text-xs">Add</button>
-                      <button onClick={() => setShowAddRow(false)} className="btn-secondary btn-sm text-xs">Cancel</button>
-                    </div>
-                  </td>
-                </tr>
+                        placeholder="Product name"
+                        autoFocus={products.length === 0}
+                      />
+                      {newItem.sku && <span className="block font-mono text-xs text-iron-500">{newItem.sku}</span>}
+                    </td>
+                    <td className="px-3 py-3">
+                      <textarea
+                        value={newItem.details || ''}
+                        onChange={(e) => setNewItem((p) => ({ ...p, details: e.target.value }))}
+                        className={cellInputClass}
+                        style={inputSt}
+                        placeholder="Details"
+                        rows={3}
+                      />
+                    </td>
+                    <td className="px-3 py-3">
+                      <input type="number" min={1} value={newItem.quantity} onChange={(e) => setNewItem((p) => ({ ...p, quantity: parseInt(e.target.value) || 1 }))} className={`${cellInputClass} w-16`} style={inputSt} />
+                    </td>
+                    <td className="px-3 py-3">
+                      <input type="number" min={0} step={0.01} value={newItem.unitPrice} onChange={(e) => setNewItem((p) => ({ ...p, unitPrice: parseFloat(e.target.value) || 0 }))} className={`${cellInputClass} w-24`} style={inputSt} />
+                    </td>
+                    <td className="px-3 py-3 text-right font-medium" style={{ color: '#ff9900' }}>
+                      ${(newItem.quantity * newItem.unitPrice).toFixed(2)}
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-col gap-1">
+                        <button onClick={handleAddItem} className="btn-primary btn-sm text-xs">Add</button>
+                        <button
+                          onClick={() => setShowAddColors((v) => !v)}
+                          className="btn-sm text-xs inline-flex items-center gap-1"
+                          style={
+                            newItemColors.length > 0
+                              ? { background: 'rgba(255,153,0,0.15)', color: '#ff9900', border: '1px solid rgba(255,153,0,0.3)', borderRadius: 6, padding: '2px 8px' }
+                              : { background: '#2d2d2d', color: '#9ca3af', border: '1px solid #3a3a3a', borderRadius: 6, padding: '2px 8px' }
+                          }
+                        >
+                          {newItemColors.length > 0 && (() => {
+                            const primary = newItemColors.find((c) => c.isPrimary);
+                            const col = primary ? availableColors.find((c) => c.id === primary.colorId) : null;
+                            return col ? <ColorSwatch hex={col.hex} name={col.name} size={10} /> : null;
+                          })()}
+                          {newItemColors.length > 0 ? `${newItemColors.length} color${newItemColors.length > 1 ? 's' : ''}` : '+ Colors'}
+                        </button>
+                        <button onClick={() => { setShowAddRow(false); setNewItemColors([]); setShowAddColors(false); }} className="btn-secondary btn-sm text-xs">Cancel</button>
+                      </div>
+                    </td>
+                  </tr>
+                  {showAddColors && (
+                    <tr style={{ background: 'rgba(255,153,0,0.03)', borderBottom: '1px solid #2d2d2d' }}>
+                      <td colSpan={6} className="px-3 pb-3 pt-1">
+                        <div style={{ borderTop: '1px solid #2d2d2d', paddingTop: 8 }}>
+                          <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#ff9900' }}>
+                            Print Colors — 1 primary + up to 3 more
+                          </span>
+                          <div className="mt-2">
+                            <ColorPicker
+                              availableColors={availableColors}
+                              selected={newItemColors}
+                              onChange={setNewItemColors}
+                              maxColors={4}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
               )}
 
               {invoice.lineItems.length === 0 && !showAddRow && (
