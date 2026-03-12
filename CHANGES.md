@@ -75,6 +75,13 @@ Running log of completed work and what's still planned.
 - **Shipping email** — sent to customer with tracking number; CC to `orders@wiz3dprints.com`; uses `sendShippingEmail()` in `email.service.ts`
 - **Shipped lock** — once `shippedAt` is set, all invoice editing is blocked (customer, status, tax, shipping cost, line items); `confirmIfPaid()` now checks shipped first; shipped invoices show a green "✓ Shipped [date]" badge
 
+### Session 12 — PDF invoice style updates
+- **Colors on printed invoice** — line item colors now render on the PDF: 7×7 colored swatch + color name (+ note if set) stacked below the SKU in the product column; row height auto-expands to fit
+- **Darker section backgrounds** — alternating row shading `#dcdcdc`, section boxes (Bill To, Totals, Payment, Notes) `#d0d0d0`; previously barely visible
+- **Top margin fix** — `COMPANY_BOX_TOP` increased from 12→28pt; "INVOICE" title was clipping at top of page
+- **Column header text** — changed from white to dark/black for legibility against orange header bar
+- **SKU text** — darkened from `#888888` to `#555555`
+
 ### Session 10 — Print colors feature
 - **Color catalog** — admin-managed list of print colors (name + hex); pre-seeded with all 30 Bambu Lab PLA colors; migrations 012–015
 - **Admin → Colors page** (`/admin/colors`) — add/edit/delete colors, toggle active/inactive, live swatch preview; header now shows "Users" + "Colors" tabs for admins
