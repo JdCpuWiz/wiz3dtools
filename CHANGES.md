@@ -67,6 +67,14 @@ Running log of completed work and what's still planned.
 - **PDF download auth** — changed `<a href>` link to `fetch()` with `Authorization: Bearer` header + blob download; plain links can't send JWT tokens
 - **PDF page overflow** — invoices with many line items were producing ~15 mostly-blank pages (one element per page); added page break detection in line items loop, re-draws table header on continuation pages, added overflow check before totals section
 
+### Session 11 — Invoice list sorting + shipping workflow
+- **Sortable columns** — Invoice list columns (Invoice #, Customer, Date, Total) are now clickable sort headers; orange ▲/▼ indicator on active column; default sort is Date descending; ⇅ shown on inactive columns
+- **Invoice shipping** — migration 016 adds `tracking_number` + `shipped_at` to `sales_invoices`
+- **Tracking number field** — inline add/edit in the Status card on InvoiceDetail; saved via existing PUT endpoint
+- **Mark as Shipped button** — blue button in header; requires tracking number + customer email; prompts confirmation; sets `shipped_at` and sends shipping notification email
+- **Shipping email** — sent to customer with tracking number; CC to `orders@wiz3dprints.com`; uses `sendShippingEmail()` in `email.service.ts`
+- **Shipped lock** — once `shippedAt` is set, all invoice editing is blocked (customer, status, tax, shipping cost, line items); `confirmIfPaid()` now checks shipped first; shipped invoices show a green "✓ Shipped [date]" badge
+
 ### Session 10 — Print colors feature
 - **Color catalog** — admin-managed list of print colors (name + hex); pre-seeded with all 30 Bambu Lab PLA colors; migrations 012–015
 - **Admin → Colors page** (`/admin/colors`) — add/edit/delete colors, toggle active/inactive, live swatch preview; header now shows "Users" + "Colors" tabs for admins
