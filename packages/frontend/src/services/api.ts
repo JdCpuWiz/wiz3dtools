@@ -240,6 +240,10 @@ export const salesInvoiceApi = {
     await api.post(`/sales-invoices/${id}/send-to-queue`, { lineItemIds });
   },
 
+  ship: async (id: number): Promise<void> => {
+    await api.post(`/sales-invoices/${id}/ship`);
+  },
+
   downloadPdf: (id: number): string => {
     return `${API_BASE_URL}/sales-invoices/${id}/pdf`;
   },

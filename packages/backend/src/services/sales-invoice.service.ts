@@ -3,6 +3,7 @@ import { InvoiceLineItemModel } from '../models/invoice-line-item.model.js';
 import { QueueItemModel } from '../models/queue-item.model.js';
 import { ProductModel } from '../models/product.model.js';
 import { QueueItemColorModel } from '../models/item-color.model.js';
+import { sendShippingEmail } from './email.service.js';
 import type {
   SalesInvoice,
   CreateSalesInvoiceDto,
@@ -58,6 +59,17 @@ export class SalesInvoiceService {
     const item = await InvoiceLineItemModel.findById(itemId);
     if (!item || item.invoiceId !== invoiceId) throw new Error('Line item not found');
     await InvoiceLineItemModel.delete(itemId);
+  }
+
+  async ship(invoiceId: number): Promise<void> {
+    const invoice = await this.getById(invoiceId);
+    if (invoice.shippedAt) throw new Error('Invoice has already been shipped');
+    if (!invoice.trackingNumber?.trim()) throw new Error('A tracking number is required before marking as shipped');
+    if (!invoice.customer) throw new Error('Invoice has no customer');
+    if (!invoice.customer.email) throw new Error(`Customer "${invoice.customer.contactName}" has no email address`);
+
+    await SalesInvoiceModel.markShipped(invoiceId, invoice.trackingNumber.trim());
+    await sendShippingEmail(invoice.customer, invoice.invoiceNumber, invoice.trackingNumber.trim());
   }
 
   async sendToQueue(invoiceId: number, lineItemIds?: number[]): Promise<void> {

@@ -7,6 +7,7 @@ const INVOICE_SELECT = `
   si.status, si.tax_rate as "taxRate", si.tax_exempt as "taxExempt",
   si.shipping_cost as "shippingCost",
   si.notes, si.due_date as "dueDate", si.sent_at as "sentAt",
+  si.tracking_number as "trackingNumber", si.shipped_at as "shippedAt",
   si.created_at as "createdAt", si.updated_at as "updatedAt"
 `;
 
@@ -31,6 +32,8 @@ function mapRow(row: Record<string, unknown>): Omit<SalesInvoice, 'lineItems'> {
     notes: row.notes as string | null,
     dueDate: row.dueDate ? (row.dueDate as Date).toISOString().split('T')[0] : null,
     sentAt: row.sentAt as string | null,
+    trackingNumber: row.trackingNumber as string | null,
+    shippedAt: row.shippedAt ? (row.shippedAt as Date).toISOString() : null,
     createdAt: row.createdAt as string,
     updatedAt: row.updatedAt as string,
     customer: row.c_id
@@ -147,6 +150,7 @@ export class SalesInvoiceModel {
       ['shippingCost', 'shipping_cost'],
       ['notes', 'notes'],
       ['dueDate', 'due_date'],
+      ['trackingNumber', 'tracking_number'],
     ];
 
     for (const [key, col] of map) {
@@ -172,6 +176,13 @@ export class SalesInvoiceModel {
     await pool.query(
       `UPDATE sales_invoices SET status = 'sent', sent_at = NOW(), updated_at = NOW() WHERE id = $1`,
       [id],
+    );
+  }
+
+  static async markShipped(id: number, trackingNumber: string): Promise<void> {
+    await pool.query(
+      `UPDATE sales_invoices SET tracking_number = $1, shipped_at = NOW(), updated_at = NOW() WHERE id = $2`,
+      [trackingNumber, id],
     );
   }
 

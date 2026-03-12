@@ -61,11 +61,13 @@ export const InvoiceDetail: React.FC = () => {
   const invoiceId = parseInt(id || '0');
 
   const { invoice, isLoading, addLineItem, updateLineItem, deleteLineItem, updateLineItemColors } = useSalesInvoice(invoiceId);
-  const { sendEmail, sendToQueue, update, isSending } = useSalesInvoices();
+  const { sendEmail, sendToQueue, update, ship, isSending, isShipping } = useSalesInvoices();
   const { customers } = useCustomers();
   const { products } = useProducts(true);
   const { colors: availableColors } = useColors();
 
+  const [editingTracking, setEditingTracking] = useState(false);
+  const [trackingDraft, setTrackingDraft] = useState('');
   const [showAddRow, setShowAddRow] = useState(false);
   const [newItem, setNewItem] = useState<CreateLineItemDto>({ productName: '', quantity: 1, unitPrice: 0 });
   const [newItemColors, setNewItemColors] = useState<ItemColorDto[]>([]);
@@ -80,11 +82,13 @@ export const InvoiceDetail: React.FC = () => {
     return <div className="text-center py-16 text-iron-400">Invoice not found</div>;
   }
 
+  const isShipped = !!invoice.shippedAt;
   const subtotal = invoice.lineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0);
   const taxAmount = invoice.taxExempt ? 0 : subtotal * invoice.taxRate;
   const total = subtotal + (invoice.shippingCost || 0) + taxAmount;
 
   const confirmIfPaid = () => {
+    if (isShipped) { window.alert('This invoice has been shipped and cannot be modified.'); return false; }
     if (invoice.status !== 'paid') return true;
     return window.confirm('This invoice is marked as Paid. Are you sure you want to make changes?');
   };
@@ -147,6 +151,25 @@ export const InvoiceDetail: React.FC = () => {
           >
             Download PDF
           </button>
+          {isShipped ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium" style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' }}>
+              ✓ Shipped {new Date(invoice.shippedAt!).toLocaleDateString('en-NZ')}
+            </span>
+          ) : (
+            <button
+              onClick={() => {
+                if (!invoice.trackingNumber?.trim()) { window.alert('Please add a tracking number before marking as shipped.'); return; }
+                if (!invoice.customer?.email) { window.alert('Customer has no email address — shipping notification cannot be sent.'); return; }
+                if (window.confirm(`Mark ${invoice.invoiceNumber} as shipped and notify ${invoice.customer.email}?`)) ship(invoiceId);
+              }}
+              disabled={isShipping || !invoice.trackingNumber?.trim() || !invoice.customer?.email}
+              title={!invoice.trackingNumber?.trim() ? 'Add a tracking number first' : !invoice.customer?.email ? 'Customer has no email' : undefined}
+              className="btn-sm text-sm font-medium px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: 'linear-gradient(to bottom,#3b82f6,#2563eb)', color: '#fff', boxShadow: '0 4px 8px rgb(0 0 0 / 0.4)' }}
+            >
+              {isShipping ? 'Shipping…' : '🚚 Mark as Shipped'}
+            </button>
+          )}
           <button
             onClick={() => sendToQueue(invoiceId)}
             className="btn-sm text-sm font-medium px-3 py-1.5 rounded-lg transition-all"
@@ -210,8 +233,46 @@ export const InvoiceDetail: React.FC = () => {
             <div>
               <StatusBadge status={invoice.status} />
               {invoice.sentAt && <p className="text-xs text-iron-400 mt-1">Sent {new Date(invoice.sentAt).toLocaleDateString('en-NZ')}</p>}
+              {invoice.shippedAt && <p className="text-xs mt-1" style={{ color: '#4ade80' }}>Shipped {new Date(invoice.shippedAt).toLocaleDateString('en-NZ')}</p>}
             </div>
           )}
+
+          {/* Tracking number */}
+          <div className="mt-3 pt-3" style={{ borderTop: '1px solid #2d2d2d' }}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#ff9900' }}>Tracking #</span>
+              {!isShipped && !editingTracking && (
+                <button
+                  onClick={() => { setTrackingDraft(invoice.trackingNumber || ''); setEditingTracking(true); }}
+                  className="text-xs text-primary-500 hover:text-primary-400"
+                >
+                  {invoice.trackingNumber ? 'Edit' : 'Add'}
+                </button>
+              )}
+            </div>
+            {editingTracking ? (
+              <div className="flex items-center gap-1">
+                <input
+                  value={trackingDraft}
+                  onChange={(e) => setTrackingDraft(e.target.value)}
+                  className="flex-1 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  style={inputSt}
+                  placeholder="e.g. 1Z999AA10123456784"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { update(invoiceId, { trackingNumber: trackingDraft.trim() || null }); setEditingTracking(false); }
+                    if (e.key === 'Escape') setEditingTracking(false);
+                  }}
+                />
+                <button onClick={() => { update(invoiceId, { trackingNumber: trackingDraft.trim() || null }); setEditingTracking(false); }} className="text-xs text-primary-400 hover:text-primary-300">✓</button>
+                <button onClick={() => setEditingTracking(false)} className="text-xs text-iron-500 hover:text-iron-300">✕</button>
+              </div>
+            ) : invoice.trackingNumber ? (
+              <p className="text-sm font-mono text-iron-100">{invoice.trackingNumber}</p>
+            ) : (
+              <p className="text-xs text-iron-600">{isShipped ? '—' : 'No tracking number'}</p>
+            )}
+          </div>
           <div className="mt-3 pt-3 text-xs text-iron-400 space-y-0.5" style={{ borderTop: '1px solid #2d2d2d' }}>
             <div className="flex justify-between items-center">
               <span>Tax:</span>

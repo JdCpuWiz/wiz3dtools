@@ -98,6 +98,15 @@ export class SalesInvoiceController {
     } catch (error) { next(error); }
   }
 
+  async ship(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      await service.ship(id);
+      res.json({ success: true, message: 'Invoice marked as shipped and customer notified' });
+    } catch (error) { next(error); }
+  }
+
   async sendToQueue(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const id = parseInt(req.params.id);

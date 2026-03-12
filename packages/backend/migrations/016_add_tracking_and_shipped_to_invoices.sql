@@ -1,0 +1,3 @@
+ALTER TABLE sales_invoices
+  ADD COLUMN IF NOT EXISTS tracking_number VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ;

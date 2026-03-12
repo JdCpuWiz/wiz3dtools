@@ -13,6 +13,35 @@ function createTransporter() {
   });
 }
 
+export async function sendShippingEmail(
+  customer: Customer,
+  invoiceNumber: string,
+  trackingNumber: string,
+): Promise<void> {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const companyName = process.env.COMPANY_NAME || 'Wiz3D Prints';
+  const ordersEmail = 'orders@wiz3dprints.com';
+
+  if (!from || !process.env.SMTP_USER) {
+    throw new Error('SMTP credentials not configured. Set SMTP_USER, SMTP_PASS, and SMTP_FROM in .env');
+  }
+
+  if (!customer.email) {
+    throw new Error(`Customer "${customer.contactName}" has no email address`);
+  }
+
+  const transporter = createTransporter();
+
+  await transporter.sendMail({
+    from: `"${companyName}" <${from}>`,
+    to: customer.email,
+    cc: ordersEmail,
+    subject: `Your order ${invoiceNumber} has shipped!`,
+    text: `Hi ${customer.contactName},\n\nGreat news — your order (${invoiceNumber}) has shipped!\n\nTracking Number: ${trackingNumber}\n\nThank you for your business!\n\n${companyName}`,
+    html: `<p>Hi ${customer.contactName},</p><p>Great news — your order (<strong>${invoiceNumber}</strong>) has shipped!</p><p><strong>Tracking Number:</strong> ${trackingNumber}</p><p>Thank you for your business!</p><p>${companyName}</p>`,
+  });
+}
+
 export async function sendInvoiceEmail(
   customer: Customer,
   invoiceNumber: string,

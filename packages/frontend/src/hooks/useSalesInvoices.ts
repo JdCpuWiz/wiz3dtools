@@ -55,6 +55,16 @@ export const useSalesInvoices = () => {
     onError: (error: Error) => toast.error(`Failed to send: ${error.message}`),
   });
 
+  const shipMutation = useMutation({
+    mutationFn: salesInvoiceApi.ship,
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-invoices', id] });
+      toast.success('Shipped! Customer notification sent.');
+    },
+    onError: (error: Error) => toast.error(`Failed to ship: ${error.message}`),
+  });
+
   const sendToQueueMutation = useMutation({
     mutationFn: ({ id, lineItemIds }: { id: number; lineItemIds?: number[] }) =>
       salesInvoiceApi.sendToQueue(id, lineItemIds),
@@ -74,11 +84,13 @@ export const useSalesInvoices = () => {
     update: (id: number, data: UpdateSalesInvoiceDto) => updateMutation.mutateAsync({ id, data }),
     delete: (id: number) => deleteMutation.mutateAsync(id),
     sendEmail: (id: number) => sendEmailMutation.mutateAsync(id),
+    ship: (id: number) => shipMutation.mutateAsync(id),
     sendToQueue: (id: number, lineItemIds?: number[]) =>
       sendToQueueMutation.mutateAsync({ id, lineItemIds }),
     isCreating: createMutation.isPending,
     isDeleting: deleteMutation.isPending,
     isSending: sendEmailMutation.isPending,
+    isShipping: shipMutation.isPending,
   };
 };
 
