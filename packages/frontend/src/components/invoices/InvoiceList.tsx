@@ -5,21 +5,43 @@ import { StatusBadge } from '../common/StatusBadge';
 import type { SalesInvoice, SalesInvoiceStatus } from '@wizqueue/shared';
 
 type InvoiceFilter = 'all' | SalesInvoiceStatus;
+type SortCol = 'invoiceNumber' | 'customer' | 'date' | 'total';
+type SortDir = 'asc' | 'desc';
 
 function calcTotal(invoice: SalesInvoice): number {
   const sub = invoice.lineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0);
   return sub + (invoice.taxExempt ? 0 : sub * invoice.taxRate) + (invoice.shippingCost || 0);
 }
 
+function customerName(invoice: SalesInvoice): string {
+  return invoice.customer
+    ? (invoice.customer.businessName || invoice.customer.contactName || '')
+    : '';
+}
+
 export const InvoiceList: React.FC = () => {
   const navigate = useNavigate();
   const { invoices, isLoading, delete: deleteInvoice } = useSalesInvoices();
   const [filter, setFilter] = useState<InvoiceFilter>('all');
+  const [sortCol, setSortCol] = useState<SortCol>('date');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
-  const filtered = useMemo(() =>
-    filter === 'all' ? invoices : invoices.filter((inv) => inv.status === filter),
-    [invoices, filter]
-  );
+  function handleSort(col: SortCol) {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  }
+
+  const filtered = useMemo(() => {
+    const base = filter === 'all' ? invoices : invoices.filter((inv) => inv.status === filter);
+    return [...base].sort((a, b) => {
+      let cmp = 0;
+      if (sortCol === 'invoiceNumber') cmp = a.invoiceNumber.localeCompare(b.invoiceNumber, undefined, { numeric: true });
+      else if (sortCol === 'customer') cmp = customerName(a).localeCompare(customerName(b));
+      else if (sortCol === 'date') cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      else if (sortCol === 'total') cmp = calcTotal(a) - calcTotal(b);
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [invoices, filter, sortCol, sortDir]);
 
   if (isLoading) {
     return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" /></div>;
@@ -54,11 +76,28 @@ export const InvoiceList: React.FC = () => {
           <table className="wiz-table">
             <thead>
               <tr>
-                <th>Invoice #</th>
-                <th className="hidden sm:table-cell">Customer</th>
-                <th>Status</th>
-                <th className="text-right">Total</th>
-                <th className="hidden md:table-cell">Date</th>
+                {([
+                  { col: 'invoiceNumber' as SortCol, label: 'Invoice #', cls: '' },
+                  { col: 'customer' as SortCol, label: 'Customer', cls: 'hidden sm:table-cell' },
+                  { col: null, label: 'Status', cls: '' },
+                  { col: 'total' as SortCol, label: 'Total', cls: 'text-right' },
+                  { col: 'date' as SortCol, label: 'Date', cls: 'hidden md:table-cell' },
+                ] as { col: SortCol | null; label: string; cls: string }[]).map(({ col, label, cls }) => (
+                  <th
+                    key={label}
+                    className={`${cls}${col ? ' cursor-pointer select-none hover:text-iron-50 transition-colors' : ''}`}
+                    onClick={col ? () => handleSort(col) : undefined}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {label}
+                      {col && (
+                        <span className="text-xs" style={{ color: sortCol === col ? '#ff9900' : '#4b5563' }}>
+                          {sortCol === col ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+                        </span>
+                      )}
+                    </span>
+                  </th>
+                ))}
                 <th />
               </tr>
             </thead>
