@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ColorModel } from '../models/color.model.js';
-import { LineItemColorModel } from '../models/item-color.model.js';
-import { QueueItemColorModel } from '../models/item-color.model.js';
+import { LineItemColorModel, QueueItemColorModel } from '../models/item-color.model.js';
+import { InvoiceLineItemModel } from '../models/invoice-line-item.model.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
 export class ColorController {
@@ -45,6 +45,13 @@ export class ColorController {
       if (isNaN(itemId)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
       const { colors } = req.body as { colors: Array<{ colorId: number; isPrimary: boolean; note?: string | null; sortOrder: number }> };
       const result = await LineItemColorModel.setColors(itemId, colors || []);
+
+      // If this line item has been sent to queue, sync colors to the queue item too
+      const lineItem = await InvoiceLineItemModel.findById(itemId);
+      if (lineItem?.queueItemId) {
+        await QueueItemColorModel.setColors(lineItem.queueItemId, colors || []);
+      }
+
       res.json({ success: true, data: result, message: 'Colors updated' });
     } catch (error) { next(error); }
   }
