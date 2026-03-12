@@ -8,9 +8,9 @@ const LOGO_PATH = join(__dirname, '../assets/wiz3d_logo.png');
 
 const ORANGE = '#E8610A';
 const DARK = '#1a1a1a';
-const LIGHT_GRAY = '#f5f5f5';
+const LIGHT_GRAY = '#dcdcdc';
 const MID_GRAY = '#cccccc';
-const BOX_BG = '#f0f0f0';   // soft light grey for all section boxes
+const BOX_BG = '#d0d0d0';   // soft grey for all section boxes
 const BOX_PAD = 8;
 
 function formatCurrency(amount: number): string {
@@ -69,7 +69,7 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     const infoBlockH = 22 + companyInfoLines.length * 13; // name(22px) + info lines
     const contentH = Math.max(LOGO_H, infoBlockH);
     const COMPANY_BOX_X = M - 8;        // 10pt — slightly inside margin
-    const COMPANY_BOX_TOP = 12;
+    const COMPANY_BOX_TOP = 28;
     const COMPANY_BOX_W = 318;
     const COMPANY_BOX_H = BOX_PAD + contentH + BOX_PAD;
 
@@ -167,7 +167,7 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     const subtotalColW = R             - colX.subtotal - 6;
 
     doc.fillColor(ORANGE).rect(M, tableY, CW, 22).fill();
-    doc.fillColor('white').fontSize(8).font('Helvetica-Bold');
+    doc.fillColor(DARK).fontSize(8).font('Helvetica-Bold');
     doc.text('PRODUCT',    colX.product + 4, tableY + 7);
     doc.text('DETAILS',    colX.details + 4, tableY + 7);
     doc.text('QTY',        colX.qty,         tableY + 7, { align: 'right', width: qtyColW      });
@@ -190,7 +190,7 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
 
     const drawTableHeader = (y: number) => {
       doc.fillColor(ORANGE).rect(M, y, CW, 22).fill();
-      doc.fillColor('white').fontSize(8).font('Helvetica-Bold');
+      doc.fillColor(DARK).fontSize(8).font('Helvetica-Bold');
       doc.text('PRODUCT',    colX.product + 4, y + 7);
       doc.text('DETAILS',    colX.details + 4, y + 7);
       doc.text('QTY',        colX.qty,         y + 7, { align: 'right', width: qtyColW      });
@@ -213,7 +213,9 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
         doc.fontSize(8);
       }
 
-      const leftColH   = productH + skuH;
+      const colorsH = (item.colors && item.colors.length > 0) ? (3 + item.colors.length * 10) : 0;
+
+      const leftColH   = productH + skuH + colorsH;
       const rowContent = Math.max(leftColH, detailsH, 12); // minimum 12pt content
       const rowHeight  = Math.ceil(rowContent) + VPAD * 2;
 
@@ -242,8 +244,22 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
 
       // ── SKU (single line, below product name) ─────────────────────────────
       if (item.sku) {
-        doc.fillColor('#888888').fontSize(7)
+        doc.fillColor('#555555').fontSize(7)
           .text(item.sku, colX.product + 4, textTop + productH + 3, { ...clip1, height: 10, width: COL_W.product });
+        doc.fillColor(DARK).fontSize(8);
+      }
+
+      // ── Colors (swatch + name + note, below SKU) ──────────────────────────
+      if (item.colors && item.colors.length > 0) {
+        const sortedColors = [...item.colors].sort((a, b) => a.sortOrder - b.sortOrder);
+        let colorY = textTop + productH + skuH + 3;
+        for (const ic of sortedColors) {
+          doc.fillColor(ic.color.hex).rect(colX.product + 4, colorY + 1, 7, 7).fill();
+          doc.fillColor(DARK).fontSize(7);
+          const label = ic.note ? `${ic.color.name} – ${ic.note}` : ic.color.name;
+          doc.text(label, colX.product + 14, colorY, { width: COL_W.product - 14, lineBreak: false, ellipsis: true, height: 9 });
+          colorY += 10;
+        }
         doc.fillColor(DARK).fontSize(8);
       }
 
