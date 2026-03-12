@@ -44,6 +44,7 @@ export const ProductList: React.FC = () => {
                 <th className="hidden sm:table-cell">Description</th>
                 <th>Unit Price</th>
                 <th>Units Sold</th>
+                <th className="hidden md:table-cell">Revenue</th>
                 <th>Status</th>
                 <th />
               </tr>
@@ -64,6 +65,9 @@ export const ProductList: React.FC = () => {
                     ${product.unitPrice.toFixed(2)}
                   </td>
                   <td className="text-iron-100">{product.unitsSold}</td>
+                  <td className="hidden md:table-cell font-medium" style={{ color: '#86efac' }}>
+                    {product.unitsSold > 0 ? `$${(product.unitsSold * product.unitPrice).toFixed(2)}` : '—'}
+                  </td>
                   <td>
                     <button
                       onClick={() => update(product.id, { active: !product.active })}

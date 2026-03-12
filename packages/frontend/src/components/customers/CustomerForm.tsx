@@ -1,8 +1,26 @@
 import React, { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useCustomer, useCustomers } from '../../hooks/useCustomers';
-import type { CreateCustomerDto } from '@wizqueue/shared';
+import { useSalesInvoices } from '../../hooks/useSalesInvoices';
+import type { CreateCustomerDto, SalesInvoice } from '@wizqueue/shared';
+
+const statusColors: Record<string, { color: string; bg: string }> = {
+  draft:     { color: '#d1d5db', bg: '#2d2d2d' },
+  sent:      { color: '#93c5fd', bg: '#1e3a5f' },
+  paid:      { color: '#86efac', bg: '#14532d' },
+  cancelled: { color: '#fca5a5', bg: '#450a0a' },
+};
+
+function calcTotal(inv: SalesInvoice): number {
+  const subtotal = inv.lineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0);
+  const taxAmount = inv.taxExempt ? 0 : subtotal * inv.taxRate;
+  return subtotal + taxAmount + (Number(inv.shippingCost) || 0);
+}
+
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export const CustomerForm: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +30,12 @@ export const CustomerForm: React.FC = () => {
 
   const { data: existing } = useCustomer(customerId);
   const { create, update, isCreating, isUpdating } = useCustomers();
+  const { invoices } = useSalesInvoices();
+  const customerInvoices = isEdit
+    ? invoices
+        .filter((inv) => inv.customerId === customerId)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    : [];
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateCustomerDto>();
 
   useEffect(() => {
@@ -108,6 +132,55 @@ export const CustomerForm: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* Invoice History (edit mode only) */}
+      {isEdit && (
+        <div className="card-surface">
+          <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-[#2d2d2d]">
+            <h3 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-widest">
+              Invoice History
+            </h3>
+            <Link to={`/invoices/new`} className="btn-primary btn-sm text-xs">+ New Invoice</Link>
+          </div>
+          {customerInvoices.length === 0 ? (
+            <p className="text-sm text-[#6b7280] px-4 py-6">No invoices for this customer yet.</p>
+          ) : (
+            <table className="wiz-table">
+              <thead>
+                <tr>
+                  <th>Invoice</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th className="text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customerInvoices.map((inv) => {
+                  const sc = statusColors[inv.status] || statusColors.draft;
+                  return (
+                    <tr key={inv.id}>
+                      <td>
+                        <Link to={`/invoices/${inv.id}`} className="font-mono text-sm text-[#ff9900] hover:text-[#e68a00]">
+                          {inv.invoiceNumber}
+                        </Link>
+                      </td>
+                      <td className="text-[#9ca3af] text-sm">{fmtDate(inv.createdAt)}</td>
+                      <td>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ color: sc.color, background: sc.bg }}>
+                          {inv.status.charAt(0).toUpperCase() + inv.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="text-right font-medium text-[#e5e5e5]">
+                        ${calcTotal(inv).toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 };

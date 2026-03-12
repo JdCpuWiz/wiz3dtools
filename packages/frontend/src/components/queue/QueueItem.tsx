@@ -8,9 +8,11 @@ import { ColorSwatch } from '../common/ColorPicker';
 
 interface QueueItemProps {
   item: QueueItemType;
+  isSelected?: boolean;
+  onSelect?: (id: number, checked: boolean) => void;
 }
 
-export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
+export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [partialQty, setPartialQty] = useState<number | null>(null);
   const [editingQty, setEditingQty] = useState(false);
@@ -88,6 +90,16 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item }) => {
         className="card hover:shadow-md transition-shadow"
       >
         <div className="flex items-start gap-4">
+          {/* Checkbox (bulk select) */}
+          {onSelect && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={(e) => onSelect(item.id, e.target.checked)}
+              className="mt-1.5 h-4 w-4 flex-shrink-0 cursor-pointer accent-[#ff9900]"
+            />
+          )}
+
           {/* Drag Handle */}
           <button
             className="cursor-grab active:cursor-grabbing text-[#6b7280] hover:text-[#d1d5db] pt-1"

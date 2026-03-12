@@ -36,6 +36,17 @@ const Pill: React.FC<{ label: string; count: number; color: string; bg: string }
   </div>
 );
 
+const statusColors: Record<string, { color: string; bg: string; label: string }> = {
+  draft:     { color: '#d1d5db', bg: '#2d2d2d', label: 'Draft' },
+  sent:      { color: '#93c5fd', bg: '#1e3a5f', label: 'Sent' },
+  paid:      { color: '#86efac', bg: '#14532d', label: 'Paid' },
+  cancelled: { color: '#fca5a5', bg: '#450a0a', label: 'Cancelled' },
+};
+
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export const Dashboard: React.FC = () => {
   const { items: queueItems, isLoading: queueLoading } = useQueue();
   const { invoices, isLoading: invoicesLoading } = useSalesInvoices();
@@ -57,11 +68,23 @@ export const Dashboard: React.FC = () => {
     const taxAmount = inv.taxExempt ? 0 : subtotal * inv.taxRate;
     return subtotal + taxAmount + (Number(inv.shippingCost) || 0);
   };
-  const paidRevenue = invoices.filter((i) => i.status === 'paid').reduce((s, i) => s + calcTotal(i), 0);
+
+  const now = new Date();
+  const paidInvoices = invoices.filter((i) => i.status === 'paid');
+  const paidRevenue = paidInvoices.reduce((s, i) => s + calcTotal(i), 0);
   const outstanding = invoices.filter((i) => i.status === 'sent').reduce((s, i) => s + calcTotal(i), 0);
+  const thisMonthRevenue = paidInvoices
+    .filter((i) => {
+      const d = new Date(i.createdAt);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    })
+    .reduce((s, i) => s + calcTotal(i), 0);
+
   const fmt = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
   const activeProducts = products.filter((p) => p.active).length;
+
+  const recentInvoices = invoices.slice(0, 5);
 
   const isLoading = queueLoading || invoicesLoading || customersLoading || productsLoading;
 
@@ -115,11 +138,17 @@ export const Dashboard: React.FC = () => {
           {invoices.length === 0 && (
             <p className="text-sm text-[#6b7280] mt-2">No invoices yet</p>
           )}
-          {(paidRevenue > 0 || outstanding > 0) && (
+          {(paidRevenue > 0 || outstanding > 0 || thisMonthRevenue > 0) && (
             <div className="mt-3 pt-3 border-t border-[#2d2d2d] space-y-1">
+              {thisMonthRevenue > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#9ca3af]">This Month</span>
+                  <span className="text-sm font-semibold" style={{ color: '#ff9900' }}>{fmt(thisMonthRevenue)}</span>
+                </div>
+              )}
               {paidRevenue > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#9ca3af]">Paid Revenue</span>
+                  <span className="text-xs text-[#9ca3af]">Total Paid</span>
                   <span className="text-sm font-semibold" style={{ color: '#86efac' }}>{fmt(paidRevenue)}</span>
                 </div>
               )}
@@ -152,6 +181,51 @@ export const Dashboard: React.FC = () => {
           )}
         </StatCard>
       </div>
+
+      {/* Recent Invoices */}
+      {recentInvoices.length > 0 && (
+        <div className="card-surface">
+          <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-[#2d2d2d]">
+            <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-widest">Recent Invoices</h2>
+            <Link to="/invoices" className="text-xs text-[#ff9900] hover:text-[#e68a00]">View all →</Link>
+          </div>
+          <table className="wiz-table">
+            <thead>
+              <tr>
+                <th>Invoice</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th className="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentInvoices.map((inv) => {
+                const sc = statusColors[inv.status] || statusColors.draft;
+                return (
+                  <tr key={inv.id}>
+                    <td>
+                      <Link to={`/invoices/${inv.id}`} className="font-mono text-sm text-[#ff9900] hover:text-[#e68a00]">
+                        {inv.invoiceNumber}
+                      </Link>
+                    </td>
+                    <td className="text-[#d1d5db]">
+                      {inv.customer ? (inv.customer.businessName || inv.customer.contactName) : '—'}
+                    </td>
+                    <td className="text-[#9ca3af] text-sm">{fmtDate(inv.createdAt)}</td>
+                    <td>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ color: sc.color, background: sc.bg }}>
+                        {sc.label}
+                      </span>
+                    </td>
+                    <td className="text-right font-medium text-[#e5e5e5]">{fmt(calcTotal(inv))}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
