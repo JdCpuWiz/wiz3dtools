@@ -67,6 +67,18 @@ Running log of completed work and what's still planned.
 - **PDF download auth** — changed `<a href>` link to `fetch()` with `Authorization: Bearer` header + blob download; plain links can't send JWT tokens
 - **PDF page overflow** — invoices with many line items were producing ~15 mostly-blank pages (one element per page); added page break detection in line items loop, re-draws table header on continuation pages, added overflow check before totals section
 
+### Session 10 — Print colors feature
+- **Color catalog** — admin-managed list of print colors (name + hex); pre-seeded with all 30 Bambu Lab PLA colors; migrations 012–015
+- **Admin → Colors page** (`/admin/colors`) — add/edit/delete colors, toggle active/inactive, live swatch preview; header now shows "Users" + "Colors" tabs for admins
+- **ColorPicker component** — swatch palette, click to add up to 4 colors (1 primary + 3 more); each color has a short note field; primary highlighted in orange
+- **Invoice line items** — colors shown as swatches below product name in read mode; color picker expands inline in edit mode; "+ Colors" button (orange, under product name) in Add Item row
+- **Queue items** — color swatches displayed on each queue card; primary color in orange, others in grey
+- **QueueItemEdit modal** — color picker included; colors saved on submit
+- **AddItemForm** (manual queue add) — color picker included
+- **InvoiceForm** (new invoice) — "+ Colors" button per line item expands inline picker
+- **Color sync** — colors copied from line item → queue item when sent to queue; if line item colors are updated after queuing, queue item colors are synced automatically
+- **Bambu Lab reseed** — `bambu-colors.md` in project root; migration 015 truncates + reseeds with correct colors
+
 ### Session 9 — Paid invoice edit warning
 - **Paid invoice guard** — all edit actions on a paid invoice now prompt for confirmation before proceeding: change customer, change status, tax exempt toggle, shipping edit, add line item, edit/delete line items
 - `confirmIfPaid()` helper in `InvoiceDetail.tsx` — returns `true` immediately for non-paid invoices, shows `window.confirm` for paid ones

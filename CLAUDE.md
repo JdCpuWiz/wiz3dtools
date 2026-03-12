@@ -68,6 +68,10 @@ PostgreSQL. Migrations live in `packages/backend/migrations/` and are applied in
 | `009_backfill_product_ids.sql` | `invoice_line_items` | Backfills `product_id` by matching name + price |
 | `010_add_missing_products.sql` | `products`, `invoice_line_items` | Adds 3 missing products; name-only backfill for remaining unlinked items |
 | `011_create_users_table.sql` | `users` | Auth users (id, username, email, password_hash, role, timestamps) |
+| `012_create_colors_table.sql` | `colors` | Print color catalog (name, hex, active, sort_order); seeded with 30 Bambu Lab PLA colors |
+| `013_create_line_item_colors_table.sql` | `line_item_colors` | Colors assigned to invoice line items (colorId, isPrimary, note, sortOrder) |
+| `014_create_queue_item_colors_table.sql` | `queue_item_colors` | Colors assigned to queue items; auto-copied from line item on send-to-queue |
+| `015_reseed_bambu_colors.sql` | `colors` | TRUNCATE + re-insert correct Bambu Lab PLA colors (run if seeded with wrong colors) |
 
 ---
 
@@ -143,6 +147,7 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 - `POST /api/queue/batch` — batch create
 - `PATCH /api/queue/reorder` — drag-drop reorder `{ itemId, newPosition }`
 - `PATCH /api/queue/:id/status` — status update `{ status }`
+- `PUT /api/queue/:id/colors` — set colors `{ colors: [{ colorId, isPrimary, note, sortOrder }] }`
 
 **Upload (Ollama OCR)**
 - `POST /api/upload` — PDF upload (multipart), triggers Ollama extraction
@@ -172,9 +177,16 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 - `POST /api/sales-invoices/:id/line-items`
 - `PUT /api/sales-invoices/:id/line-items/:itemId`
 - `DELETE /api/sales-invoices/:id/line-items/:itemId`
+- `PUT /api/sales-invoices/:id/line-items/:itemId/colors` — set colors; also syncs to linked queue item if already queued
 - `POST /api/sales-invoices/:id/send` — generates PDF + sends email, marks status=sent
 - `POST /api/sales-invoices/:id/send-to-queue` — body: `{ lineItemIds?: number[] }` (omit for all); creates queue_items, increments product units_sold
 - `GET /api/sales-invoices/:id/pdf` — streams PDF download
+
+**Colors**
+- `GET /api/colors` — list all colors (authenticated)
+- `POST /api/colors` — create (admin only)
+- `PUT /api/colors/:id` — update (admin only)
+- `DELETE /api/colors/:id` — delete (admin only)
 
 **Users** (admin only)
 - `GET /api/users` — list all users
@@ -199,6 +211,7 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 | `sales-invoice.ts` | `SalesInvoice`, `SalesInvoiceStatus`, `InvoiceLineItem`, `CreateSalesInvoiceDto`, `UpdateSalesInvoiceDto`, `CreateLineItemDto` |
 | `auth.ts` | `User`, `LoginDto`, `RegisterDto`, `AuthResponse` |
 | `api.ts` | `ApiResponse`, `ApiError`, `PaginatedResponse` |
+| `color.ts` | `Color`, `ItemColor`, `ItemColorDto`, `CreateColorDto`, `UpdateColorDto` |
 
 ---
 
@@ -219,10 +232,11 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 | `/invoices/new` | `InvoiceForm` | |
 | `/invoices/:id` | `InvoiceDetail` | |
 | `/admin/users` | `UsersPage` | Admin only — list/create/edit/delete users |
+| `/admin/colors` | `ColorsPage` | Admin only — manage print color catalog |
 | `/login` | `LoginPage` | No Layout wrapper, full-page form |
 
 ### Navigation order
-**Dashboard → Customers → Products → Invoices → Queue → Admin** (Admin tab visible to admin role only)
+**Dashboard → Customers → Products → Invoices → Queue → Users → Colors** (Users + Colors tabs visible to admin role only)
 
 ### Key files
 ```
@@ -235,28 +249,31 @@ components/auth/
   ProtectedRoute.tsx   Redirects unauthenticated to /login
 styles/globals.css    All base styles, .btn-primary, .btn-secondary, .card, .input, .wiz-table etc.
 tailwind.config.js    Extended with iron/primary color palette
-services/api.ts       queueApi, uploadApi, customerApi, productApi, salesInvoiceApi, userApi
+services/api.ts       queueApi, uploadApi, customerApi, productApi, salesInvoiceApi, userApi, colorApi
 hooks/
   useQueue.ts
   useUpload.ts
   useCustomers.ts
   useProducts.ts
-  useSalesInvoices.ts   also exports useSalesInvoice(id) for detail view
+  useSalesInvoices.ts   also exports useSalesInvoice(id) for detail view; updateLineItemColors syncs to queue
   useUsers.ts           admin user management
+  useColors.ts          color catalog; create/update/delete (admin)
 components/
   layout/
     Layout.tsx          iron-950 background, sticky header, footer
-    Header.tsx          Frosted-glass sticky nav, orange gradient active tab; Admin tab for admins
+    Header.tsx          Frosted-glass sticky nav; Users + Colors tabs for admins
   common/
     StatusBadge.tsx     draft/sent/paid/cancelled colored badges
     Button.tsx
     Modal.tsx
+    ColorPicker.tsx     swatch palette; select up to 4 colors (1 primary + 3); note per color
+    ColorSwatch.tsx     exported from ColorPicker.tsx — small colored circle
   dashboard/
     Dashboard.tsx       Stat cards: queue, invoices (revenue), customers, products
   queue/
     QueueList.tsx       Filter: 'all' shows pending+printing (printing sorted first); 'completed' shows history
-    QueueItem.tsx       Completing an item sets status='completed' (keeps row in DB); never deletes on complete
-    QueueItemEdit.tsx
+    QueueItem.tsx       Completing an item sets status='completed' (keeps row in DB); shows color swatches
+    QueueItemEdit.tsx   Includes ColorPicker; colors saved via colorApi.setQueueItemColors after update
   upload/
     UploadZone.tsx
     UploadProgress.tsx
@@ -268,11 +285,12 @@ components/
     ProductForm.tsx
   invoices/
     InvoiceList.tsx
-    InvoiceForm.tsx     Product picker dropdown auto-fills name/price/description
-    InvoiceDetail.tsx   Inline add item (with product picker), send to queue per-item or all
-    LineItemRow.tsx     Inline edit, → Queue button per row
+    InvoiceForm.tsx     Product picker; "+ Colors" button per line item expands inline picker
+    InvoiceDetail.tsx   Inline add item with "+ Colors" button (under product name, orange); color sync on save
+    LineItemRow.tsx     Inline edit with ColorPicker expansion row; shows color swatches in read mode
   admin/
     UsersPage.tsx       List users, add user, inline email edit, role dropdown, reset password, delete
+    ColorsPage.tsx      Add/edit/delete Bambu Lab PLA colors; toggle active; live swatch preview
 ```
 
 ### Branding
