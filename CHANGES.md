@@ -75,6 +75,13 @@ Running log of completed work and what's still planned.
 - **Shipping email** — sent to customer with tracking number; CC to `orders@wiz3dprints.com`; uses `sendShippingEmail()` in `email.service.ts`
 - **Shipped lock** — once `shippedAt` is set, all invoice editing is blocked (customer, status, tax, shipping cost, line items); `confirmIfPaid()` now checks shipped first; shipped invoices show a green "✓ Shipped [date]" badge
 
+### Session 13 — Dashboard, customer history, product revenue, bulk queue actions
+- **Dashboard — This Month revenue** — Invoices card now shows current-month paid revenue in orange alongside all-time totals
+- **Dashboard — Recent Invoices** — table below stat cards shows last 5 invoices with clickable invoice #, customer, date, status badge, total
+- **Customer invoice history** — customer edit page shows all invoices for that customer below the form (sorted newest first); includes "+ New Invoice" button
+- **Product revenue column** — Products list now shows a Revenue column (`units_sold × unit_price`) in green; shows `—` for unsold products
+- **Bulk queue status** — checkboxes on every queue item + select-all toggle; bulk action bar appears when any selected: set all to Pending / Printing / Completed in one click; selection clears on filter change
+
 ### Session 12 — PDF invoice style updates
 - **Colors on printed invoice** — line item colors now render on the PDF: 7×7 colored swatch + color name (+ note if set) stacked below the SKU in the product column; row height auto-expands to fit
 - **Darker section backgrounds** — alternating row shading `#dcdcdc`, section boxes (Bill To, Totals, Payment, Notes) `#d0d0d0`; previously barely visible
