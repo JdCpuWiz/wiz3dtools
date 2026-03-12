@@ -295,12 +295,7 @@ export const InvoiceDetail: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowAddColors((v) => !v)}
-                        className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded mt-1"
-                        style={
-                          newItemColors.length > 0
-                            ? { background: 'rgba(255,153,0,0.15)', color: '#ff9900', border: '1px solid rgba(255,153,0,0.3)' }
-                            : { background: '#2d2d2d', color: '#9ca3af', border: '1px solid #3a3a3a' }
-                        }
+                        className="btn-primary btn-sm text-xs inline-flex items-center gap-1 mt-1"
                       >
                         {newItemColors.length > 0 && (() => {
                           const primary = newItemColors.find((c) => c.isPrimary);
