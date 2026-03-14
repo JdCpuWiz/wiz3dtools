@@ -6,6 +6,12 @@ Running log of completed work and what's still planned.
 
 ## Completed
 
+### Session 14 — Queue cleanup on ship
+- When a sales invoice is marked as shipped, all queue items linked to that invoice's line items are now deleted (any status: pending, printing, or completed)
+- Deletion is scoped strictly via `invoice_line_items.queue_item_id` FK — queue items from other invoices sharing the same product are unaffected
+- `queue_item_colors` cascade-deletes automatically; `invoice_line_items.queue_item_id` nulls automatically via existing FK constraints
+- Change in `SalesInvoiceService.ship()` (`packages/backend/src/services/sales-invoice.service.ts`)
+
 ### Session 1 — Initial queue app
 - Queue management UI (drag-drop reorder, status update)
 - PDF invoice upload → Ollama OCR → auto-populate queue
