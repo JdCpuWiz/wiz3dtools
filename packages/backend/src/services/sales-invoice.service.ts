@@ -4,6 +4,7 @@ import { QueueItemModel } from '../models/queue-item.model.js';
 import { ProductModel } from '../models/product.model.js';
 import { QueueItemColorModel } from '../models/item-color.model.js';
 import { sendShippingEmail } from './email.service.js';
+import { pool } from '../config/database.js';
 import type {
   SalesInvoice,
   CreateSalesInvoiceDto,
@@ -70,6 +71,18 @@ export class SalesInvoiceService {
 
     await SalesInvoiceModel.markShipped(invoiceId, invoice.trackingNumber.trim());
     await sendShippingEmail(invoice.customer, invoice.invoiceNumber, invoice.trackingNumber.trim());
+
+    // Remove all queue items linked to this invoice's line items (any status)
+    await pool.query(
+      `DELETE FROM queue_items
+       WHERE id IN (
+         SELECT queue_item_id
+         FROM invoice_line_items
+         WHERE invoice_id = $1
+           AND queue_item_id IS NOT NULL
+       )`,
+      [invoiceId]
+    );
   }
 
   async sendToQueue(invoiceId: number, lineItemIds?: number[]): Promise<void> {
