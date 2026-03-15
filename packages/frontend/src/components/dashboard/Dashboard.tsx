@@ -37,10 +37,11 @@ const Pill: React.FC<{ label: string; count: number; color: string; bg: string }
 );
 
 const statusColors: Record<string, { color: string; bg: string; label: string }> = {
-  draft:     { color: '#d1d5db', bg: '#2d2d2d', label: 'Draft' },
-  sent:      { color: '#93c5fd', bg: '#1e3a5f', label: 'Sent' },
-  paid:      { color: '#86efac', bg: '#14532d', label: 'Paid' },
-  cancelled: { color: '#fca5a5', bg: '#450a0a', label: 'Cancelled' },
+  draft:     { color: '#d1d5db', bg: '#2d2d2d',  label: 'Draft' },
+  sent:      { color: '#93c5fd', bg: '#1e3a5f',  label: 'Sent' },
+  paid:      { color: '#86efac', bg: '#14532d',  label: 'Paid' },
+  shipped:   { color: '#2dd4bf', bg: '#0d3330',  label: 'Shipped' },
+  cancelled: { color: '#fca5a5', bg: '#450a0a',  label: 'Cancelled' },
 };
 
 function fmtDate(d: string) {
@@ -58,9 +59,10 @@ export const Dashboard: React.FC = () => {
   const pendingQty = queueItems.filter((i) => i.status === 'pending').reduce((s, i) => s + i.quantity, 0);
   const printingQty = queueItems.filter((i) => i.status === 'printing').reduce((s, i) => s + i.quantity, 0);
 
-  const draft = invoices.filter((i) => i.status === 'draft').length;
-  const sent = invoices.filter((i) => i.status === 'sent').length;
-  const paid = invoices.filter((i) => i.status === 'paid').length;
+  const draft = invoices.filter((i) => i.status === 'draft' && !i.shippedAt).length;
+  const sent = invoices.filter((i) => i.status === 'sent' && !i.shippedAt).length;
+  const shipped = invoices.filter((i) => !!i.shippedAt).length;
+  const paid = invoices.filter((i) => i.status === 'paid' && !i.shippedAt).length;
   const cancelled = invoices.filter((i) => i.status === 'cancelled').length;
 
   const calcTotal = (inv: SalesInvoice): number => {
@@ -72,7 +74,7 @@ export const Dashboard: React.FC = () => {
   const now = new Date();
   const paidInvoices = invoices.filter((i) => i.status === 'paid');
   const paidRevenue = paidInvoices.reduce((s, i) => s + calcTotal(i), 0);
-  const outstanding = invoices.filter((i) => i.status === 'sent').reduce((s, i) => s + calcTotal(i), 0);
+  const outstanding = invoices.filter((i) => i.status === 'sent' && !i.shippedAt).reduce((s, i) => s + calcTotal(i), 0);
   const thisMonthRevenue = paidInvoices
     .filter((i) => {
       const d = new Date(i.createdAt);
@@ -130,6 +132,7 @@ export const Dashboard: React.FC = () => {
           <div className="divide-y divide-[#2d2d2d]">
             <Pill label="Draft" count={draft} color="#d1d5db" bg="#2d2d2d" />
             <Pill label="Sent" count={sent} color="#93c5fd" bg="#1e3a5f" />
+            <Pill label="Shipped" count={shipped} color="#2dd4bf" bg="#0d3330" />
             <Pill label="Paid" count={paid} color="#86efac" bg="#14532d" />
             {cancelled > 0 && (
               <Pill label="Cancelled" count={cancelled} color="#fca5a5" bg="#450a0a" />
@@ -201,7 +204,7 @@ export const Dashboard: React.FC = () => {
             </thead>
             <tbody>
               {recentInvoices.map((inv) => {
-                const sc = statusColors[inv.status] || statusColors.draft;
+                const sc = statusColors[inv.shippedAt ? 'shipped' : inv.status] || statusColors.draft;
                 return (
                   <tr key={inv.id}>
                     <td>
