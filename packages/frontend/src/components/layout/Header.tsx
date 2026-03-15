@@ -94,6 +94,7 @@ export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
             {user && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-[#9ca3af] hidden sm:inline">{user.username}</span>
+                <span className="text-xs text-iron-600 hidden sm:inline">v{__APP_VERSION__}</span>
                 <button onClick={handleLogout} className="btn-secondary btn-sm">Sign Out</button>
               </div>
             )}

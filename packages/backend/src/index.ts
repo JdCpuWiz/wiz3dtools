@@ -1,4 +1,7 @@
 import express, { Request, Response } from 'express';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { version } = require('../package.json');
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
@@ -57,6 +60,7 @@ app.get('/health', async (_req: Request, res: Response) => {
 
   res.status(statusCode).json({
     status,
+    version,
     timestamp: new Date().toISOString(),
     services: {
       database: dbConnected ? 'connected' : 'disconnected',
@@ -104,7 +108,7 @@ app.use('/api/colors', colorRoutes);
 app.get('/', (_req: Request, res: Response) => {
   res.json({
     name: 'WizQueue API',
-    version: '1.0.0',
+    version,
     description: '3D Printing Queue Generator API',
     endpoints: {
       health: '/health',
