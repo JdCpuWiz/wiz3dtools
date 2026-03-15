@@ -1,7 +1,8 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { Request } from 'express';
+import fsPromises from 'fs/promises';
+import { Request, Response, NextFunction } from 'express';
 
 // Ensure upload directory exists
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
@@ -42,3 +43,19 @@ export const uploadMiddleware = multer({
     fileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760'), // 10MB default
   },
 });
+
+// Validate actual PDF magic bytes after multer saves the file
+export async function validatePdfMagicBytes(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (!req.file) { next(); return; }
+  try {
+    const buffer = await fsPromises.readFile(req.file.path);
+    if (buffer.toString('utf8', 0, 4) !== '%PDF') {
+      await fsPromises.unlink(req.file.path);
+      res.status(400).json({ success: false, error: 'Uploaded file is not a valid PDF' });
+      return;
+    }
+    next();
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to validate uploaded file' });
+  }
+}

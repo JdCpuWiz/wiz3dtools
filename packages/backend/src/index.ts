@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { testConnection as testDbConnection } from './config/database.js';
 import { testOllamaConnection } from './config/ollama.js';
@@ -54,6 +55,26 @@ app.get('/health', async (_req: Request, res: Response) => {
     },
   });
 });
+
+// Rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests, please try again later' },
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many login attempts, please try again later' },
+});
+
+app.use('/api/', apiLimiter);
+app.use('/api/auth/login', loginLimiter);
 
 // Auth routes (public — must be before requireAuth middleware)
 app.use('/api/auth', authRoutes);

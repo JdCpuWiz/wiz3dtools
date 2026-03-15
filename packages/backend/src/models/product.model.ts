@@ -98,11 +98,9 @@ export class ProductModel {
     const prefix = words.map((w) => w.replace(/[^a-zA-Z]/g, '')[0] || '').join('').toUpperCase() || 'SKU';
 
     const pattern = `${prefix}-%`;
-    const excludeClause = excludeId ? `AND id != ${excludeId}` : '';
-    const result = await pool.query(
-      `SELECT sku FROM products WHERE sku LIKE $1 ${excludeClause} ORDER BY sku DESC LIMIT 1`,
-      [pattern],
-    );
+    const result = excludeId
+      ? await pool.query(`SELECT sku FROM products WHERE sku LIKE $1 AND id != $2 ORDER BY sku DESC LIMIT 1`, [pattern, excludeId])
+      : await pool.query(`SELECT sku FROM products WHERE sku LIKE $1 ORDER BY sku DESC LIMIT 1`, [pattern]);
 
     if (!result.rows[0] || !result.rows[0].sku) {
       return `${prefix}-001`;

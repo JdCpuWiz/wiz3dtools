@@ -18,43 +18,30 @@ export function errorHandler(
 
   // Multer errors
   if (err.message?.includes('File too large')) {
-    res.status(413).json({
-      success: false,
-      error: 'File too large',
-      message: err.message,
-    });
+    res.status(413).json({ success: false, error: 'File too large' });
+    return;
   }
 
   if (err.message?.includes('Invalid file type')) {
-    res.status(400).json({
-      success: false,
-      error: 'Invalid file type',
-      message: err.message,
-    });
+    res.status(400).json({ success: false, error: 'Invalid file type' });
+    return;
   }
 
   // Database errors
   if (err.message?.includes('violates')) {
-    res.status(400).json({
-      success: false,
-      error: 'Database constraint violation',
-      message: err.message,
-    });
+    res.status(400).json({ success: false, error: 'Database constraint violation' });
+    return;
   }
 
   // Not found errors
   if (err.message?.includes('not found')) {
-    res.status(404).json({
-      success: false,
-      error: 'Resource not found',
-      message: err.message,
-    });
+    res.status(404).json({ success: false, error: 'Resource not found' });
+    return;
   }
 
-  // Default error
+  // Default error — never leak internal details to client
   res.status(500).json({
     success: false,
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'production' ? 'An error occurred' : err.message,
   });
 }

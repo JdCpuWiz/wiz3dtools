@@ -48,8 +48,8 @@ export async function resetPassword(req: Request, res: Response<ApiResponse>, ne
     if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
 
     const { password } = req.body;
-    if (!password || typeof password !== 'string' || password.length < 1) {
-      res.status(400).json({ success: false, error: 'Password is required' });
+    if (!password || typeof password !== 'string' || password.length < 12) {
+      res.status(400).json({ success: false, error: 'Password must be at least 12 characters' });
       return;
     }
 

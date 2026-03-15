@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { UploadController } from '../controllers/upload.controller.js';
-import { uploadMiddleware } from '../middleware/upload.middleware.js';
+import { uploadMiddleware, validatePdfMagicBytes } from '../middleware/upload.middleware.js';
 import rateLimit from 'express-rate-limit';
 
 const router = Router();
@@ -20,6 +20,7 @@ router.post(
   '/',
   uploadLimiter,
   uploadMiddleware.single('invoice'),
+  validatePdfMagicBytes,
   (req, res, next) => uploadController.uploadInvoice(req, res, next)
 );
 

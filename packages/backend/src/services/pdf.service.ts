@@ -1,9 +1,21 @@
 import path from 'path';
 import fs from 'fs/promises';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 
-const execAsync = promisify(exec);
+function spawnAsync(cmd: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(cmd, args);
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', (d) => { stdout += d; });
+    proc.stderr.on('data', (d) => { stderr += d; });
+    proc.on('close', (code) => {
+      if (code === 0) resolve(stdout);
+      else reject(new Error(stderr || `${cmd} exited with code ${code}`));
+    });
+    proc.on('error', reject);
+  });
+}
 
 export class PdfService {
   /**
@@ -22,9 +34,7 @@ export class PdfService {
       // -png: output format PNG
       // -r 150: resolution 150 DPI for good quality
       const outputPrefix = path.join(outputDir, 'page');
-      const command = `pdftoppm -png -r 150 "${pdfPath}" "${outputPrefix}"`;
-
-      await execAsync(command);
+      await spawnAsync('pdftoppm', ['-png', '-r', '150', pdfPath, outputPrefix]);
 
       // Read all generated PNG files
       const files = await fs.readdir(outputDir);
@@ -81,7 +91,7 @@ export class PdfService {
   async getPageCount(pdfPath: string): Promise<number> {
     try {
       // Use pdfinfo to get page count
-      const { stdout } = await execAsync(`pdfinfo "${pdfPath}"`);
+      const stdout = await spawnAsync('pdfinfo', [pdfPath]);
       const match = stdout.match(/Pages:\s+(\d+)/);
       return match ? parseInt(match[1]) : 1;
     } catch (error) {

@@ -14,6 +14,7 @@ export interface JwtPayload {
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error('JWT_SECRET environment variable is not set');
+  if (secret.length < 32) throw new Error('JWT_SECRET must be at least 32 characters long');
   return secret;
 }
 
@@ -33,6 +34,12 @@ export function verifyToken(token: string): JwtPayload {
 }
 
 export async function register(data: RegisterDto): Promise<AuthResponse> {
+  if (!data.password || data.password.length < 12) {
+    const err = new Error('Password must be at least 12 characters') as any;
+    err.statusCode = 400;
+    throw err;
+  }
+
   const existing = await UserModel.findByUsername(data.username);
   if (existing) {
     const err = new Error('Username already taken') as any;
