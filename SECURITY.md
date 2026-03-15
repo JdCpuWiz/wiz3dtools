@@ -53,7 +53,7 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ---
 
 ### H2 — CORS Open to All Origins
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **File:** `packages/backend/src/index.ts` line ~27
 **Issue:** `origin: true` allows any website to make credentialed requests to the API (CSRF vector).
 **Fix:** Restrict to known frontend domains via `CORS_ORIGIN` env var.
@@ -80,7 +80,7 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ---
 
 ### H5 — No HTTPS / HSTS
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **File:** `infrastructure/docker/nginx.conf`
 **Issue:** Only HTTP. Tokens and data transmitted in plaintext. No HSTS header.
 **Fix:** Add SSL cert (Let's Encrypt), redirect HTTP → HTTPS, add HSTS header.
@@ -89,7 +89,7 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ---
 
 ### H6 — No Content-Security-Policy Header
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **File:** `infrastructure/docker/nginx.conf`
 **Issue:** No CSP — XSS attacks can load external scripts freely.
 **Fix:** Add CSP header allowing self + Google Fonts CDN + inline styles.

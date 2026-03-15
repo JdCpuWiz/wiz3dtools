@@ -32,6 +32,7 @@ services:
       - PAYMENT_PAYPAL=${PAYMENT_PAYPAL}
       - PAYMENT_VENMO=${PAYMENT_VENMO}
       - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGIN=${CORS_ORIGIN:-https://tools.wiz3dprints.com}
     volumes:
       - ${UPLOADS_PATH:-./uploads}:/app/uploads
     networks:
