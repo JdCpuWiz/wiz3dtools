@@ -127,8 +127,8 @@ export const InvoiceDetail: React.FC = () => {
             <StatusBadge status={isShipped ? 'shipped' : invoice.status} />
           </div>
           <p className="text-xs text-iron-400 mt-0.5">
-            Created {new Date(invoice.createdAt).toLocaleDateString('en-NZ')}
-            {invoice.dueDate && ` · Due ${new Date(invoice.dueDate).toLocaleDateString('en-NZ')}`}
+            Created {new Date(invoice.createdAt).toLocaleDateString('en-US')}
+            {invoice.dueDate && ` · Due ${new Date(invoice.dueDate).toLocaleDateString('en-US')}`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -154,7 +154,7 @@ export const InvoiceDetail: React.FC = () => {
           </button>
           {isShipped ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium" style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' }}>
-              ✓ Shipped {new Date(invoice.shippedAt!).toLocaleDateString('en-NZ')}
+              ✓ Shipped {new Date(invoice.shippedAt!).toLocaleDateString('en-US')}
             </span>
           ) : (
             <button
@@ -233,8 +233,8 @@ export const InvoiceDetail: React.FC = () => {
           ) : (
             <div>
               <StatusBadge status={isShipped ? 'shipped' : invoice.status} />
-              {invoice.sentAt && <p className="text-xs text-iron-400 mt-1">Sent {new Date(invoice.sentAt).toLocaleDateString('en-NZ')}</p>}
-              {invoice.shippedAt && <p className="text-xs mt-1" style={{ color: '#2dd4bf' }}>Shipped {new Date(invoice.shippedAt).toLocaleDateString('en-NZ')}</p>}
+              {invoice.sentAt && <p className="text-xs text-iron-400 mt-1">Sent {new Date(invoice.sentAt).toLocaleDateString('en-US')}</p>}
+              {invoice.shippedAt && <p className="text-xs mt-1" style={{ color: '#2dd4bf' }}>Shipped {new Date(invoice.shippedAt).toLocaleDateString('en-US')}</p>}
             </div>
           )}
 
