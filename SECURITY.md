@@ -98,10 +98,10 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ---
 
 ### H7 — JWT Stored in localStorage (XSS Risk)
-**Status:** 🔴 Open
-**File:** `packages/frontend/src/context/AuthContext.tsx` lines 21-22
+**Status:** ✅ Fixed
+**File:** `packages/frontend/src/context/AuthContext.tsx`, `packages/backend/src/controllers/auth.controller.ts`
 **Issue:** localStorage is readable by any JavaScript on the page. XSS attack can steal JWT.
-**Fix:** Switch to HttpOnly, Secure, SameSite=Strict cookies (requires backend + frontend refactor).
+**Fix:** JWT now stored in HttpOnly `wiz3d_token` cookie (`SameSite=Strict`, `Secure` in production). `AuthContext` restored via `/api/auth/me` on mount. `api.ts` uses `withCredentials: true`. Logout clears cookie server-side via `POST /api/auth/logout`.
 **Breaking risk:** High — full auth flow refactor.
 
 ---
@@ -127,17 +127,17 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ## Medium
 
 ### M1 — No Input Validation on Request Bodies
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **Issue:** All controllers pass `req.body` directly to services without schema validation. Allows over-posting, type confusion, excessively long strings.
-**Fix:** Add Zod or Joi validation schemas to all controllers.
+**Fix:** Zod validation schemas added to all 8 controllers (auth, users, queue, upload, customer, product, sales-invoice, color). Invalid input returns 400 with field-level error messages.
 **Breaking risk:** Low — rejects invalid input that currently passes through.
 
 ---
 
 ### M2 — No CSRF Protection
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **Issue:** No CSRF tokens on state-changing endpoints. Mitigated partially by Bearer token auth but not fully if CORS is open.
-**Fix:** Implement CSRF tokens, or fully restrict CORS + switch to SameSite cookies.
+**Fix:** CSRF token (48-char hex) embedded in JWT payload, returned in login/register/me response body. Frontend stores in React state only; sends as `X-CSRF-Token` header on all POST/PUT/PATCH/DELETE. `requireAuth` middleware validates token on mutating requests.
 **Breaking risk:** Low-Medium.
 
 ---
@@ -230,12 +230,13 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 - [x] ~~H9 — Error handler message leak~~
 
 ### Careful (test before deploying)
-- [ ] H2 — CORS restriction
-- [ ] H5 — HTTPS / HSTS
-- [ ] H6 — Content-Security-Policy
+- [x] ~~H2 — CORS restriction~~
+- [x] ~~H5 — HTTPS / HSTS~~
+- [x] ~~H6 — Content-Security-Policy~~
 
 ### Plan properly
-- [ ] H3 — JWT expiry + refresh tokens
-- [ ] H7 — JWT → HttpOnly cookies
-- [ ] M1 — Input validation (Zod/Joi)
-- [ ] M3 — Audit logging
+- [x] ~~H3 — JWT expiry (24h)~~
+- [x] ~~H7 — JWT → HttpOnly cookies~~
+- [x] ~~M1 — Input validation (Zod)~~
+- [x] ~~M2 — CSRF protection~~
+- [x] ~~M3 — Audit logging~~
