@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
             />
             <div>
               <h1 className="text-xl font-bold text-iron-50 leading-tight">Wiz3d Tools</h1>
-              <p className="text-xs text-iron-400">3D Printing Business Suite</p>
+              <p className="text-xs text-iron-300">3D Printing Business Suite</p>
             </div>
           </div>
 
@@ -94,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
             {user && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-[#9ca3af] hidden sm:inline">{user.username}</span>
-                <span className="text-xs text-iron-600 hidden sm:inline">v{__APP_VERSION__}</span>
+                <span className="text-xs text-iron-300 hidden sm:inline">v{__APP_VERSION__}</span>
                 <button onClick={handleLogout} className="btn-secondary btn-sm">Sign Out</button>
               </div>
             )}
