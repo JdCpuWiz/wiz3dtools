@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import type { InvoiceLineItem, ItemColorDto } from '@wizqueue/shared';
 import { useColors } from '../../hooks/useColors';
+import { useProducts } from '../../hooks/useProducts';
 import { ColorPicker, ColorSwatch } from '../common/ColorPicker';
 
 interface LineItemRowProps {
   item: InvoiceLineItem;
-  onUpdate: (itemId: number, data: Partial<{ productName: string; details: string; quantity: number; unitPrice: number }>) => void;
+  onUpdate: (itemId: number, data: Partial<{ productId: number; productName: string; sku: string; details: string; quantity: number; unitPrice: number }>) => void;
   onUpdateColors?: (itemId: number, colors: ItemColorDto[]) => void;
   onDelete: (itemId: number) => void;
   onSendToQueue?: (itemId: number) => void;
@@ -20,8 +21,11 @@ const inputSt: React.CSSProperties = {
 
 export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpdateColors, onDelete, onSendToQueue, readOnly }) => {
   const { colors: availableColors } = useColors();
+  const { products } = useProducts(true);
   const [editing, setEditing] = useState(false);
+  const [productId, setProductId] = useState<number | null>(item.productId);
   const [productName, setProductName] = useState(item.productName);
+  const [sku, setSku] = useState(item.sku || '');
   const [details, setDetails] = useState(item.details || '');
   const [quantity, setQuantity] = useState(item.quantity);
   const [unitPrice, setUnitPrice] = useState(item.unitPrice);
@@ -30,7 +34,9 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
   const cellInputClass = 'w-full px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500';
 
   const openEdit = () => {
+    setProductId(item.productId);
     setProductName(item.productName);
+    setSku(item.sku || '');
     setDetails(item.details || '');
     setQuantity(item.quantity);
     setUnitPrice(item.unitPrice);
@@ -45,8 +51,18 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
     setEditing(true);
   };
 
+  const applyProduct = (id: number) => {
+    const p = products.find((pr) => pr.id === id);
+    if (!p) return;
+    setProductId(p.id);
+    setProductName(p.name);
+    setSku(p.sku || '');
+    setUnitPrice(p.unitPrice);
+    if (p.description) setDetails(p.description);
+  };
+
   const save = () => {
-    onUpdate(item.id, { productName, details: details || undefined, quantity, unitPrice });
+    onUpdate(item.id, { productId: productId ?? undefined, productName, ...(sku ? { sku } : {}), details: details || undefined, quantity, unitPrice });
     if (onUpdateColors) onUpdateColors(item.id, draftColors);
     setEditing(false);
   };
@@ -59,7 +75,21 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
     return (
       <>
         <tr style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(230,138,0,0.05)' }}>
-          <td className="px-3 py-2"><input value={productName} onChange={(e) => setProductName(e.target.value)} className={cellInputClass} style={inputSt} /></td>
+          <td className="px-3 py-2 space-y-1.5">
+            {products.length > 0 && (
+              <select
+                className={cellInputClass}
+                style={inputSt}
+                value={productId || ''}
+                onChange={(e) => e.target.value ? applyProduct(parseInt(e.target.value)) : undefined}
+              >
+                <option value="">— change product —</option>
+                {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${p.unitPrice.toFixed(2)})</option>)}
+              </select>
+            )}
+            <input value={productName} onChange={(e) => setProductName(e.target.value)} className={cellInputClass} style={inputSt} placeholder="Product name" />
+            {sku && <span className="block font-mono text-xs text-iron-500">{sku}</span>}
+          </td>
           <td className="px-3 py-2"><textarea value={details} onChange={(e) => setDetails(e.target.value)} className={cellInputClass} style={inputSt} rows={3} /></td>
           <td className="px-3 py-2"><input type="number" min={1} value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value) || 1)} className={`${cellInputClass} w-14`} style={inputSt} /></td>
           <td className="px-3 py-2"><input type="number" min={0} step={0.01} value={unitPrice} onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)} className={`${cellInputClass} w-20`} style={inputSt} /></td>
