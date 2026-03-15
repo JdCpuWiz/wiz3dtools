@@ -9,20 +9,33 @@ declare global {
   }
 }
 
+const COOKIE_NAME = 'wiz3d_token';
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const token = req.cookies?.[COOKIE_NAME];
+  if (!token) {
     res.status(401).json({ success: false, error: 'Authentication required' });
     return;
   }
 
-  const token = authHeader.slice(7);
   try {
     req.user = verifyToken(token);
-    next();
   } catch {
     res.status(401).json({ success: false, error: 'Invalid or expired token' });
+    return;
   }
+
+  // CSRF check for mutating requests
+  if (!SAFE_METHODS.has(req.method)) {
+    const csrfHeader = req.headers['x-csrf-token'];
+    if (!csrfHeader || csrfHeader !== req.user.csrfToken) {
+      res.status(403).json({ success: false, error: 'CSRF validation failed' });
+      return;
+    }
+  }
+
+  next();
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
@@ -34,9 +47,8 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
 }
 
 export function optionalAuth(req: Request, _res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
+  const token = req.cookies?.[COOKIE_NAME];
+  if (token) {
     try {
       req.user = verifyToken(token);
     } catch {

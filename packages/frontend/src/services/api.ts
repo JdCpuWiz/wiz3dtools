@@ -30,25 +30,27 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 console.log('API Base URL:', API_BASE_URL);
 
+// In-memory CSRF token — set by AuthContext after login/me, cleared on logout
+let _csrfToken: string | null = null;
+export function setCsrfToken(token: string | null) { _csrfToken = token; }
+
+const SAFE_METHODS = new Set(['get', 'head', 'options']);
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // send HttpOnly JWT cookie on every request
   timeout: 120000, // 2 minute timeout for file uploads
 });
 
-// Log all requests for debugging; attach JWT if present
+// Log all requests; attach CSRF token for mutating methods
 api.interceptors.request.use((config) => {
   console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
-  const raw = localStorage.getItem('wiz3d_auth');
-  if (raw) {
-    try {
-      const { token } = JSON.parse(raw);
-      if (token) config.headers.Authorization = `Bearer ${token}`;
-    } catch {
-      // ignore
-    }
+  const method = (config.method || 'get').toLowerCase();
+  if (!SAFE_METHODS.has(method) && _csrfToken) {
+    config.headers['X-CSRF-Token'] = _csrfToken;
   }
   return config;
 });
@@ -63,7 +65,7 @@ api.interceptors.response.use(
     if (error.response) {
       console.error('Response data:', error.response.data);
       if (error.response.status === 401) {
-        localStorage.removeItem('wiz3d_auth');
+        setCsrfToken(null);
         if (!window.location.pathname.startsWith('/login')) {
           window.location.href = '/login';
         }

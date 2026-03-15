@@ -20,8 +20,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, onUploadClick }) => {
     return () => clearInterval(interval);
   }, [idleWarning]);
 
-  const handleLogoutNow = () => {
-    logout();
+  const handleLogoutNow = async () => {
+    await logout();
     navigate('/login', { replace: true });
   };
 

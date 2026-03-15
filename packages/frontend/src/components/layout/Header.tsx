@@ -28,8 +28,8 @@ export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
   ];
   const isQueueView = location.pathname === '/queue';
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login', { replace: true });
   };
 

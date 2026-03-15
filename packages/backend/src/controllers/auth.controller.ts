@@ -3,12 +3,23 @@ import * as authService from '../services/auth.service.js';
 import { UserModel } from '../models/user.model.js';
 import { parseBody, loginSchema, registerSchema } from '../validation/schemas.js';
 
+const COOKIE_NAME = 'wiz3d_token';
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  maxAge: 24 * 60 * 60 * 1000, // 24h — matches JWT expiry
+  path: '/',
+};
+
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const parsed = parseBody(loginSchema, req.body);
     if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
-    const result = await authService.login(parsed.data);
-    res.status(200).json({ success: true, data: result });
+    const { user, token, csrfToken } = await authService.login(parsed.data);
+    res.cookie(COOKIE_NAME, token, cookieOptions);
+    res.status(200).json({ success: true, data: { user, csrfToken } });
   } catch (err) {
     next(err);
   }
@@ -31,11 +42,17 @@ export async function register(req: Request, res: Response, next: NextFunction):
         return;
       }
     }
-    const result = await authService.register(parsed.data);
-    res.status(201).json({ success: true, data: result });
+    const { user, token, csrfToken } = await authService.register(parsed.data);
+    res.cookie(COOKIE_NAME, token, cookieOptions);
+    res.status(201).json({ success: true, data: { user, csrfToken } });
   } catch (err) {
     next(err);
   }
+}
+
+export async function logout(_req: Request, res: Response): Promise<void> {
+  res.clearCookie(COOKIE_NAME, { path: '/' });
+  res.json({ success: true, message: 'Logged out' });
 }
 
 export async function me(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -45,7 +62,7 @@ export async function me(req: Request, res: Response, next: NextFunction): Promi
       res.status(404).json({ success: false, error: 'User not found' });
       return;
     }
-    res.status(200).json({ success: true, data: user });
+    res.status(200).json({ success: true, data: { user, csrfToken: req.user!.csrfToken } });
   } catch (err) {
     next(err);
   }

@@ -1,7 +1,8 @@
+import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { UserModel } from '../models/user.model.js';
-import type { User, LoginDto, RegisterDto, AuthResponse } from '@wizqueue/shared';
+import type { User, LoginDto, RegisterDto } from '@wizqueue/shared';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -9,6 +10,13 @@ export interface JwtPayload {
   userId: number;
   username: string;
   role: string;
+  csrfToken: string;
+}
+
+export interface AuthResult {
+  user: User;
+  token: string;
+  csrfToken: string;
 }
 
 function getJwtSecret(): string {
@@ -18,9 +26,11 @@ function getJwtSecret(): string {
   return secret;
 }
 
-export function signToken(user: User): string {
-  const payload: JwtPayload = { userId: user.id, username: user.username, role: user.role };
-  return jwt.sign(payload, getJwtSecret(), { expiresIn: '24h' });
+export function signToken(user: User): { token: string; csrfToken: string } {
+  const csrfToken = crypto.randomBytes(24).toString('hex');
+  const payload: JwtPayload = { userId: user.id, username: user.username, role: user.role, csrfToken };
+  const token = jwt.sign(payload, getJwtSecret(), { expiresIn: '24h' });
+  return { token, csrfToken };
 }
 
 export function verifyToken(token: string): JwtPayload {
@@ -33,7 +43,7 @@ export function verifyToken(token: string): JwtPayload {
   }
 }
 
-export async function register(data: RegisterDto): Promise<AuthResponse> {
+export async function register(data: RegisterDto): Promise<AuthResult> {
   if (!data.password || data.password.length < 12) {
     const err = new Error('Password must be at least 12 characters') as any;
     err.statusCode = 400;
@@ -52,11 +62,11 @@ export async function register(data: RegisterDto): Promise<AuthResponse> {
 
   const passwordHash = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
   const user = await UserModel.create({ username: data.username, email: data.email, passwordHash, role });
-  const token = signToken(user);
-  return { user, token };
+  const { token, csrfToken } = signToken(user);
+  return { user, token, csrfToken };
 }
 
-export async function login(data: LoginDto): Promise<AuthResponse> {
+export async function login(data: LoginDto): Promise<AuthResult> {
   const userWithHash = await UserModel.findByUsername(data.username);
   if (!userWithHash) {
     console.warn(`[AUTH] Failed login attempt for unknown username: ${data.username} at ${new Date().toISOString()}`);
@@ -74,7 +84,7 @@ export async function login(data: LoginDto): Promise<AuthResponse> {
   }
 
   const { passwordHash: _ph, ...user } = userWithHash;
-  const token = signToken(user);
+  const { token, csrfToken } = signToken(user);
   console.info(`[AUTH] Successful login: ${user.username} at ${new Date().toISOString()}`);
-  return { user, token };
+  return { user, token, csrfToken };
 }

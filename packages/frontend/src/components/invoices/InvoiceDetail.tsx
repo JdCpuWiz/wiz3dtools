@@ -4,6 +4,7 @@ import { useSalesInvoice, useSalesInvoices } from '../../hooks/useSalesInvoices'
 import { StatusBadge } from '../common/StatusBadge';
 import { LineItemRow } from './LineItemRow';
 import { salesInvoiceApi } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { useCustomers } from '../../hooks/useCustomers';
 import { useProducts } from '../../hooks/useProducts';
 import { useColors } from '../../hooks/useColors';
@@ -60,6 +61,7 @@ export const InvoiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const invoiceId = parseInt(id || '0');
 
+  const { csrfToken } = useAuth();
   const { invoice, isLoading, addLineItem, updateLineItem, deleteLineItem, updateLineItemColors } = useSalesInvoice(invoiceId);
   const { sendEmail, sendToQueue, update, ship, isSending, isShipping } = useSalesInvoices();
   const { customers } = useCustomers();
@@ -134,10 +136,9 @@ export const InvoiceDetail: React.FC = () => {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={async () => {
-              const raw = localStorage.getItem('wiz3d_auth');
-              const token = raw ? JSON.parse(raw).token : null;
               const res = await fetch(salesInvoiceApi.downloadPdf(invoiceId), {
-                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                credentials: 'include',
+                headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
               });
               if (!res.ok) return;
               const blob = await res.blob();

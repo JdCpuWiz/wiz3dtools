@@ -1,62 +1,66 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { User, LoginDto } from '@wizqueue/shared';
+import { setCsrfToken } from '../services/api';
 
-const STORAGE_KEY = 'wiz3d_auth';
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000;   // 30 minutes
 const WARN_BEFORE_MS  = 60 * 1000;         // warn 1 minute before logout
 
 interface AuthState {
   user: User | null;
-  token: string | null;
+  csrfToken: string | null;
+  loading: boolean;
 }
 
-interface AuthContextValue extends AuthState {
+interface AuthContextValue {
+  user: User | null;
+  csrfToken: string | null;
   isAuthenticated: boolean;
+  loading: boolean;
   login: (credentials: LoginDto) => Promise<void>;
-  logout: () => void;
-  idleWarning: boolean;         // true when the 60-second warning is showing
-  resetIdleTimer: () => void;   // call to dismiss warning + reset timer
+  logout: () => Promise<void>;
+  idleWarning: boolean;
+  resetIdleTimer: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function loadFromStorage(): AuthState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {
-    // ignore
-  }
-  return { user: null, token: null };
-}
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<AuthState>(loadFromStorage);
+  const [state, setState] = useState<AuthState>({ user: null, csrfToken: null, loading: true });
   const [idleWarning, setIdleWarning] = useState(false);
 
   const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warnTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setState({ user: null, token: null });
-    setIdleWarning(false);
-  }, []);
-
-  const resetIdleTimer = useCallback(() => {
+  const clearTimers = useCallback(() => {
     if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
     if (warnTimerRef.current)   clearTimeout(warnTimerRef.current);
+  }, []);
+
+  const doLogout = useCallback(async () => {
+    clearTimers();
     setIdleWarning(false);
+    setCsrfToken(null);
+    // Best-effort server logout to clear the HttpOnly cookie
+    try {
+      const apiBase = import.meta.env.VITE_API_URL || '/api';
+      await fetch(`${apiBase}/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch {
+      // ignore — cookie will expire naturally
+    }
+    setState({ user: null, csrfToken: null, loading: false });
+  }, [clearTimers]);
 
+  const resetIdleTimer = useCallback(() => {
+    clearTimers();
+    setIdleWarning(false);
     warnTimerRef.current   = setTimeout(() => setIdleWarning(true), IDLE_TIMEOUT_MS - WARN_BEFORE_MS);
-    logoutTimerRef.current = setTimeout(() => logout(), IDLE_TIMEOUT_MS);
-  }, [logout]);
+    logoutTimerRef.current = setTimeout(() => doLogout(), IDLE_TIMEOUT_MS);
+  }, [clearTimers, doLogout]);
 
-  // Start/restart timer whenever auth state changes
+  // Start/restart idle timer when authenticated
   useEffect(() => {
-    if (!state.token) {
-      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
-      if (warnTimerRef.current)   clearTimeout(warnTimerRef.current);
+    if (!state.user) {
+      clearTimers();
       return;
     }
 
@@ -68,16 +72,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       EVENTS.forEach((e) => window.removeEventListener(e, handler));
-      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
-      if (warnTimerRef.current)   clearTimeout(warnTimerRef.current);
+      clearTimers();
     };
-  }, [state.token, resetIdleTimer]);
+  }, [state.user, resetIdleTimer, clearTimers]);
+
+  // On mount: check if there's an active session via cookie
+  useEffect(() => {
+    const apiBase = import.meta.env.VITE_API_URL || '/api';
+    fetch(`${apiBase}/auth/me`, { credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) {
+          setState({ user: null, csrfToken: null, loading: false });
+          return;
+        }
+        const body = await res.json();
+        const { user, csrfToken } = body.data as { user: User; csrfToken: string };
+        setCsrfToken(csrfToken);
+        setState({ user, csrfToken, loading: false });
+      })
+      .catch(() => {
+        setState({ user: null, csrfToken: null, loading: false });
+      });
+  }, []);
 
   const login = useCallback(async (credentials: LoginDto) => {
     const apiBase = import.meta.env.VITE_API_URL || '/api';
     const res = await fetch(`${apiBase}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(credentials),
     });
 
@@ -87,14 +110,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const body = await res.json();
-    const { user, token } = body.data as { user: User; token: string };
-    const newState = { user, token };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-    setState(newState);
+    const { user, csrfToken } = body.data as { user: User; csrfToken: string };
+    setCsrfToken(csrfToken);
+    setState({ user, csrfToken, loading: false });
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, isAuthenticated: !!state.token, login, logout, idleWarning, resetIdleTimer }}>
+    <AuthContext.Provider value={{
+      user: state.user,
+      csrfToken: state.csrfToken,
+      isAuthenticated: !state.loading && !!state.user,
+      loading: state.loading,
+      login,
+      logout: doLogout,
+      idleWarning,
+      resetIdleTimer,
+    }}>
       {children}
     </AuthContext.Provider>
   );
