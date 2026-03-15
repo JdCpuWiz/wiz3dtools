@@ -181,10 +181,10 @@ export class SalesInvoiceModel {
     );
   }
 
-  static async markShipped(id: number, trackingNumber: string): Promise<void> {
+  static async markShipped(id: number, trackingNumber: string | null): Promise<void> {
     await pool.query(
       `UPDATE sales_invoices SET tracking_number = $1, shipped_at = NOW(), updated_at = NOW() WHERE id = $2`,
-      [trackingNumber, id],
+      [trackingNumber || null, id],
     );
   }
 

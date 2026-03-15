@@ -65,12 +65,13 @@ export class SalesInvoiceService {
   async ship(invoiceId: number): Promise<void> {
     const invoice = await this.getById(invoiceId);
     if (invoice.shippedAt) throw new Error('Invoice has already been shipped');
-    if (!invoice.trackingNumber?.trim()) throw new Error('A tracking number is required before marking as shipped');
+    const isPickup = invoice.carrier === 'Customer Pickup';
+    if (!isPickup && !invoice.trackingNumber?.trim()) throw new Error('A tracking number is required before marking as shipped');
     if (!invoice.customer) throw new Error('Invoice has no customer');
-    if (!invoice.customer.email) throw new Error(`Customer "${invoice.customer.contactName}" has no email address`);
+    if (!isPickup && !invoice.customer.email) throw new Error(`Customer "${invoice.customer.contactName}" has no email address`);
 
-    await SalesInvoiceModel.markShipped(invoiceId, invoice.trackingNumber.trim());
-    await sendShippingEmail(invoice.customer, invoice.invoiceNumber, invoice.trackingNumber.trim());
+    await SalesInvoiceModel.markShipped(invoiceId, invoice.trackingNumber?.trim() || null);
+    await sendShippingEmail(invoice.customer, invoice.invoiceNumber, invoice.carrier, invoice.trackingNumber?.trim() || null);
 
     // Remove all queue items linked to this invoice's line items (any status)
     await pool.query(

@@ -16,7 +16,8 @@ function createTransporter() {
 export async function sendShippingEmail(
   customer: Customer,
   invoiceNumber: string,
-  trackingNumber: string,
+  carrier: string | null,
+  trackingNumber: string | null,
 ): Promise<void> {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
   const companyName = process.env.COMPANY_NAME || 'Wiz3D Prints';
@@ -24,6 +25,21 @@ export async function sendShippingEmail(
 
   if (!from || !process.env.SMTP_USER) {
     throw new Error('SMTP credentials not configured. Set SMTP_USER, SMTP_PASS, and SMTP_FROM in .env');
+  }
+
+  // Customer Pickup — skip notification if no email, otherwise send pickup-ready email
+  if (carrier === 'Customer Pickup') {
+    if (!customer.email) return;
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: `"${companyName}" <${from}>`,
+      to: customer.email,
+      cc: ordersEmail,
+      subject: `Your order ${invoiceNumber} is ready for pickup!`,
+      text: `Hi ${customer.contactName},\n\nGreat news — your order (${invoiceNumber}) is ready for pickup!\n\nPlease contact us to arrange a convenient time.\n\nThank you for your business!\n\n${companyName}`,
+      html: `<p>Hi ${customer.contactName},</p><p>Great news — your order (<strong>${invoiceNumber}</strong>) is ready for pickup!</p><p>Please contact us to arrange a convenient time.</p><p>Thank you for your business!</p><p>${companyName}</p>`,
+    });
+    return;
   }
 
   if (!customer.email) {

@@ -159,16 +159,21 @@ export const InvoiceDetail: React.FC = () => {
           ) : (
             <button
               onClick={() => {
-                if (!invoice.trackingNumber?.trim()) { window.alert('Please add a tracking number before marking as shipped.'); return; }
-                if (!invoice.customer?.email) { window.alert('Customer has no email address — shipping notification cannot be sent.'); return; }
-                if (window.confirm(`Mark ${invoice.invoiceNumber} as shipped and notify ${invoice.customer.email}?`)) ship(invoiceId);
+                const isPickup = invoice.carrier === 'Customer Pickup';
+                if (!isPickup && !invoice.trackingNumber?.trim()) { window.alert('Please add a tracking number before marking as shipped.'); return; }
+                if (!isPickup && !invoice.customer?.email) { window.alert('Customer has no email address — shipping notification cannot be sent.'); return; }
+                if (!invoice.carrier) { window.alert('Please select a carrier before marking as shipped.'); return; }
+                const confirmMsg = isPickup
+                  ? `Mark ${invoice.invoiceNumber} as ready for customer pickup?`
+                  : `Mark ${invoice.invoiceNumber} as shipped and notify ${invoice.customer?.email}?`;
+                if (window.confirm(confirmMsg)) ship(invoiceId);
               }}
-              disabled={isShipping || !invoice.trackingNumber?.trim() || !invoice.customer?.email}
-              title={!invoice.trackingNumber?.trim() ? 'Add a tracking number first' : !invoice.customer?.email ? 'Customer has no email' : undefined}
+              disabled={isShipping || !invoice.carrier || (!invoice.trackingNumber?.trim() && invoice.carrier !== 'Customer Pickup') || (!invoice.customer?.email && invoice.carrier !== 'Customer Pickup')}
+              title={!invoice.carrier ? 'Select a carrier first' : !invoice.trackingNumber?.trim() && invoice.carrier !== 'Customer Pickup' ? 'Add a tracking number first' : !invoice.customer?.email && invoice.carrier !== 'Customer Pickup' ? 'Customer has no email' : undefined}
               className="btn-sm text-sm font-medium px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(to bottom,#3b82f6,#2563eb)', color: '#fff', boxShadow: '0 4px 8px rgb(0 0 0 / 0.4)' }}
             >
-              {isShipping ? 'Shipping…' : '🚚 Mark as Shipped'}
+              {isShipping ? 'Saving…' : invoice.carrier === 'Customer Pickup' ? '🏪 Ready for Pickup' : '🚚 Mark as Shipped'}
             </button>
           )}
           <button
@@ -264,22 +269,26 @@ export const InvoiceDetail: React.FC = () => {
                   <option value="USPS">USPS</option>
                   <option value="FedEx">FedEx</option>
                   <option value="DHL">DHL</option>
+                  <option value="Customer Pickup">Customer Pickup</option>
                   <option value="Other">Other</option>
                 </select>
-                <div className="flex items-center gap-1">
-                  <input
-                    value={trackingDraft}
-                    onChange={(e) => setTrackingDraft(e.target.value)}
-                    className="flex-1 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    style={inputSt}
-                    placeholder="Tracking number"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') { update(invoiceId, { carrier: carrierDraft.trim() || null, trackingNumber: trackingDraft.trim() || null }); setEditingTracking(false); }
-                      if (e.key === 'Escape') setEditingTracking(false);
-                    }}
-                  />
-                  <button onClick={() => { update(invoiceId, { carrier: carrierDraft.trim() || null, trackingNumber: trackingDraft.trim() || null }); setEditingTracking(false); }} className="text-xs text-primary-400 hover:text-primary-300">✓</button>
+                {carrierDraft !== 'Customer Pickup' && (
+                  <div className="flex items-center gap-1">
+                    <input
+                      value={trackingDraft}
+                      onChange={(e) => setTrackingDraft(e.target.value)}
+                      className="flex-1 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      style={inputSt}
+                      placeholder="Tracking number"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { update(invoiceId, { carrier: carrierDraft.trim() || null, trackingNumber: trackingDraft.trim() || null }); setEditingTracking(false); }
+                        if (e.key === 'Escape') setEditingTracking(false);
+                      }}
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-1 justify-end">
+                  <button onClick={() => { update(invoiceId, { carrier: carrierDraft.trim() || null, trackingNumber: carrierDraft === 'Customer Pickup' ? null : trackingDraft.trim() || null }); setEditingTracking(false); }} className="text-xs text-primary-400 hover:text-primary-300">✓</button>
                   <button onClick={() => setEditingTracking(false)} className="text-xs text-iron-500 hover:text-iron-300">✕</button>
                 </div>
               </div>
