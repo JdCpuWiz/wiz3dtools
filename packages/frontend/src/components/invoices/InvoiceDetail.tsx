@@ -68,6 +68,7 @@ export const InvoiceDetail: React.FC = () => {
 
   const [editingTracking, setEditingTracking] = useState(false);
   const [trackingDraft, setTrackingDraft] = useState('');
+  const [carrierDraft, setCarrierDraft] = useState('');
   const [showAddRow, setShowAddRow] = useState(false);
   const [newItem, setNewItem] = useState<CreateLineItemDto>({ productName: '', quantity: 1, unitPrice: 0 });
   const [newItemColors, setNewItemColors] = useState<ItemColorDto[]>([]);
@@ -123,7 +124,7 @@ export const InvoiceDetail: React.FC = () => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-xl font-semibold text-iron-50">{invoice.invoiceNumber}</h2>
-            <StatusBadge status={invoice.status} />
+            <StatusBadge status={isShipped ? 'shipped' : invoice.status} />
           </div>
           <p className="text-xs text-iron-400 mt-0.5">
             Created {new Date(invoice.createdAt).toLocaleDateString('en-NZ')}
@@ -231,19 +232,19 @@ export const InvoiceDetail: React.FC = () => {
             </select>
           ) : (
             <div>
-              <StatusBadge status={invoice.status} />
+              <StatusBadge status={isShipped ? 'shipped' : invoice.status} />
               {invoice.sentAt && <p className="text-xs text-iron-400 mt-1">Sent {new Date(invoice.sentAt).toLocaleDateString('en-NZ')}</p>}
-              {invoice.shippedAt && <p className="text-xs mt-1" style={{ color: '#4ade80' }}>Shipped {new Date(invoice.shippedAt).toLocaleDateString('en-NZ')}</p>}
+              {invoice.shippedAt && <p className="text-xs mt-1" style={{ color: '#2dd4bf' }}>Shipped {new Date(invoice.shippedAt).toLocaleDateString('en-NZ')}</p>}
             </div>
           )}
 
-          {/* Tracking number */}
+          {/* Carrier + Tracking number */}
           <div className="mt-3 pt-3" style={{ borderTop: '1px solid #2d2d2d' }}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#ff9900' }}>Tracking #</span>
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#ff9900' }}>Shipping Info</span>
               {!isShipped && !editingTracking && (
                 <button
-                  onClick={() => { setTrackingDraft(invoice.trackingNumber || ''); setEditingTracking(true); }}
+                  onClick={() => { setCarrierDraft(invoice.carrier || ''); setTrackingDraft(invoice.trackingNumber || ''); setEditingTracking(true); }}
                   className="text-xs text-primary-500 hover:text-primary-400"
                 >
                   {invoice.trackingNumber ? 'Edit' : 'Add'}
@@ -251,26 +252,62 @@ export const InvoiceDetail: React.FC = () => {
               )}
             </div>
             {editingTracking ? (
-              <div className="flex items-center gap-1">
-                <input
-                  value={trackingDraft}
-                  onChange={(e) => setTrackingDraft(e.target.value)}
-                  className="flex-1 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+              <div className="space-y-1.5">
+                <select
+                  value={carrierDraft}
+                  onChange={(e) => setCarrierDraft(e.target.value)}
+                  className="w-full px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                   style={inputSt}
-                  placeholder="e.g. 1Z999AA10123456784"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') { update(invoiceId, { trackingNumber: trackingDraft.trim() || null }); setEditingTracking(false); }
-                    if (e.key === 'Escape') setEditingTracking(false);
-                  }}
-                />
-                <button onClick={() => { update(invoiceId, { trackingNumber: trackingDraft.trim() || null }); setEditingTracking(false); }} className="text-xs text-primary-400 hover:text-primary-300">✓</button>
-                <button onClick={() => setEditingTracking(false)} className="text-xs text-iron-500 hover:text-iron-300">✕</button>
+                >
+                  <option value="">— Select carrier —</option>
+                  <option value="UPS">UPS</option>
+                  <option value="USPS">USPS</option>
+                  <option value="FedEx">FedEx</option>
+                  <option value="DHL">DHL</option>
+                  <option value="Other">Other</option>
+                </select>
+                <div className="flex items-center gap-1">
+                  <input
+                    value={trackingDraft}
+                    onChange={(e) => setTrackingDraft(e.target.value)}
+                    className="flex-1 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    style={inputSt}
+                    placeholder="Tracking number"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { update(invoiceId, { carrier: carrierDraft.trim() || null, trackingNumber: trackingDraft.trim() || null }); setEditingTracking(false); }
+                      if (e.key === 'Escape') setEditingTracking(false);
+                    }}
+                  />
+                  <button onClick={() => { update(invoiceId, { carrier: carrierDraft.trim() || null, trackingNumber: trackingDraft.trim() || null }); setEditingTracking(false); }} className="text-xs text-primary-400 hover:text-primary-300">✓</button>
+                  <button onClick={() => setEditingTracking(false)} className="text-xs text-iron-500 hover:text-iron-300">✕</button>
+                </div>
               </div>
             ) : invoice.trackingNumber ? (
-              <p className="text-sm font-mono text-iron-100">{invoice.trackingNumber}</p>
+              <div className="space-y-0.5">
+                {invoice.carrier && <p className="text-xs text-iron-400">{invoice.carrier}</p>}
+                {(() => {
+                  const trackingUrl = (() => {
+                    const t = encodeURIComponent(invoice.trackingNumber!);
+                    switch (invoice.carrier) {
+                      case 'UPS':   return `https://www.ups.com/track?tracknum=${t}`;
+                      case 'USPS':  return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${t}`;
+                      case 'FedEx': return `https://www.fedex.com/fedex/track/?tracknumbers=${t}`;
+                      case 'DHL':   return `https://www.dhl.com/en/express/tracking.html?AWB=${t}`;
+                      default:      return null;
+                    }
+                  })();
+                  return trackingUrl ? (
+                    <a href={trackingUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-mono hover:underline" style={{ color: '#2dd4bf' }}>
+                      {invoice.trackingNumber}
+                    </a>
+                  ) : (
+                    <p className="text-sm font-mono text-iron-100">{invoice.trackingNumber}</p>
+                  );
+                })()}
+              </div>
             ) : (
-              <p className="text-xs text-iron-600">{isShipped ? '—' : 'No tracking number'}</p>
+              <p className="text-xs text-iron-600">{isShipped ? '—' : 'No tracking info'}</p>
             )}
           </div>
           <div className="mt-3 pt-3 text-xs text-iron-400 space-y-0.5" style={{ borderTop: '1px solid #2d2d2d' }}>

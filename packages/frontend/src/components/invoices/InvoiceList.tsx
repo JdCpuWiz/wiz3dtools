@@ -4,7 +4,7 @@ import { useSalesInvoices } from '../../hooks/useSalesInvoices';
 import { StatusBadge } from '../common/StatusBadge';
 import type { SalesInvoice, SalesInvoiceStatus } from '@wizqueue/shared';
 
-type InvoiceFilter = 'all' | SalesInvoiceStatus;
+type InvoiceFilter = 'all' | SalesInvoiceStatus | 'shipped';
 type SortCol = 'invoiceNumber' | 'customer' | 'date' | 'total';
 type SortDir = 'asc' | 'desc';
 
@@ -32,7 +32,11 @@ export const InvoiceList: React.FC = () => {
   }
 
   const filtered = useMemo(() => {
-    const base = filter === 'all' ? invoices : invoices.filter((inv) => inv.status === filter);
+    const base = filter === 'all'
+      ? invoices
+      : filter === 'shipped'
+        ? invoices.filter((inv) => !!inv.shippedAt)
+        : invoices.filter((inv) => inv.status === filter && !inv.shippedAt);
     return [...base].sort((a, b) => {
       let cmp = 0;
       if (sortCol === 'invoiceNumber') cmp = a.invoiceNumber.localeCompare(b.invoiceNumber, undefined, { numeric: true });
@@ -55,7 +59,7 @@ export const InvoiceList: React.FC = () => {
       </div>
 
       <div className="inline-flex p-1 rounded-xl" style={{ background: 'rgba(10,10,10,0.6)' }}>
-        {(['all', 'draft', 'sent', 'paid', 'cancelled'] as InvoiceFilter[]).map((f) => (
+        {(['all', 'draft', 'sent', 'paid', 'shipped', 'cancelled'] as InvoiceFilter[]).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -114,7 +118,7 @@ export const InvoiceList: React.FC = () => {
                       ? invoice.customer.businessName || invoice.customer.contactName
                       : <span className="text-iron-600">—</span>}
                   </td>
-                  <td><StatusBadge status={invoice.status} /></td>
+                  <td><StatusBadge status={invoice.shippedAt ? 'shipped' : invoice.status} /></td>
                   <td className="text-right font-semibold text-iron-50">${calcTotal(invoice).toFixed(2)}</td>
                   <td className="text-iron-400 hidden md:table-cell">
                     {new Date(invoice.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}

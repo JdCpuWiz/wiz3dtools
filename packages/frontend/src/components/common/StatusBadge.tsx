@@ -1,14 +1,17 @@
 import React from 'react';
 import type { SalesInvoiceStatus } from '@wizqueue/shared';
 
+type DisplayStatus = SalesInvoiceStatus | 'shipped';
+
 interface StatusBadgeProps {
-  status: SalesInvoiceStatus;
+  status: DisplayStatus;
 }
 
-const CONFIG: Record<SalesInvoiceStatus, { label: string; style: React.CSSProperties }> = {
+const CONFIG: Record<DisplayStatus, { label: string; style: React.CSSProperties }> = {
   draft:     { label: 'Draft',     style: { background: 'rgba(74,74,74,0.6)',    color: '#9a9a9a' } },
   sent:      { label: 'Sent',      style: { background: 'rgba(59,130,246,0.2)', color: '#60a5fa' } },
   paid:      { label: 'Paid',      style: { background: 'rgba(34,197,94,0.2)',  color: '#4ade80' } },
+  shipped:   { label: 'Shipped',   style: { background: 'rgba(20,184,166,0.2)', color: '#2dd4bf' } },
   cancelled: { label: 'Cancelled', style: { background: 'rgba(239,68,68,0.2)',  color: '#f87171' } },
 };
 

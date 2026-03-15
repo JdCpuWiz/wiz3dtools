@@ -29,6 +29,7 @@ export interface SalesInvoice {
   notes: string | null;
   dueDate: string | null;
   sentAt: string | null;
+  carrier: string | null;
   trackingNumber: string | null;
   shippedAt: string | null;
   lineItems: InvoiceLineItem[];
@@ -63,5 +64,6 @@ export interface UpdateSalesInvoiceDto {
   shippingCost?: number;
   notes?: string;
   dueDate?: string | null;
+  carrier?: string | null;
   trackingNumber?: string | null;
 }
