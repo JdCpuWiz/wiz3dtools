@@ -9,6 +9,7 @@ const statusColors: Record<string, { color: string; bg: string }> = {
   draft:     { color: '#d1d5db', bg: '#2d2d2d' },
   sent:      { color: '#93c5fd', bg: '#1e3a5f' },
   paid:      { color: '#86efac', bg: '#14532d' },
+  shipped:   { color: '#2dd4bf', bg: '#0d3330' },
   cancelled: { color: '#fca5a5', bg: '#450a0a' },
 };
 
@@ -156,7 +157,8 @@ export const CustomerForm: React.FC = () => {
               </thead>
               <tbody>
                 {customerInvoices.map((inv) => {
-                  const sc = statusColors[inv.status] || statusColors.draft;
+                  const displayStatus = inv.shippedAt ? 'shipped' : inv.status;
+                  const sc = statusColors[displayStatus] || statusColors.draft;
                   return (
                     <tr key={inv.id}>
                       <td>
@@ -167,7 +169,7 @@ export const CustomerForm: React.FC = () => {
                       <td className="text-[#9ca3af] text-sm">{fmtDate(inv.createdAt)}</td>
                       <td>
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ color: sc.color, background: sc.bg }}>
-                          {inv.status.charAt(0).toUpperCase() + inv.status.slice(1)}
+                          {displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)}
                         </span>
                       </td>
                       <td className="text-right font-medium text-[#e5e5e5]">
