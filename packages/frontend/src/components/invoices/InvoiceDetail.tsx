@@ -252,7 +252,7 @@ export const InvoiceDetail: React.FC = () => {
                   onClick={() => { setCarrierDraft(invoice.carrier || ''); setTrackingDraft(invoice.trackingNumber || ''); setEditingTracking(true); }}
                   className="text-xs text-primary-500 hover:text-primary-400"
                 >
-                  {invoice.trackingNumber ? 'Edit' : 'Add'}
+                  {invoice.carrier || invoice.trackingNumber ? 'Edit' : 'Add'}
                 </button>
               )}
             </div>
@@ -260,7 +260,14 @@ export const InvoiceDetail: React.FC = () => {
               <div className="space-y-1.5">
                 <select
                   value={carrierDraft}
-                  onChange={(e) => setCarrierDraft(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCarrierDraft(val);
+                    if (val === 'Customer Pickup') {
+                      update(invoiceId, { carrier: val, trackingNumber: null });
+                      setEditingTracking(false);
+                    }
+                  }}
                   className="w-full px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
                   style={inputSt}
                 >
@@ -292,6 +299,8 @@ export const InvoiceDetail: React.FC = () => {
                   <button onClick={() => setEditingTracking(false)} className="text-xs text-iron-500 hover:text-iron-300">✕</button>
                 </div>
               </div>
+            ) : invoice.carrier === 'Customer Pickup' ? (
+              <p className="text-sm text-iron-300">Customer Pickup</p>
             ) : invoice.trackingNumber ? (
               <div className="space-y-0.5">
                 {invoice.carrier && <p className="text-xs text-iron-400">{invoice.carrier}</p>}
