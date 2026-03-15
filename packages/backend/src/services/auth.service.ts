@@ -20,7 +20,7 @@ function getJwtSecret(): string {
 
 export function signToken(user: User): string {
   const payload: JwtPayload = { userId: user.id, username: user.username, role: user.role };
-  return jwt.sign(payload, getJwtSecret(), { expiresIn: '7d' });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: '24h' });
 }
 
 export function verifyToken(token: string): JwtPayload {

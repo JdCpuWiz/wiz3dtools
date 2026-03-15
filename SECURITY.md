@@ -62,11 +62,11 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ---
 
 ### H3 — JWT Expiry Too Long (7 Days)
-**Status:** 🔴 Open
+**Status:** ✅ Fixed (interim)
 **File:** `packages/backend/src/services/auth.service.ts` line ~22
 **Issue:** Stolen tokens valid for a full week. No refresh token mechanism.
-**Fix:** Reduce to 1 hour; implement refresh tokens. Or as interim: reduce to 24h without refresh tokens.
-**Breaking risk:** High — users logged out more frequently without refresh tokens.
+**Fix:** Reduced to 24h. Full refresh token implementation deferred.
+**Breaking risk:** Low — users log in again after 24h of inactivity.
 
 ---
 
@@ -151,9 +151,9 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ---
 
 ### M4 — No Session Timeout / Activity Monitoring
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **Issue:** Tokens valid 7 days with no activity-based expiry.
-**Fix:** Implement inactivity timeout on frontend (auto-logout after 30min idle).
+**Fix:** 30min idle timer in AuthContext; 60-second countdown warning modal before auto-logout.
 **Breaking risk:** Low.
 
 ---

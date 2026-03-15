@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { User, LoginDto } from '@wizqueue/shared';
 
 const STORAGE_KEY = 'wiz3d_auth';
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;   // 30 minutes
+const WARN_BEFORE_MS  = 60 * 1000;         // warn 1 minute before logout
 
 interface AuthState {
   user: User | null;
@@ -12,6 +14,8 @@ interface AuthContextValue extends AuthState {
   isAuthenticated: boolean;
   login: (credentials: LoginDto) => Promise<void>;
   logout: () => void;
+  idleWarning: boolean;         // true when the 60-second warning is showing
+  resetIdleTimer: () => void;   // call to dismiss warning + reset timer
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -28,6 +32,46 @@ function loadFromStorage(): AuthState {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>(loadFromStorage);
+  const [idleWarning, setIdleWarning] = useState(false);
+
+  const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warnTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    setState({ user: null, token: null });
+    setIdleWarning(false);
+  }, []);
+
+  const resetIdleTimer = useCallback(() => {
+    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+    if (warnTimerRef.current)   clearTimeout(warnTimerRef.current);
+    setIdleWarning(false);
+
+    warnTimerRef.current   = setTimeout(() => setIdleWarning(true), IDLE_TIMEOUT_MS - WARN_BEFORE_MS);
+    logoutTimerRef.current = setTimeout(() => logout(), IDLE_TIMEOUT_MS);
+  }, [logout]);
+
+  // Start/restart timer whenever auth state changes
+  useEffect(() => {
+    if (!state.token) {
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      if (warnTimerRef.current)   clearTimeout(warnTimerRef.current);
+      return;
+    }
+
+    resetIdleTimer();
+
+    const EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+    const handler = () => resetIdleTimer();
+    EVENTS.forEach((e) => window.addEventListener(e, handler, { passive: true }));
+
+    return () => {
+      EVENTS.forEach((e) => window.removeEventListener(e, handler));
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      if (warnTimerRef.current)   clearTimeout(warnTimerRef.current);
+    };
+  }, [state.token, resetIdleTimer]);
 
   const login = useCallback(async (credentials: LoginDto) => {
     const apiBase = import.meta.env.VITE_API_URL || '/api';
@@ -49,13 +93,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState(newState);
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setState({ user: null, token: null });
-  }, []);
-
   return (
-    <AuthContext.Provider value={{ ...state, isAuthenticated: !!state.token, login, logout }}>
+    <AuthContext.Provider value={{ ...state, isAuthenticated: !!state.token, login, logout, idleWarning, resetIdleTimer }}>
       {children}
     </AuthContext.Provider>
   );
