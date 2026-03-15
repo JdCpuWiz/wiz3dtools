@@ -3,6 +3,14 @@ import { SalesInvoiceService } from '../services/sales-invoice.service.js';
 import { generateInvoicePdf } from '../services/pdf-generator.service.js';
 import { sendInvoiceEmail } from '../services/email.service.js';
 import { writeAuditLog } from '../models/audit-log.model.js';
+import {
+  parseBody,
+  createInvoiceSchema,
+  updateInvoiceSchema,
+  addLineItemSchema,
+  updateLineItemSchema,
+  sendToQueueSchema,
+} from '../validation/schemas.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
 const service = new SalesInvoiceService();
@@ -26,7 +34,9 @@ export class SalesInvoiceController {
 
   async create(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
-      const invoice = await service.create(req.body);
+      const parsed = parseBody(createInvoiceSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      const invoice = await service.create(parsed.data);
       await writeAuditLog(req.user!.username, 'invoice.create', `invoice:${invoice.invoiceNumber}`);
       res.status(201).json({ success: true, data: invoice, message: 'Invoice created' });
     } catch (error) { next(error); }
@@ -36,7 +46,9 @@ export class SalesInvoiceController {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
-      const invoice = await service.update(id, req.body);
+      const parsed = parseBody(updateInvoiceSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      const invoice = await service.update(id, parsed.data);
       res.json({ success: true, data: invoice, message: 'Invoice updated' });
     } catch (error) { next(error); }
   }
@@ -55,7 +67,9 @@ export class SalesInvoiceController {
     try {
       const invoiceId = parseInt(req.params.id);
       if (isNaN(invoiceId)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
-      const item = await service.addLineItem(invoiceId, req.body);
+      const parsed = parseBody(addLineItemSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      const item = await service.addLineItem(invoiceId, parsed.data);
       res.status(201).json({ success: true, data: item, message: 'Line item added' });
     } catch (error) { next(error); }
   }
@@ -65,7 +79,9 @@ export class SalesInvoiceController {
       const invoiceId = parseInt(req.params.id);
       const itemId = parseInt(req.params.itemId);
       if (isNaN(invoiceId) || isNaN(itemId)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
-      const item = await service.updateLineItem(invoiceId, itemId, req.body);
+      const parsed = parseBody(updateLineItemSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      const item = await service.updateLineItem(invoiceId, itemId, parsed.data);
       res.json({ success: true, data: item, message: 'Line item updated' });
     } catch (error) { next(error); }
   }
@@ -116,9 +132,9 @@ export class SalesInvoiceController {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
-
-      const { lineItemIds } = req.body as { lineItemIds?: number[] };
-      await service.sendToQueue(id, lineItemIds);
+      const parsed = parseBody(sendToQueueSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      await service.sendToQueue(id, parsed.data.lineItemIds);
       await writeAuditLog(req.user!.username, 'invoice.send_to_queue', `invoice:${id}`);
       res.json({ success: true, message: 'Line items sent to print queue' });
     } catch (error) { next(error); }

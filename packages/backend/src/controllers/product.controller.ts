@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ProductService } from '../services/product.service.js';
+import { parseBody, createProductSchema, updateProductSchema } from '../validation/schemas.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
 const service = new ProductService();
@@ -24,7 +25,9 @@ export class ProductController {
 
   async create(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
-      const product = await service.create(req.body);
+      const parsed = parseBody(createProductSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      const product = await service.create(parsed.data);
       res.status(201).json({ success: true, data: product, message: 'Product created' });
     } catch (error) { next(error); }
   }
@@ -33,7 +36,9 @@ export class ProductController {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
-      const product = await service.update(id, req.body);
+      const parsed = parseBody(updateProductSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      const product = await service.update(id, parsed.data);
       res.json({ success: true, data: product, message: 'Product updated' });
     } catch (error) { next(error); }
   }

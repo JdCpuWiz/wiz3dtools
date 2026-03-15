@@ -1,18 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { CustomerService } from '../services/customer.service.js';
+import { parseBody, createCustomerSchema, updateCustomerSchema } from '../validation/schemas.js';
 import type { ApiResponse } from '@wizqueue/shared';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function validateEmail(email: unknown, res: Response<ApiResponse>): boolean {
-  if (email !== undefined && email !== null && email !== '') {
-    if (typeof email !== 'string' || !EMAIL_RE.test(email)) {
-      res.status(400).json({ success: false, error: 'Invalid email format' });
-      return false;
-    }
-  }
-  return true;
-}
 
 const service = new CustomerService();
 
@@ -35,8 +24,9 @@ export class CustomerController {
 
   async create(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
-      if (!validateEmail(req.body.email, res)) return;
-      const customer = await service.create(req.body);
+      const parsed = parseBody(createCustomerSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      const customer = await service.create(parsed.data);
       res.status(201).json({ success: true, data: customer, message: 'Customer created' });
     } catch (error) { next(error); }
   }
@@ -45,8 +35,9 @@ export class CustomerController {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
-      if (!validateEmail(req.body.email, res)) return;
-      const customer = await service.update(id, req.body);
+      const parsed = parseBody(updateCustomerSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      const customer = await service.update(id, parsed.data);
       res.json({ success: true, data: customer, message: 'Customer updated' });
     } catch (error) { next(error); }
   }

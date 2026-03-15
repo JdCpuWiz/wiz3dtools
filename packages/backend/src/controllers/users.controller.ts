@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { UserModel } from '../models/user.model.js';
 import * as authService from '../services/auth.service.js';
 import { writeAuditLog } from '../models/audit-log.model.js';
+import { parseBody, createUserSchema, updateUserSchema, resetPasswordSchema } from '../validation/schemas.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
 const BCRYPT_ROUNDS = 12;
@@ -16,7 +17,9 @@ export async function listUsers(_req: Request, res: Response<ApiResponse>, next:
 
 export async function createUser(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
   try {
-    const { user, token: _token } = await authService.register(req.body);
+    const parsed = parseBody(createUserSchema, req.body);
+    if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+    const { user, token: _token } = await authService.register(parsed.data);
     await writeAuditLog(req.user!.username, 'user.create', `user:${user.id}`, `username=${user.username} role=${user.role}`);
     res.status(201).json({ success: true, data: user, message: 'User created' });
   } catch (error) { next(error); }
@@ -27,15 +30,18 @@ export async function updateUser(req: Request, res: Response<ApiResponse>, next:
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
 
+    const parsed = parseBody(updateUserSchema, req.body);
+    if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+
     // Prevent admin from changing their own role
     const data: { email?: string | null; role?: string } = {};
-    if (req.body.email !== undefined) data.email = req.body.email || null;
-    if (req.body.role !== undefined) {
+    if (parsed.data.email !== undefined) data.email = parsed.data.email || null;
+    if (parsed.data.role !== undefined) {
       if (req.user?.userId === id) {
         res.status(400).json({ success: false, error: 'Cannot change your own role' });
         return;
       }
-      data.role = req.body.role;
+      data.role = parsed.data.role;
     }
 
     const user = await UserModel.update(id, data);
@@ -50,13 +56,10 @@ export async function resetPassword(req: Request, res: Response<ApiResponse>, ne
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
 
-    const { password } = req.body;
-    if (!password || typeof password !== 'string' || password.length < 12) {
-      res.status(400).json({ success: false, error: 'Password must be at least 12 characters' });
-      return;
-    }
+    const parsed = parseBody(resetPasswordSchema, req.body);
+    if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
 
-    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const passwordHash = await bcrypt.hash(parsed.data.password, BCRYPT_ROUNDS);
     const ok = await UserModel.updatePassword(id, passwordHash);
     if (!ok) { res.status(404).json({ success: false, error: 'User not found' }); return; }
     await writeAuditLog(req.user!.username, 'user.reset_password', `user:${id}`);
