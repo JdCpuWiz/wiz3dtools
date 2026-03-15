@@ -6,6 +6,38 @@ Running log of completed work and what's still planned.
 
 ## Completed
 
+### Session 15 — Shipped status, carrier/tracking, product data cleanup, units_sold accuracy
+
+**Shipped status display**
+- Invoice list and detail now show a teal **Shipped** badge (driven by `shippedAt`, not the status field)
+- Invoice list has a new **Shipped** filter tab; draft/sent/paid counts exclude shipped invoices
+- Dashboard invoices card shows Shipped pill; outstanding balance excludes shipped invoices
+- Customer invoice history shows Shipped badge correctly
+- Recent invoices table on dashboard shows Shipped badge
+
+**Carrier + tracking URL (migration 017)**
+- `carrier` column added to `sales_invoices`
+- Carrier dropdown in InvoiceDetail (UPS / USPS / FedEx / DHL / Customer Pickup / Other)
+- Tracking number renders as a clickable link to the carrier's tracking page for known carriers
+- `Customer Pickup` option: no tracking number required; auto-saves on select; button shows "Ready for Pickup"; sends pickup-ready email if customer has email, skips silently if not
+
+**units_sold accuracy**
+- Removed `incrementSold` call from `sendToQueue` — shipping is now the authoritative event
+- `ProductModel.recalcSoldFromShippedInvoices()` — full recalc from all shipped invoice line items on ship
+- Backfilled `units_sold` for all products from historical invoice data via direct DB queries
+
+**Product data cleanup (via DB)**
+- Merged old Phone Stand variants (ids 1, 2, 13, 23, 24) → Phone Stand - Basic (id 26); 50 line items reassigned
+- Deleted Credit on account product (id 25); its line item's product_id nulled
+- `units_sold` backfilled for all 17 products with invoice history
+- Line items on 4 unshipped paid invoices reassigned from Basic → Tooled Leather or Highland Cow by keyword match on details
+- INV-0001, INV-0016: carrier set to USPS so tracking links render
+
+**Other fixes**
+- Date format on InvoiceDetail changed from `en-NZ` (DD/MM/YYYY) to `en-US` (MM/DD/YYYY)
+- Product picker dropdown added to line item edit mode — selecting a product auto-fills name, SKU, unit price
+- INV-0016 status updated to paid via DB
+
 ### Session 14 — Queue cleanup on ship
 - When a sales invoice is marked as shipped, all queue items linked to that invoice's line items are now deleted (any status: pending, printing, or completed)
 - Deletion is scoped strictly via `invoice_line_items.queue_item_id` FK — queue items from other invoices sharing the same product are unaffected
