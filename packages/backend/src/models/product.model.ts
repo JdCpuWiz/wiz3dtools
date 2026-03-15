@@ -74,6 +74,24 @@ export class ProductModel {
     );
   }
 
+  static async recalcSoldFromShippedInvoices(productIds: number[]): Promise<void> {
+    if (productIds.length === 0) return;
+    await pool.query(
+      `UPDATE products p
+       SET units_sold = sub.total, updated_at = NOW()
+       FROM (
+         SELECT ili.product_id, COALESCE(SUM(ili.quantity), 0) AS total
+         FROM invoice_line_items ili
+         JOIN sales_invoices si ON si.id = ili.invoice_id
+         WHERE ili.product_id = ANY($1)
+           AND si.shipped_at IS NOT NULL
+         GROUP BY ili.product_id
+       ) sub
+       WHERE p.id = sub.product_id`,
+      [productIds],
+    );
+  }
+
   static async suggestSku(name: string, excludeId?: number): Promise<string> {
     // Build prefix from first char of each alpha word in the name
     const words = name.split(/[\s\-_]+/).filter((w) => /[a-zA-Z]/.test(w));

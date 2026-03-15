@@ -83,6 +83,12 @@ export class SalesInvoiceService {
        )`,
       [invoiceId]
     );
+
+    // Recalculate units_sold for all products on this invoice based on all shipped invoices
+    const productIds = invoice.lineItems
+      .map((li) => li.productId)
+      .filter((id): id is number => id !== null);
+    await ProductModel.recalcSoldFromShippedInvoices(productIds);
   }
 
   async sendToQueue(invoiceId: number, lineItemIds?: number[]): Promise<void> {
@@ -109,10 +115,7 @@ export class SalesInvoiceService {
         await QueueItemColorModel.copyFromLineItem(lineItem.id, queueItem.id);
       }
 
-      // Track units sold on the product
-      if (lineItem.productId) {
-        await ProductModel.incrementSold(lineItem.productId, lineItem.quantity);
-      }
+      // units_sold is recalculated at ship time — not tracked here
     }
   }
 }
