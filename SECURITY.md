@@ -159,7 +159,7 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ---
 
 ### M5 — No Database Connection SSL
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **File:** `packages/backend/src/config/database.ts`
 **Issue:** No `ssl` option in pg pool config. If DB is remote, credentials/data sent in plaintext.
 **Fix:** Enable `ssl: { rejectUnauthorized: false }` for production.
@@ -168,7 +168,7 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ---
 
 ### M6 — Upload Directory Path Not Validated
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **File:** `packages/backend/src/middleware/upload.middleware.ts`
 **Issue:** `UPLOAD_DIR` env var used without path traversal validation.
 **Fix:** Resolve and validate path stays within expected root at startup.
@@ -177,7 +177,7 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ---
 
 ### M7 — No Email Format Validation on Customer
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **Issue:** Customer email stored without format validation. Malformed emails silently saved.
 **Fix:** Validate email format in customer create/update controller.
 **Breaking risk:** Low — rejects invalid emails on write.
@@ -185,16 +185,16 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ---
 
 ### M8 — No Rate Limiting on Password Reset
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **File:** `packages/backend/src/routes/users.routes.ts`
 **Issue:** Admin password reset endpoint has no rate limiting.
-**Fix:** Add rate limiter to password reset route.
+**Fix:** Add rate limiter to password reset route (5 req/15min).
 **Breaking risk:** None.
 
 ---
 
 ### M9 — No Logging of Auth Failures
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **File:** `packages/backend/src/services/auth.service.ts`
 **Issue:** Failed login attempts not logged — brute-force attacks invisible.
 **Fix:** Log failed attempts with timestamp and username (not password).
@@ -205,16 +205,16 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ## Low / Info
 
 ### L1 — Missing Security Headers
-**Status:** 🔴 Open
-**Fix:** Add `Referrer-Policy`, `Permissions-Policy`, `X-Permitted-Cross-Domain-Policies` to nginx.
+**Status:** ✅ Fixed
+**Fix:** Added `Referrer-Policy` and `Permissions-Policy` to nginx (both server and static file location blocks).
 
 ### L2 — Dependency Versions Use Caret Ranges
 **Status:** 🔴 Open
 **Fix:** Pin exact versions in production; run `npm audit` regularly.
 
 ### L3 — Ollama Model Name Not Whitelisted
-**Status:** 🔴 Open
-**Fix:** Validate `OLLAMA_MODEL` against an allowlist at startup.
+**Status:** ✅ Fixed
+**Fix:** Validate `OLLAMA_MODEL` against an allowlist at startup; exits if not recognized.
 
 ---
 

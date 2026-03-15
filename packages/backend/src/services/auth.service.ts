@@ -59,6 +59,7 @@ export async function register(data: RegisterDto): Promise<AuthResponse> {
 export async function login(data: LoginDto): Promise<AuthResponse> {
   const userWithHash = await UserModel.findByUsername(data.username);
   if (!userWithHash) {
+    console.warn(`[AUTH] Failed login attempt for unknown username: ${data.username} at ${new Date().toISOString()}`);
     const err = new Error('Invalid credentials') as any;
     err.statusCode = 401;
     throw err;
@@ -66,6 +67,7 @@ export async function login(data: LoginDto): Promise<AuthResponse> {
 
   const valid = await bcrypt.compare(data.password, userWithHash.passwordHash);
   if (!valid) {
+    console.warn(`[AUTH] Failed login attempt for username: ${data.username} at ${new Date().toISOString()}`);
     const err = new Error('Invalid credentials') as any;
     err.statusCode = 401;
     throw err;

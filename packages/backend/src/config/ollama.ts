@@ -4,7 +4,20 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-export const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llava:latest';
+
+const ALLOWED_OLLAMA_MODELS = [
+  'minicpm-v:8b',
+  'llava:latest',
+  'llava:13b',
+  'llama3.2-vision:latest',
+];
+
+const configuredModel = process.env.OLLAMA_MODEL || 'minicpm-v:8b';
+if (!ALLOWED_OLLAMA_MODELS.includes(configuredModel)) {
+  console.error(`OLLAMA_MODEL "${configuredModel}" is not in the allowlist: ${ALLOWED_OLLAMA_MODELS.join(', ')}. Exiting.`);
+  process.exit(1);
+}
+export const OLLAMA_MODEL = configuredModel;
 
 export const ollamaClient: AxiosInstance = axios.create({
   baseURL: OLLAMA_BASE_URL,

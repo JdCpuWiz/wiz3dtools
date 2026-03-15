@@ -4,8 +4,14 @@ import fs from 'fs';
 import fsPromises from 'fs/promises';
 import { Request, Response, NextFunction } from 'express';
 
-// Ensure upload directory exists
-const uploadDir = process.env.UPLOAD_DIR || './uploads';
+// Resolve and validate upload directory
+const rawUploadDir = process.env.UPLOAD_DIR || './uploads';
+const uploadDir = path.resolve(rawUploadDir);
+const uploadRoot = path.resolve(process.env.UPLOAD_ROOT || './');
+if (!uploadDir.startsWith(uploadRoot)) {
+  console.error(`UPLOAD_DIR "${uploadDir}" is outside allowed root "${uploadRoot}". Exiting.`);
+  process.exit(1);
+}
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
