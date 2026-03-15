@@ -75,5 +75,6 @@ export async function login(data: LoginDto): Promise<AuthResponse> {
 
   const { passwordHash: _ph, ...user } = userWithHash;
   const token = signToken(user);
+  console.info(`[AUTH] Successful login: ${user.username} at ${new Date().toISOString()}`);
   return { user, token };
 }

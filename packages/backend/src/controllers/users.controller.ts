@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import { UserModel } from '../models/user.model.js';
 import * as authService from '../services/auth.service.js';
+import { writeAuditLog } from '../models/audit-log.model.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
 const BCRYPT_ROUNDS = 12;
@@ -16,6 +17,7 @@ export async function listUsers(_req: Request, res: Response<ApiResponse>, next:
 export async function createUser(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
   try {
     const { user, token: _token } = await authService.register(req.body);
+    await writeAuditLog(req.user!.username, 'user.create', `user:${user.id}`, `username=${user.username} role=${user.role}`);
     res.status(201).json({ success: true, data: user, message: 'User created' });
   } catch (error) { next(error); }
 }
@@ -38,6 +40,7 @@ export async function updateUser(req: Request, res: Response<ApiResponse>, next:
 
     const user = await UserModel.update(id, data);
     if (!user) { res.status(404).json({ success: false, error: 'User not found' }); return; }
+    await writeAuditLog(req.user!.username, 'user.update', `user:${id}`, JSON.stringify(data));
     res.json({ success: true, data: user, message: 'User updated' });
   } catch (error) { next(error); }
 }
@@ -56,6 +59,7 @@ export async function resetPassword(req: Request, res: Response<ApiResponse>, ne
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const ok = await UserModel.updatePassword(id, passwordHash);
     if (!ok) { res.status(404).json({ success: false, error: 'User not found' }); return; }
+    await writeAuditLog(req.user!.username, 'user.reset_password', `user:${id}`);
     res.json({ success: true, message: 'Password reset successfully' });
   } catch (error) { next(error); }
 }
@@ -72,6 +76,7 @@ export async function deleteUser(req: Request, res: Response<ApiResponse>, next:
 
     const ok = await UserModel.delete(id);
     if (!ok) { res.status(404).json({ success: false, error: 'User not found' }); return; }
+    await writeAuditLog(req.user!.username, 'user.delete', `user:${id}`);
     res.json({ success: true, message: 'User deleted' });
   } catch (error) { next(error); }
 }

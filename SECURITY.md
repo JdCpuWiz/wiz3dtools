@@ -143,9 +143,9 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 ---
 
 ### M3 — No Audit Logging
-**Status:** 🔴 Open
+**Status:** ✅ Fixed
 **Issue:** No persistent log of sensitive actions (user creation, invoice changes, status updates). Console logs are ephemeral.
-**Fix:** Add `audit_logs` table; log actor, action, resource, timestamp on all sensitive operations.
+**Fix:** Added `audit_logs` table (migration 018); logs actor, action, resource, detail, timestamp on: user create/update/delete/reset-password, invoice create/delete/send/ship/send-to-queue.
 **Breaking risk:** None — additive only.
 
 ---
@@ -209,8 +209,8 @@ Audit performed: 2026-03-14. All findings from automated + manual review of the 
 **Fix:** Added `Referrer-Policy` and `Permissions-Policy` to nginx (both server and static file location blocks).
 
 ### L2 — Dependency Versions Use Caret Ranges
-**Status:** 🔴 Open
-**Fix:** Pin exact versions in production; run `npm audit` regularly.
+**Status:** ✅ Fixed (audit)
+**Fix:** Ran `npm audit fix` — patched multer (3 high DoS CVEs). Caret ranges remain; audit should be run regularly.
 
 ### L3 — Ollama Model Name Not Whitelisted
 **Status:** ✅ Fixed

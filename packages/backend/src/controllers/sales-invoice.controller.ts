@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { SalesInvoiceService } from '../services/sales-invoice.service.js';
 import { generateInvoicePdf } from '../services/pdf-generator.service.js';
 import { sendInvoiceEmail } from '../services/email.service.js';
+import { writeAuditLog } from '../models/audit-log.model.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
 const service = new SalesInvoiceService();
@@ -26,6 +27,7 @@ export class SalesInvoiceController {
   async create(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const invoice = await service.create(req.body);
+      await writeAuditLog(req.user!.username, 'invoice.create', `invoice:${invoice.invoiceNumber}`);
       res.status(201).json({ success: true, data: invoice, message: 'Invoice created' });
     } catch (error) { next(error); }
   }
@@ -44,6 +46,7 @@ export class SalesInvoiceController {
       const id = parseInt(req.params.id);
       if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
       await service.delete(id);
+      await writeAuditLog(req.user!.username, 'invoice.delete', `invoice:${id}`);
       res.json({ success: true, message: 'Invoice deleted' });
     } catch (error) { next(error); }
   }
@@ -94,6 +97,7 @@ export class SalesInvoiceController {
       // Mark as sent
       await service.update(id, { status: 'sent' });
 
+      await writeAuditLog(req.user!.username, 'invoice.send_email', `invoice:${invoice.invoiceNumber}`, `to=${invoice.customer.email}`);
       res.json({ success: true, message: `Invoice ${invoice.invoiceNumber} sent to ${invoice.customer.email}` });
     } catch (error) { next(error); }
   }
@@ -103,6 +107,7 @@ export class SalesInvoiceController {
       const id = parseInt(req.params.id);
       if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
       await service.ship(id);
+      await writeAuditLog(req.user!.username, 'invoice.ship', `invoice:${id}`);
       res.json({ success: true, message: 'Invoice marked as shipped and customer notified' });
     } catch (error) { next(error); }
   }
@@ -114,7 +119,7 @@ export class SalesInvoiceController {
 
       const { lineItemIds } = req.body as { lineItemIds?: number[] };
       await service.sendToQueue(id, lineItemIds);
-
+      await writeAuditLog(req.user!.username, 'invoice.send_to_queue', `invoice:${id}`);
       res.json({ success: true, message: 'Line items sent to print queue' });
     } catch (error) { next(error); }
   }
