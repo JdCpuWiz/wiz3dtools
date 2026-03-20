@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { QueueItem as QueueItemType } from '@wizqueue/shared';
 import { useQueue } from '../../hooks/useQueue';
+import { useColors } from '../../hooks/useColors';
 import { QueueItemEdit } from './QueueItemEdit';
 import { ColorSwatch } from '../common/ColorPicker';
 
@@ -12,12 +13,121 @@ interface QueueItemProps {
   onSelect?: (id: number, checked: boolean) => void;
 }
 
+interface FilamentImpactModalProps {
+  item: QueueItemType;
+  qty: number;
+  colorInventory: Record<number, { inventoryGrams: number; lowThreshold: number; criticalThreshold: number }>;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function FilamentImpactModal({ item, qty, colorInventory, onConfirm, onCancel }: FilamentImpactModalProps) {
+  const colorsWithWeight = (item.colors || []).filter((c) => (c.weightGrams ?? 0) > 0);
+
+  const rows = colorsWithWeight.map((c) => {
+    const inv = colorInventory[c.colorId];
+    const current = inv?.inventoryGrams ?? 0;
+    const usage = (c.weightGrams ?? 0) * qty;
+    const after = current - usage;
+    const low = inv?.lowThreshold ?? 500;
+    const critical = inv?.criticalThreshold ?? 200;
+    const afterStatus: 'negative' | 'critical' | 'low' | 'ok' =
+      after < 0 ? 'negative' : after <= critical ? 'critical' : after <= low ? 'low' : 'ok';
+    return { c, current, usage, after, afterStatus };
+  });
+
+  const afterColor = (s: string) => {
+    if (s === 'negative') return '#fca5a5';
+    if (s === 'critical') return '#fca5a5';
+    if (s === 'low') return '#fdba74';
+    return '#86efac';
+  };
+
+  const afterBg = (s: string) => {
+    if (s === 'negative' || s === 'critical') return '#450a0a';
+    if (s === 'low') return '#422006';
+    return '#14532d';
+  };
+
+  const hasWarnings = rows.some((r) => r.afterStatus !== 'ok');
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.7)' }}
+      onClick={onCancel}
+    >
+      <div
+        className="card"
+        style={{ width: '100%', maxWidth: 520, margin: '0 16px', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-iron-50">Complete: {item.productName}</h3>
+          <p className="text-sm text-iron-400 mt-0.5">
+            Qty: <span className="text-iron-200 font-medium">{qty}</span>
+            {qty < item.quantity && <span className="ml-2 text-iron-500">(of {item.quantity} — remainder stays in queue)</span>}
+          </p>
+        </div>
+
+        {colorsWithWeight.length === 0 ? (
+          <p className="text-sm text-iron-400 mb-4">No filament weights recorded for this item — no inventory will be deducted.</p>
+        ) : (
+          <div className="space-y-0 mb-4 rounded-lg overflow-hidden" style={{ border: '1px solid #2d2d2d' }}>
+            {/* Header */}
+            <div className="grid text-xs font-semibold text-iron-400 px-3 py-2" style={{ gridTemplateColumns: '1fr 80px 80px 90px', background: '#1a1a1a' }}>
+              <span>Color</span>
+              <span className="text-right">Current</span>
+              <span className="text-right">Usage</span>
+              <span className="text-right">After</span>
+            </div>
+            {rows.map(({ c, current, usage, after, afterStatus }) => (
+              <div
+                key={c.colorId}
+                className="grid items-center px-3 py-2.5 text-sm"
+                style={{ gridTemplateColumns: '1fr 80px 80px 90px', borderTop: '1px solid #2d2d2d' }}
+              >
+                <div className="flex items-center gap-2">
+                  <ColorSwatch hex={c.color?.hex || '#888'} name={c.color?.name || ''} size={14} />
+                  <span className="text-iron-100 truncate">{c.color?.name ?? `Color #${c.colorId}`}</span>
+                </div>
+                <span className="text-right text-iron-300">{current.toFixed(0)}g</span>
+                <span className="text-right" style={{ color: '#fb923c' }}>−{usage.toFixed(1)}g</span>
+                <div className="flex justify-end">
+                  <span
+                    className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                    style={{ color: afterColor(afterStatus), background: afterBg(afterStatus) }}
+                  >
+                    {after.toFixed(0)}g{afterStatus === 'negative' ? ' ⚠' : ''}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {hasWarnings && (
+          <p className="text-xs mb-4" style={{ color: '#fca5a5' }}>
+            ⚠ One or more filaments will be critically low or depleted after this completion.
+          </p>
+        )}
+
+        <div className="flex justify-end gap-3">
+          <button onClick={onCancel} className="btn-secondary">Cancel</button>
+          <button onClick={onConfirm} className="btn-primary">Confirm & Complete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [partialQty, setPartialQty] = useState<number | null>(null);
+  const [completingQty, setCompletingQty] = useState<number | null>(null);
   const [editingQty, setEditingQty] = useState(false);
   const [qtyValue, setQtyValue] = useState(item.quantity);
   const { delete: deleteItem, updateStatus, update } = useQueue();
+  const { colors } = useColors();
 
   const {
     attributes,
@@ -41,6 +151,35 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
     cancelled: 'bg-[#7f1d1d] text-[#fca5a5]',
   };
 
+  // Build inventory map for the modal
+  const colorInventory: Record<number, { inventoryGrams: number; lowThreshold: number; criticalThreshold: number }> = {};
+  for (const c of colors) {
+    colorInventory[c.id] = {
+      inventoryGrams: c.inventoryGrams,
+      lowThreshold: c.manufacturer?.lowThresholdG ?? 500,
+      criticalThreshold: c.manufacturer?.criticalThresholdG ?? 200,
+    };
+  }
+
+  const hasWeightedColors = (item.colors || []).some((c) => (c.weightGrams ?? 0) > 0);
+
+  const doComplete = (qty: number) => {
+    if (qty >= item.quantity) {
+      updateStatus({ id: item.id, status: 'completed' });
+    } else if (qty > 0) {
+      update({ id: item.id, data: { quantity: item.quantity - qty } });
+    }
+    setCompletingQty(null);
+  };
+
+  const requestComplete = (qty: number) => {
+    if (hasWeightedColors) {
+      setCompletingQty(qty);
+    } else {
+      doComplete(qty);
+    }
+  };
+
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       deleteItem(item.id);
@@ -52,7 +191,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
       if (item.quantity > 1) {
         setPartialQty(item.quantity);
       } else {
-        updateStatus({ id: item.id, status: 'completed' });
+        requestComplete(1);
       }
     } else {
       updateStatus({ id: item.id, status: newStatus });
@@ -61,12 +200,9 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
 
   const handlePartialComplete = () => {
     if (partialQty === null) return;
-    if (partialQty >= item.quantity) {
-      updateStatus({ id: item.id, status: 'completed' });
-    } else if (partialQty > 0) {
-      update({ id: item.id, data: { quantity: item.quantity - partialQty } });
-    }
+    const qty = Math.max(1, Math.min(partialQty, item.quantity));
     setPartialQty(null);
+    requestComplete(qty);
   };
 
   const handleQtySave = () => {
@@ -201,7 +337,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                 />
                 <span className="text-sm text-[#9ca3af]">of {item.quantity}</span>
                 <button onClick={handlePartialComplete} className="btn-primary btn-sm">
-                  {partialQty >= item.quantity ? 'Complete All' : 'Confirm'}
+                  {partialQty >= item.quantity ? 'Complete All' : 'Next →'}
                 </button>
                 <button onClick={() => setPartialQty(null)} className="btn-secondary btn-sm">
                   Cancel
@@ -258,6 +394,16 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
           item={item}
           isOpen={isEditing}
           onClose={() => setIsEditing(false)}
+        />
+      )}
+
+      {completingQty !== null && (
+        <FilamentImpactModal
+          item={item}
+          qty={completingQty}
+          colorInventory={colorInventory}
+          onConfirm={() => doComplete(completingQty)}
+          onCancel={() => setCompletingQty(null)}
         />
       )}
     </>
