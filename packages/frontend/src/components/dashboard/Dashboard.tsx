@@ -126,11 +126,11 @@ function fmtDate(d: string) {
 }
 
 const statusColors: Record<string, { color: string; bg: string; label: string }> = {
-  draft:     { color: '#9ca3af', bg: '#3a3a3a',  label: 'Draft' },
-  sent:      { color: '#93c5fd', bg: '#1e3a5f',  label: 'Sent' },
-  paid:      { color: '#86efac', bg: '#14532d',  label: 'Paid' },
-  shipped:   { color: '#c4b5fd', bg: '#3b1a6b',  label: 'Shipped' },
-  cancelled: { color: '#fca5a5', bg: '#450a0a',  label: 'Cancelled' },
+  draft:     { color: '#ffffff', bg: '#6b7280',  label: 'Draft' },
+  sent:      { color: '#ffffff', bg: '#1d4ed8',  label: 'Sent' },
+  paid:      { color: '#ffffff', bg: '#15803d',  label: 'Paid' },
+  shipped:   { color: '#ffffff', bg: '#6d28d9',  label: 'Shipped' },
+  cancelled: { color: '#ffffff', bg: '#b91c1c',  label: 'Cancelled' },
 };
 
 export const Dashboard: React.FC = () => {
@@ -202,8 +202,8 @@ export const Dashboard: React.FC = () => {
             <Pill
               label={`Pending${pendingQty !== pending ? ` (${pendingQty} pcs)` : ''}`}
               count={pending}
-              color="#e5e5e5"
-              bg="#3a3a3a"
+              color="#ffffff"
+              bg="#6b7280"
             />
             <Pill
               label={`Printing${printingQty !== printing ? ` (${printingQty} pcs)` : ''}`}
@@ -220,12 +220,12 @@ export const Dashboard: React.FC = () => {
         {/* Invoices */}
         <StatCard title="Invoices" to="/invoices">
           <div className="divide-y divide-[#2d2d2d]">
-            <Pill label="Draft"    count={draft}     color="#9ca3af" bg="#3a3a3a" />
-            <Pill label="Sent"     count={sent}      color="#93c5fd" bg="#1e3a5f" />
-            <Pill label="Shipped"  count={shipped}   color="#c4b5fd" bg="#3b1a6b" />
-            <Pill label="Paid"     count={paid}      color="#86efac" bg="#14532d" />
+            <Pill label="Draft"    count={draft}     color="#ffffff" bg="#6b7280" />
+            <Pill label="Sent"     count={sent}      color="#ffffff" bg="#1d4ed8" />
+            <Pill label="Shipped"  count={shipped}   color="#ffffff" bg="#6d28d9" />
+            <Pill label="Paid"     count={paid}      color="#ffffff" bg="#15803d" />
             {cancelled > 0 && (
-              <Pill label="Cancelled" count={cancelled} color="#fca5a5" bg="#450a0a" />
+              <Pill label="Cancelled" count={cancelled} color="#ffffff" bg="#b91c1c" />
             )}
           </div>
           {invoices.length === 0 && (
