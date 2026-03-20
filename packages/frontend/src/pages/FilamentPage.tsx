@@ -144,7 +144,7 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
       </td>
       {isAdmin && (
         <td className="px-4 py-3">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
             {!disabled && (
               addingGrams ? (
                 <div className="flex items-center gap-1.5">
@@ -169,10 +169,7 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
             )}
             <button
               onClick={() => update(color.id, { active: !color.active })}
-              className="btn-sm text-xs"
-              style={disabled
-                ? { background: '#14532d', color: '#86efac', border: '1px solid #166534' }
-                : { background: '#2d2d2d', color: '#9ca3af', border: '1px solid #3a3a3a' }}
+              className="btn-secondary btn-sm text-xs"
             >
               {disabled ? 'Enable' : 'Disable'}
             </button>
