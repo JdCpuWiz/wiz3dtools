@@ -34,6 +34,7 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
   const [spoolGrams, setSpoolGrams] = useState('');
   const status = stockStatus(color);
   const style = STATUS_STYLE[status];
+  const disabled = !color.active;
 
   const handleSaveManual = async () => {
     const grams = parseFloat(manualGrams);
@@ -59,14 +60,8 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
     ? Math.min(100, Math.max(0, Math.round((filamentGrams(color) / color.manufacturer.fullSpoolNetWeightG) * 100)))
     : null;
 
-  const inputSt: React.CSSProperties = {
-    background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)',
-    border: 'none',
-    boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)',
-  };
-
   return (
-    <tr style={{ borderTop: '1px solid #2d2d2d' }} className="hover:bg-iron-800/10 transition-colors">
+    <tr style={{ borderTop: '1px solid #2d2d2d', opacity: disabled ? 0.45 : 1 }} className="hover:bg-iron-800/10 transition-colors">
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <span
@@ -109,10 +104,10 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold" style={{ color: status === 'ok' ? '#e5e5e5' : style.color }}>
+            <span className="text-sm font-semibold" style={{ color: disabled ? '#6b7280' : status === 'ok' ? '#e5e5e5' : style.color }}>
               {Math.max(0, netGrams).toFixed(0)}g
             </span>
-            {isAdmin && (
+            {isAdmin && !disabled && (
               <button
                 onClick={() => { setManualGrams(String(color.inventoryGrams.toFixed(1))); setEditing(true); }}
                 className="text-iron-500 hover:text-iron-300 transition-colors"
@@ -122,7 +117,7 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
                 ✎
               </button>
             )}
-            {pct !== null && (
+            {pct !== null && !disabled && (
               <div className="flex-1 min-w-16 max-w-24 h-1.5 rounded-full overflow-hidden" style={{ background: '#2d2d2d' }}>
                 <div
                   className="h-full rounded-full transition-all"
@@ -137,41 +132,51 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
         )}
       </td>
       <td className="px-4 py-3">
-        <span
-          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-          style={{ color: style.color, background: style.bg }}
-        >
-          {style.label}
-        </span>
+        {disabled ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" style={{ color: '#6b7280', background: '#1f1f1f' }}>
+            Disabled
+          </span>
+        ) : (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" style={{ color: style.color, background: style.bg }}>
+            {style.label}
+          </span>
+        )}
       </td>
       {isAdmin && (
         <td className="px-4 py-3">
-          {addingGrams ? (
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={spoolGrams}
-                onChange={(e) => setSpoolGrams(e.target.value)}
-                autoFocus
-                className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-right"
-                style={inputSt}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddSpool(); if (e.key === 'Escape') setAddingGrams(false); }}
-              />
-              <span className="text-xs text-iron-400">g</span>
-              <button onClick={handleAddSpool} className="btn-primary btn-sm text-xs">Add</button>
-              <button onClick={() => setAddingGrams(false)} className="btn-secondary btn-sm text-xs">✕</button>
-            </div>
-          ) : (
+          <div className="flex items-center gap-2 flex-wrap">
+            {!disabled && (
+              addingGrams ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={spoolGrams}
+                    onChange={(e) => setSpoolGrams(e.target.value)}
+                    autoFocus
+                    className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-right"
+                    style={inputSt}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleAddSpool(); if (e.key === 'Escape') setAddingGrams(false); }}
+                  />
+                  <span className="text-xs text-iron-400">g</span>
+                  <button onClick={handleAddSpool} className="btn-primary btn-sm text-xs">Add</button>
+                  <button onClick={() => setAddingGrams(false)} className="btn-secondary btn-sm text-xs">✕</button>
+                </div>
+              ) : (
+                <button onClick={openAddSpool} className="btn-secondary btn-sm text-xs" title="Add spool">+ Spool</button>
+              )
+            )}
             <button
-              onClick={openAddSpool}
-              className="btn-secondary btn-sm text-xs"
-              title="Add spool — enter weight to add"
+              onClick={() => update(color.id, { active: !color.active })}
+              className="btn-sm text-xs"
+              style={disabled
+                ? { background: '#14532d', color: '#86efac', border: '1px solid #166534' }
+                : { background: '#2d2d2d', color: '#9ca3af', border: '1px solid #3a3a3a' }}
             >
-              + Spool
+              {disabled ? 'Enable' : 'Disable'}
             </button>
-          )}
+          </div>
         </td>
       )}
     </tr>
@@ -311,17 +316,19 @@ export const FilamentPage: React.FC = () => {
 
   const activeColors = colors.filter((c) => c.active);
 
-  const filtered = activeColors.filter((c) => {
-    if (filter === 'all') return true;
-    const s = stockStatus(c);
-    if (filter === 'critical') return s === 'critical' || s === 'empty';
-    if (filter === 'low') return s === 'low' || s === 'critical' || s === 'empty';
-    return true;
-  });
+  const filtered = filter === 'all'
+    ? colors  // show all including disabled
+    : activeColors.filter((c) => {
+        const s = stockStatus(c);
+        if (filter === 'critical') return s === 'critical' || s === 'empty';
+        if (filter === 'low') return s === 'low' || s === 'critical' || s === 'empty';
+        return true;
+      });
 
   const criticalCount = activeColors.filter((c) => { const s = stockStatus(c); return s === 'critical' || s === 'empty'; }).length;
   const lowCount = activeColors.filter((c) => stockStatus(c) === 'low').length;
   const totalGrams = activeColors.reduce((s, c) => s + Math.max(0, filamentGrams(c)), 0);
+  const disabledCount = colors.length - activeColors.length;
 
   if (isLoading) {
     return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" /></div>;
@@ -333,7 +340,7 @@ export const FilamentPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-iron-50">Filament Inventory</h1>
           <p className="text-sm text-iron-400 mt-0.5">
-            {totalGrams.toFixed(0)}g total across {activeColors.length} active colors
+            {totalGrams.toFixed(0)}g total · {activeColors.length} active{disabledCount > 0 ? `, ${disabledCount} disabled` : ''}
           </p>
         </div>
         {isAdmin && !showAddColor && (
@@ -352,7 +359,7 @@ export const FilamentPage: React.FC = () => {
           className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
           style={filter === 'all' ? { background: '#ff9900', color: '#0a0a0a' } : { background: '#2d2d2d', color: '#9ca3af' }}
         >
-          All ({activeColors.length})
+          All ({colors.length})
         </button>
         {lowCount > 0 && (
           <button
@@ -392,7 +399,7 @@ export const FilamentPage: React.FC = () => {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-iron-500 text-sm">
-                  {filter === 'all' ? 'No active colors' : 'No colors in this category'}
+                  {filter === 'all' ? 'No colors yet' : 'No colors in this category'}
                 </td>
               </tr>
             )}
