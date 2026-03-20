@@ -5,7 +5,7 @@ import { useProducts } from '../../hooks/useProducts';
 import { productApi } from '../../services/api';
 import { useColors } from '../../hooks/useColors';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreateProductDto, ProductColorDto } from '@wizqueue/shared';
+import type { Color, CreateProductDto, ProductColorDto } from '@wizqueue/shared';
 
 interface ProductFormFields extends CreateProductDto {
   sku?: string;
@@ -22,6 +22,85 @@ const inputSt: React.CSSProperties = {
   border: 'none',
   boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)',
 };
+
+function ColorDropdown({ colors, value, onChange, onAdd }: {
+  colors: Color[];
+  value: string;
+  onChange: (v: string) => void;
+  onAdd: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const selected = colors.find((c) => String(c.id) === value);
+
+  // Group by manufacturer (order preserved from API)
+  const groups: { mfgName: string; colors: Color[] }[] = [];
+  for (const c of colors) {
+    const mfgName = c.manufacturer?.name ?? 'No Manufacturer';
+    const existing = groups.find((g) => g.mfgName === mfgName);
+    if (existing) existing.colors.push(c);
+    else groups.push({ mfgName, colors: [c] });
+  }
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-2 pt-1" ref={ref}>
+      <div className="relative flex-1">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left focus:outline-none focus:ring-1 focus:ring-primary-500"
+          style={inputSt}
+        >
+          {selected ? (
+            <>
+              <span style={{ width: 16, height: 16, borderRadius: '50%', background: selected.hex, border: `2px solid ${selected.hex}`, flexShrink: 0, display: 'inline-block' }} />
+              <span className="text-iron-50">{selected.name}</span>
+            </>
+          ) : (
+            <span className="text-iron-500">— Add a color —</span>
+          )}
+          <span className="ml-auto text-iron-500 text-xs">▼</span>
+        </button>
+
+        {open && (
+          <div
+            className="absolute z-50 w-full mt-1 rounded-lg overflow-y-auto"
+            style={{ background: '#2d2d2d', boxShadow: '0 8px 24px rgb(0 0 0 / 0.5)', maxHeight: 260 }}
+          >
+            {groups.map((group) => (
+              <div key={group.mfgName}>
+                <div className="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: '#6b7280' }}>
+                  {group.mfgName}
+                </div>
+                {group.colors.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => { onChange(String(c.id)); setOpen(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-iron-700/40 transition-colors"
+                    style={{ color: '#e5e5e5' }}
+                  >
+                    <span style={{ width: 16, height: 16, borderRadius: '50%', background: c.hex, border: `2px solid ${c.hex}`, flexShrink: 0, display: 'inline-block' }} />
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <button type="button" onClick={onAdd} disabled={!value} className="btn-secondary btn-sm">Add</button>
+    </div>
+  );
+}
 
 export const ProductForm: React.FC = () => {
   const navigate = useNavigate();
@@ -244,7 +323,7 @@ export const ProductForm: React.FC = () => {
                     height: 18,
                     borderRadius: '50%',
                     background: color.hex,
-                    border: '2px solid #444444',
+                    border: `2px solid ${color.hex}`,
                     flexShrink: 0,
                     display: 'inline-block',
                   }}
@@ -276,27 +355,12 @@ export const ProductForm: React.FC = () => {
 
           {/* Add color row */}
           {remainingColors.length > 0 && (
-            <div className="flex items-center gap-2 pt-1">
-              <select
-                value={selectedColorId}
-                onChange={(e) => setSelectedColorId(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-lg text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                style={inputSt}
-              >
-                <option value="">— Add a color —</option>
-                {remainingColors.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={addColor}
-                disabled={!selectedColorId}
-                className="btn-secondary btn-sm"
-              >
-                Add
-              </button>
-            </div>
+            <ColorDropdown
+              colors={remainingColors}
+              value={selectedColorId}
+              onChange={setSelectedColorId}
+              onAdd={addColor}
+            />
           )}
 
           {colorWeights.length === 0 && (

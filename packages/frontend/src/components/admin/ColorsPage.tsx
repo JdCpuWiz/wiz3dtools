@@ -190,7 +190,7 @@ function ColorRow({ color }: { color: Color }) {
               height: 28,
               borderRadius: '50%',
               background: color.hex,
-              border: '2px solid #444444',
+              border: `2px solid ${color.hex}`,
               flexShrink: 0,
             }}
           />

@@ -21,7 +21,7 @@ export const ColorSwatch: React.FC<{ hex: string; name: string; size?: number }>
       height: size,
       borderRadius: '50%',
       background: hex,
-      border: '2px solid #444444',
+      border: `2px solid ${hex}`,
       flexShrink: 0,
     }}
   />
