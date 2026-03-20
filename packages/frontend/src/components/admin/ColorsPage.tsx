@@ -91,12 +91,26 @@ function AddColorForm({ onDone }: { onDone: () => void }) {
 }
 
 function ColorRow({ color }: { color: Color }) {
-  const { update, delete: deleteColor, addSpool } = useColors();
+  const { update, delete: deleteColor } = useColors();
   const { manufacturers } = useManufacturers();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(color.name);
   const [hex, setHex] = useState(color.hex);
   const [manufacturerId, setManufacturerId] = useState<string>(color.manufacturerId ? String(color.manufacturerId) : '');
+  const [addingGrams, setAddingGrams] = useState(false);
+  const [spoolGrams, setSpoolGrams] = useState('');
+
+  const openAddSpool = () => {
+    setSpoolGrams(String(color.manufacturer?.fullSpoolNetWeightG ?? 1000));
+    setAddingGrams(true);
+  };
+
+  const handleAddSpool = async () => {
+    const g = parseFloat(spoolGrams);
+    if (isNaN(g) || g <= 0) return;
+    await update(color.id, { inventoryGrams: color.inventoryGrams + g });
+    setAddingGrams(false);
+  };
 
   const save = async () => {
     await update(color.id, {
@@ -170,16 +184,35 @@ function ColorRow({ color }: { color: Color }) {
       <td className="px-4 py-3 text-sm font-medium text-iron-50">{color.name}</td>
       <td className="px-4 py-3 text-xs text-iron-400">{color.manufacturer?.name ?? '—'}</td>
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-iron-300">{color.inventoryGrams.toFixed(0)}g</span>
-          <button
-            onClick={() => addSpool(color.id)}
-            className="text-xs px-2 py-0.5 rounded font-medium transition-colors"
-            style={{ background: '#2d2d2d', color: '#ff9900', border: '1px solid #b45309' }}
-            title={`Add ${color.manufacturer?.fullSpoolNetWeightG ?? 1000}g spool`}
-          >
-            + Spool
-          </button>
+          {addingGrams ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={spoolGrams}
+                onChange={(e) => setSpoolGrams(e.target.value)}
+                autoFocus
+                className="w-16 px-1.5 py-0.5 rounded text-iron-50 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-right"
+                style={inputSt}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddSpool(); if (e.key === 'Escape') setAddingGrams(false); }}
+              />
+              <span className="text-xs text-iron-400">g</span>
+              <button onClick={handleAddSpool} className="btn-primary btn-sm text-xs">Add</button>
+              <button onClick={() => setAddingGrams(false)} className="btn-secondary btn-sm text-xs">✕</button>
+            </div>
+          ) : (
+            <button
+              onClick={openAddSpool}
+              className="text-xs px-2 py-0.5 rounded font-medium transition-colors"
+              style={{ background: '#2d2d2d', color: '#ff9900', border: '1px solid #b45309' }}
+              title="Add spool — enter weight to add"
+            >
+              + Spool
+            </button>
+          )}
         </div>
       </td>
       <td className="px-4 py-3">

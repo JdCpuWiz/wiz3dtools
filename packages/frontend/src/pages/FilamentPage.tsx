@@ -20,9 +20,11 @@ const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }>
 };
 
 function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean }) {
-  const { addSpool, update } = useColors();
+  const { update } = useColors();
   const [editing, setEditing] = useState(false);
   const [manualGrams, setManualGrams] = useState(String(color.inventoryGrams.toFixed(0)));
+  const [addingGrams, setAddingGrams] = useState(false);
+  const [spoolGrams, setSpoolGrams] = useState('');
   const status = stockStatus(color);
   const style = STATUS_STYLE[status];
 
@@ -31,6 +33,18 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
     if (isNaN(grams)) return;
     await update(color.id, { inventoryGrams: grams });
     setEditing(false);
+  };
+
+  const openAddSpool = () => {
+    setSpoolGrams(String(color.manufacturer?.fullSpoolNetWeightG ?? 1000));
+    setAddingGrams(true);
+  };
+
+  const handleAddSpool = async () => {
+    const g = parseFloat(spoolGrams);
+    if (isNaN(g) || g <= 0) return;
+    await update(color.id, { inventoryGrams: color.inventoryGrams + g });
+    setAddingGrams(false);
   };
 
   const pct = color.manufacturer
@@ -117,13 +131,32 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
       </td>
       {isAdmin && (
         <td className="px-4 py-3">
-          <button
-            onClick={() => addSpool(color.id)}
-            className="btn-secondary btn-sm text-xs"
-            title={`Add ${color.manufacturer?.fullSpoolNetWeightG ?? 1000}g spool`}
-          >
-            + Spool
-          </button>
+          {addingGrams ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={spoolGrams}
+                onChange={(e) => setSpoolGrams(e.target.value)}
+                autoFocus
+                className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-right"
+                style={inputSt}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddSpool(); if (e.key === 'Escape') setAddingGrams(false); }}
+              />
+              <span className="text-xs text-iron-400">g</span>
+              <button onClick={handleAddSpool} className="btn-primary btn-sm text-xs">Add</button>
+              <button onClick={() => setAddingGrams(false)} className="btn-secondary btn-sm text-xs">✕</button>
+            </div>
+          ) : (
+            <button
+              onClick={openAddSpool}
+              className="btn-secondary btn-sm text-xs"
+              title="Add spool — enter weight to add"
+            >
+              + Spool
+            </button>
+          )}
         </td>
       )}
     </tr>
