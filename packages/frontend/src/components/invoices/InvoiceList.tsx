@@ -13,6 +13,14 @@ function calcTotal(invoice: SalesInvoice): number {
   return sub + (invoice.taxExempt ? 0 : sub * invoice.taxRate) + (invoice.shippingCost || 0);
 }
 
+function calcWeightOz(invoice: SalesInvoice): number {
+  const grams = invoice.lineItems.reduce((sum, li) => {
+    const itemGrams = (li.colors || []).reduce((s, c) => s + (c.weightGrams || 0), 0);
+    return sum + itemGrams * li.quantity;
+  }, 0);
+  return grams * 0.035274;
+}
+
 function customerName(invoice: SalesInvoice): string {
   return invoice.customer
     ? (invoice.customer.businessName || invoice.customer.contactName || '')
@@ -85,6 +93,7 @@ export const InvoiceList: React.FC = () => {
                   { col: 'customer' as SortCol, label: 'Customer', cls: 'hidden sm:table-cell' },
                   { col: null, label: 'Status', cls: '' },
                   { col: 'total' as SortCol, label: 'Total', cls: 'text-right' },
+                  { col: null, label: 'Weight', cls: 'hidden lg:table-cell text-right' },
                   { col: 'date' as SortCol, label: 'Date', cls: 'hidden md:table-cell' },
                 ] as { col: SortCol | null; label: string; cls: string }[]).map(({ col, label, cls }) => (
                   <th
@@ -120,6 +129,9 @@ export const InvoiceList: React.FC = () => {
                   </td>
                   <td><StatusBadge status={invoice.shippedAt ? 'shipped' : invoice.status} /></td>
                   <td className="text-right font-semibold text-iron-50">${calcTotal(invoice).toFixed(2)}</td>
+                  <td className="text-right text-iron-400 hidden lg:table-cell">
+                    {(() => { const oz = calcWeightOz(invoice); return oz > 0 ? `${oz.toFixed(2)} oz` : <span className="text-iron-600">—</span>; })()}
+                  </td>
                   <td className="text-iron-400 hidden md:table-cell">
                     {new Date(invoice.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                   </td>

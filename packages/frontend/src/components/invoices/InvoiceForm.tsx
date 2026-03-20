@@ -13,6 +13,7 @@ interface LineItemDraft extends CreateLineItemDto {
   _key: number;
   _colors: ItemColorDto[];
   _showColors: boolean;
+  _weightGrams: number;
 }
 
 export const InvoiceForm: React.FC = () => {
@@ -31,13 +32,13 @@ export const InvoiceForm: React.FC = () => {
   }>();
 
   const [lineItems, setLineItems] = useState<LineItemDraft[]>([
-    { _key: Date.now(), productName: '', quantity: 1, unitPrice: 0, _colors: [], _showColors: false },
+    { _key: Date.now(), productName: '', quantity: 1, unitPrice: 0, _colors: [], _showColors: false, _weightGrams: 0 },
   ]);
   const [shippingCost, setShippingCost] = useState(0);
 
   const addRow = () => setLineItems((prev) => [
     ...prev,
-    { _key: Date.now() + Math.random(), productName: '', quantity: 1, unitPrice: 0, _colors: [], _showColors: false },
+    { _key: Date.now() + Math.random(), productName: '', quantity: 1, unitPrice: 0, _colors: [], _showColors: false, _weightGrams: 0 },
   ]);
 
   const removeRow = (key: number) => setLineItems((prev) => prev.filter((li) => li._key !== key));
@@ -59,12 +60,14 @@ export const InvoiceForm: React.FC = () => {
     if (!product) return;
     setLineItems((prev) => prev.map((li) =>
       li._key === key
-        ? { ...li, productId: product.id, productName: product.name, sku: product.sku || undefined, unitPrice: product.unitPrice, details: product.description || li.details }
+        ? { ...li, productId: product.id, productName: product.name, sku: product.sku || undefined, unitPrice: product.unitPrice, details: product.description || li.details, _weightGrams: product.totalWeightGrams || 0 }
         : li,
     ));
   };
 
   const subtotal = lineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0);
+  const totalWeightGrams = lineItems.reduce((s, li) => s + li._weightGrams * li.quantity, 0);
+  const totalWeightOz = totalWeightGrams * 0.035274;
 
   const onSubmit = async (data: { customerId: string; taxRate: string; taxExempt: boolean; notes: string; dueDate: string }) => {
     const validItems = lineItems.filter((li) => li.productName.trim() && li.unitPrice >= 0);
@@ -80,7 +83,7 @@ export const InvoiceForm: React.FC = () => {
       shippingCost,
       notes: data.notes || undefined,
       dueDate: data.dueDate || undefined,
-      lineItems: validItems.map(({ _key: _, _colors: _c, _showColors: _s, ...rest }) => rest),
+      lineItems: validItems.map(({ _key: _, _colors: _c, _showColors: _s, _weightGrams: _w, ...rest }) => rest),
     });
 
     // Save colors for each line item that has colors set
@@ -322,6 +325,12 @@ export const InvoiceForm: React.FC = () => {
                 <span className="text-iron-400">IA Sales Tax (7%)</span>
                 <span className="font-medium text-iron-50">calculated at save</span>
               </div>
+              {totalWeightOz > 0 && (
+                <div className="flex justify-between w-64">
+                  <span className="text-iron-400">Est. Weight</span>
+                  <span className="font-medium text-iron-50">{totalWeightOz.toFixed(2)} oz ({totalWeightGrams.toFixed(0)}g)</span>
+                </div>
+              )}
               <div className="flex justify-between w-64 pt-2" style={{ borderTop: '1px solid #3a3a3a' }}>
                 <span className="font-bold text-iron-50">Total</span>
                 <span className="font-bold text-lg" style={{ color: '#ff9900' }}>
