@@ -25,9 +25,9 @@ function NavItem({
         }`
       }
       style={({ isActive }) => ({
-        color: isActive ? '#ff9900' : '#9ca3af',
-        backgroundColor: isActive ? 'rgba(255,153,0,0.08)' : 'transparent',
-        borderLeft: isActive ? '2px solid #ff9900' : '2px solid transparent',
+        color: isActive ? '#ffffff' : '#9ca3af',
+        backgroundColor: isActive ? '#ff9900' : 'transparent',
+        borderLeft: isActive ? '2px solid #e68a00' : '2px solid transparent',
       })}
     >
       {icon}
