@@ -223,7 +223,7 @@ function ColorRow({ color }: { color: Color }) {
             <button
               onClick={openAddSpool}
               className="text-xs px-2 py-0.5 rounded font-medium transition-colors"
-              style={{ background: '#2d2d2d', color: '#ff9900', border: '1px solid #b45309' }}
+              style={{ background: '#ff9900', color: '#0a0a0a' }}
               title="Add spool — enter weight to add"
             >
               + Spool
