@@ -36,26 +36,32 @@ const Pill: React.FC<{ label: string; count: number; color: string; bg: string }
   </div>
 );
 
+function netFilamentGrams(c: Color): number {
+  return c.inventoryGrams - (c.manufacturer?.emptySpoolWeightG ?? 0);
+}
+
 function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColorIds: Set<number> }) {
   const withInventory = colors.filter((c) => c.active);
 
   // Low stock detection — only flag colors that are actually needed in active queue items
   const critical = withInventory.filter((c) => {
     if (!neededColorIds.has(c.id)) return false;
+    const net = netFilamentGrams(c);
     const threshold = c.manufacturer?.criticalThresholdG ?? 200;
-    return c.inventoryGrams <= threshold;
+    return net <= threshold;
   });
   const low = withInventory.filter((c) => {
     if (!neededColorIds.has(c.id)) return false;
+    const net = netFilamentGrams(c);
     const criticalT = c.manufacturer?.criticalThresholdG ?? 200;
     const lowT = c.manufacturer?.lowThresholdG ?? 500;
-    return c.inventoryGrams > criticalT && c.inventoryGrams <= lowT;
+    return net > criticalT && net <= lowT;
   });
 
-  // Top colors by inventory (most stock on hand)
-  const sorted = [...withInventory].sort((a, b) => b.inventoryGrams - a.inventoryGrams).slice(0, 3);
+  // Top colors by net filament (most stock on hand)
+  const sorted = [...withInventory].sort((a, b) => netFilamentGrams(b) - netFilamentGrams(a)).slice(0, 3);
 
-  const totalGrams = withInventory.reduce((s, c) => s + c.inventoryGrams, 0);
+  const totalGrams = withInventory.reduce((s, c) => s + Math.max(0, netFilamentGrams(c)), 0);
 
   return (
     <Link
@@ -100,7 +106,7 @@ function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColor
                 style={{ width: 10, height: 10, borderRadius: '50%', background: c.hex, flexShrink: 0, display: 'inline-block', border: '1px solid #444444' }}
               />
               <span className="text-[#d1d5db] truncate flex-1">{c.name}</span>
-              <span className="text-[#9ca3af] shrink-0">{c.inventoryGrams.toFixed(0)}g</span>
+              <span className="text-[#9ca3af] shrink-0">{Math.max(0, netFilamentGrams(c)).toFixed(0)}g</span>
             </div>
           ))}
         </div>

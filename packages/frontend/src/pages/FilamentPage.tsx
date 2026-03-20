@@ -3,12 +3,17 @@ import { useColors } from '../hooks/useColors';
 import { useAuth } from '../context/AuthContext';
 import type { Color } from '@wizqueue/shared';
 
+function filamentGrams(color: Color): number {
+  return color.inventoryGrams - (color.manufacturer?.emptySpoolWeightG ?? 0);
+}
+
 function stockStatus(color: Color): 'critical' | 'low' | 'ok' | 'empty' {
+  const net = filamentGrams(color);
   const critical = color.manufacturer?.criticalThresholdG ?? 200;
   const low = color.manufacturer?.lowThresholdG ?? 500;
-  if (color.inventoryGrams <= 0) return 'empty';
-  if (color.inventoryGrams <= critical) return 'critical';
-  if (color.inventoryGrams <= low) return 'low';
+  if (net <= 0) return 'empty';
+  if (net <= critical) return 'critical';
+  if (net <= low) return 'low';
   return 'ok';
 }
 
@@ -22,6 +27,7 @@ const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }>
 function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean }) {
   const { update } = useColors();
   const [editing, setEditing] = useState(false);
+  const netGrams = filamentGrams(color);
   const [manualGrams, setManualGrams] = useState(String(color.inventoryGrams.toFixed(0)));
   const [addingGrams, setAddingGrams] = useState(false);
   const [spoolGrams, setSpoolGrams] = useState('');
@@ -36,7 +42,8 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
   };
 
   const openAddSpool = () => {
-    setSpoolGrams(String(color.manufacturer?.fullSpoolNetWeightG ?? 1000));
+    const gross = (color.manufacturer?.fullSpoolNetWeightG ?? 1000) + (color.manufacturer?.emptySpoolWeightG ?? 0);
+    setSpoolGrams(String(gross));
     setAddingGrams(true);
   };
 
@@ -48,7 +55,7 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
   };
 
   const pct = color.manufacturer
-    ? Math.min(100, Math.round((color.inventoryGrams / color.manufacturer.fullSpoolNetWeightG) * 100))
+    ? Math.min(100, Math.max(0, Math.round((filamentGrams(color) / color.manufacturer.fullSpoolNetWeightG) * 100)))
     : null;
 
   const inputSt: React.CSSProperties = {
@@ -102,7 +109,7 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
         ) : (
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold" style={{ color: status === 'ok' ? '#e5e5e5' : style.color }}>
-              {color.inventoryGrams.toFixed(0)}g
+              {Math.max(0, netGrams).toFixed(0)}g
             </span>
             {isAdmin && (
               <button
@@ -189,7 +196,7 @@ export const FilamentPage: React.FC = () => {
 
   const criticalCount = activeColors.filter((c) => { const s = stockStatus(c); return s === 'critical' || s === 'empty'; }).length;
   const lowCount = activeColors.filter((c) => stockStatus(c) === 'low').length;
-  const totalGrams = activeColors.reduce((s, c) => s + c.inventoryGrams, 0);
+  const totalGrams = activeColors.reduce((s, c) => s + Math.max(0, filamentGrams(c)), 0);
 
   if (isLoading) {
     return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" /></div>;
