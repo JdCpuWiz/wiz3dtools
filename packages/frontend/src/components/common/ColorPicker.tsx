@@ -66,39 +66,57 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
 
   const isSelected = (colorId: number) => selected.some((s) => s.colorId === colorId);
 
+  // Group active colors by manufacturer (order preserved from API: mfg name asc, color name asc)
+  const groups: { mfgName: string; colors: Color[] }[] = [];
+  for (const c of activeColors) {
+    const mfgName = c.manufacturer?.name ?? 'No Manufacturer';
+    const existing = groups.find((g) => g.mfgName === mfgName);
+    if (existing) existing.colors.push(c);
+    else groups.push({ mfgName, colors: [c] });
+  }
+
   return (
     <div>
-      {/* Palette */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {activeColors.map((c) => {
-          const sel = isSelected(c.id);
-          return (
-            <button
-              key={c.id}
-              type="button"
-              title={sel ? `Remove ${c.name}` : `Add ${c.name}`}
-              onClick={() => (sel ? removeColor(c.id) : addColor(c.id))}
-              disabled={!sel && selected.length >= maxColors}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '3px 8px 3px 4px',
-                borderRadius: 99,
-                border: sel ? '2px solid #ff9900' : '2px solid #3a3a3a',
-                background: sel ? '#3a1f00' : '#2d2d2d',
-                cursor: !sel && selected.length >= maxColors ? 'not-allowed' : 'pointer',
-                opacity: !sel && selected.length >= maxColors ? 0.4 : 1,
-                transition: 'border-color 0.15s',
-              }}
-            >
-              <ColorSwatch hex={c.hex} name={c.name} size={16} />
-              <span style={{ fontSize: 11, color: sel ? '#ff9900' : '#d1d5db', fontWeight: sel ? 600 : 400 }}>
-                {c.name}
-              </span>
-            </button>
-          );
-        })}
+      {/* Palette grouped by manufacturer */}
+      <div className="mb-3 space-y-2">
+        {groups.map((group) => (
+          <div key={group.mfgName}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+              {group.mfgName}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {group.colors.map((c) => {
+                const sel = isSelected(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    title={sel ? `Remove ${c.name}` : `Add ${c.name}`}
+                    onClick={() => (sel ? removeColor(c.id) : addColor(c.id))}
+                    disabled={!sel && selected.length >= maxColors}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '3px 8px 3px 4px',
+                      borderRadius: 99,
+                      border: sel ? '2px solid #ff9900' : '2px solid #3a3a3a',
+                      background: sel ? '#3a1f00' : '#2d2d2d',
+                      cursor: !sel && selected.length >= maxColors ? 'not-allowed' : 'pointer',
+                      opacity: !sel && selected.length >= maxColors ? 0.4 : 1,
+                      transition: 'border-color 0.15s',
+                    }}
+                  >
+                    <ColorSwatch hex={c.hex} name={c.name} size={16} />
+                    <span style={{ fontSize: 11, color: sel ? '#ff9900' : '#d1d5db', fontWeight: sel ? 600 : 400 }}>
+                      {c.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
         {activeColors.length === 0 && (
           <span style={{ fontSize: 12, color: '#6b7280' }}>No colors in catalog — add some in Admin → Colors</span>
         )}

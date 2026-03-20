@@ -37,7 +37,7 @@ export class ColorModel {
        FROM colors c
        LEFT JOIN manufacturers m ON m.id = c.manufacturer_id
        ${where}
-       ORDER BY c.sort_order ASC, c.name ASC`,
+       ORDER BY m.name ASC NULLS LAST, c.name ASC`,
     );
     return result.rows.map(parseRow);
   }
