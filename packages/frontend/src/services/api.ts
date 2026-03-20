@@ -16,9 +16,14 @@ import type {
   InvoiceLineItem,
   CreateLineItemDto,
   Product,
+  ProductColor,
+  ProductColorDto,
   CreateProductDto,
   UpdateProductDto,
   User,
+  Manufacturer,
+  CreateManufacturerDto,
+  UpdateManufacturerDto,
   Color,
   CreateColorDto,
   UpdateColorDto,
@@ -285,6 +290,16 @@ export const productApi = {
     }
   },
 
+  getColors: async (id: number): Promise<ProductColor[]> => {
+    const response = await api.get<ApiResponse<ProductColor[]>>(`/products/${id}/colors`);
+    return response.data.data || [];
+  },
+
+  setColors: async (id: number, colors: ProductColorDto[]): Promise<ProductColor[]> => {
+    const response = await api.put<ApiResponse<ProductColor[]>>(`/products/${id}/colors`, { colors });
+    return response.data.data || [];
+  },
+
   suggestSku: async (name: string, excludeId?: number): Promise<string> => {
     const params = new URLSearchParams({ name });
     if (excludeId) params.set('excludeId', String(excludeId));
@@ -324,12 +339,42 @@ export const colorApi = {
     return response.data.data || [];
   },
 
+  addSpool: async (colorId: number): Promise<Color> => {
+    const response = await api.post<ApiResponse<Color>>(`/colors/${colorId}/add-spool`);
+    if (!response.data.data) throw new Error('Failed to add spool');
+    return response.data.data;
+  },
+
   setQueueItemColors: async (queueItemId: number, colors: ItemColorDto[]): Promise<ItemColor[]> => {
     const response = await api.put<ApiResponse<ItemColor[]>>(
       `/queue/${queueItemId}/colors`,
       { colors },
     );
     return response.data.data || [];
+  },
+};
+
+// Manufacturer API
+export const manufacturerApi = {
+  getAll: async (): Promise<Manufacturer[]> => {
+    const response = await api.get<ApiResponse<Manufacturer[]>>('/manufacturers');
+    return response.data.data || [];
+  },
+
+  create: async (data: CreateManufacturerDto): Promise<Manufacturer> => {
+    const response = await api.post<ApiResponse<Manufacturer>>('/manufacturers', data);
+    if (!response.data.data) throw new Error('Failed to create manufacturer');
+    return response.data.data;
+  },
+
+  update: async (id: number, data: UpdateManufacturerDto): Promise<Manufacturer> => {
+    const response = await api.put<ApiResponse<Manufacturer>>(`/manufacturers/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update manufacturer');
+    return response.data.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/manufacturers/${id}`);
   },
 };
 

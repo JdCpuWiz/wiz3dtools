@@ -34,6 +34,16 @@ export class ColorController {
     } catch (error) { next(error); }
   }
 
+  async addSpool(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      const color = await ColorModel.addSpool(id);
+      if (!color) { res.status(404).json({ success: false, error: 'Color not found' }); return; }
+      res.json({ success: true, data: color, message: `Added spool to inventory (now ${color.inventoryGrams.toFixed(0)}g)` });
+    } catch (error) { next(error); }
+  }
+
   async delete(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const id = parseInt(req.params.id);

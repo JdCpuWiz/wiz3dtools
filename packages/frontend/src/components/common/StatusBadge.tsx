@@ -8,11 +8,11 @@ interface StatusBadgeProps {
 }
 
 const CONFIG: Record<DisplayStatus, { label: string; style: React.CSSProperties }> = {
-  draft:     { label: 'Draft',     style: { background: 'rgba(74,74,74,0.6)',    color: '#9a9a9a' } },
-  sent:      { label: 'Sent',      style: { background: 'rgba(59,130,246,0.2)', color: '#60a5fa' } },
-  paid:      { label: 'Paid',      style: { background: 'rgba(34,197,94,0.2)',  color: '#4ade80' } },
-  shipped:   { label: 'Shipped',   style: { background: 'rgba(20,184,166,0.2)', color: '#2dd4bf' } },
-  cancelled: { label: 'Cancelled', style: { background: 'rgba(239,68,68,0.2)',  color: '#f87171' } },
+  draft:     { label: 'Draft',     style: { background: '#3a3a3a',  color: '#9ca3af' } },
+  sent:      { label: 'Sent',      style: { background: '#1e3a5f',  color: '#93c5fd' } },
+  paid:      { label: 'Paid',      style: { background: '#14532d',  color: '#86efac' } },
+  shipped:   { label: 'Shipped',   style: { background: '#3b1a6b',  color: '#c4b5fd' } },
+  cancelled: { label: 'Cancelled', style: { background: '#450a0a',  color: '#fca5a5' } },
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {

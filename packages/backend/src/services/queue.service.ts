@@ -1,4 +1,6 @@
 import { QueueItemModel } from '../models/queue-item.model.js';
+import { QueueItemColorModel } from '../models/item-color.model.js';
+import { ColorModel } from '../models/color.model.js';
 import type {
   QueueItem,
   CreateQueueItemDto,
@@ -50,6 +52,24 @@ export class QueueService {
   }
 
   async updateItemStatus(id: number, status: string): Promise<QueueItem> {
-    return await this.updateItem(id, { status: status as any });
+    const item = await this.updateItem(id, { status: status as any });
+
+    // When an item is completed, deduct filament from inventory
+    if (status === 'completed') {
+      try {
+        const colors = await QueueItemColorModel.findByQueueItem(id);
+        for (const c of colors) {
+          if (c.weightGrams > 0) {
+            // Deduct: weight per print × quantity printed
+            await ColorModel.deductInventory(c.colorId, c.weightGrams * item.quantity);
+          }
+        }
+      } catch (err) {
+        // Swallow — inventory deduction errors should never block status update
+        console.error('Inventory deduction error (non-fatal):', err);
+      }
+    }
+
+    return item;
   }
 }

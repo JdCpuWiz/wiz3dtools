@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ProductService } from '../services/product.service.js';
-import { parseBody, createProductSchema, updateProductSchema } from '../validation/schemas.js';
+import { ProductColorModel } from '../models/product-color.model.js';
+import { parseBody, createProductSchema, updateProductSchema, setProductColorsSchema } from '../validation/schemas.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
 const service = new ProductService();
@@ -49,6 +50,26 @@ export class ProductController {
       if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
       await service.delete(id);
       res.json({ success: true, message: 'Product deleted' });
+    } catch (error) { next(error); }
+  }
+
+  async getColors(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      const colors = await ProductColorModel.findByProduct(id);
+      res.json({ success: true, data: colors });
+    } catch (error) { next(error); }
+  }
+
+  async setColors(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      const parsed = parseBody(setProductColorsSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      const colors = await ProductColorModel.setColors(id, parsed.data.colors);
+      res.json({ success: true, data: colors, message: 'Product colors updated' });
     } catch (error) { next(error); }
   }
 

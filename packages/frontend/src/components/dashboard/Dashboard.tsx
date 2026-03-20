@@ -2,9 +2,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQueue } from '../../hooks/useQueue';
 import { useSalesInvoices } from '../../hooks/useSalesInvoices';
-import { useCustomers } from '../../hooks/useCustomers';
 import { useProducts } from '../../hooks/useProducts';
-import type { SalesInvoice } from '@wizqueue/shared';
+import { useColors } from '../../hooks/useColors';
+import type { SalesInvoice, Color } from '@wizqueue/shared';
 
 interface StatCardProps {
   title: string;
@@ -36,23 +36,100 @@ const Pill: React.FC<{ label: string; count: number; color: string; bg: string }
   </div>
 );
 
-const statusColors: Record<string, { color: string; bg: string; label: string }> = {
-  draft:     { color: '#d1d5db', bg: '#2d2d2d',  label: 'Draft' },
-  sent:      { color: '#93c5fd', bg: '#1e3a5f',  label: 'Sent' },
-  paid:      { color: '#86efac', bg: '#14532d',  label: 'Paid' },
-  shipped:   { color: '#2dd4bf', bg: '#0d3330',  label: 'Shipped' },
-  cancelled: { color: '#fca5a5', bg: '#450a0a',  label: 'Cancelled' },
-};
+function FilamentCard({ colors }: { colors: Color[] }) {
+  const withInventory = colors.filter((c) => c.active);
+
+  // Low stock detection using manufacturer thresholds
+  const critical = withInventory.filter((c) => {
+    const threshold = c.manufacturer?.criticalThresholdG ?? 200;
+    return c.inventoryGrams <= threshold;
+  });
+  const low = withInventory.filter((c) => {
+    const criticalT = c.manufacturer?.criticalThresholdG ?? 200;
+    const lowT = c.manufacturer?.lowThresholdG ?? 500;
+    return c.inventoryGrams > criticalT && c.inventoryGrams <= lowT;
+  });
+
+  // Top colors by inventory (most stock on hand)
+  const sorted = [...withInventory].sort((a, b) => b.inventoryGrams - a.inventoryGrams).slice(0, 3);
+
+  const totalGrams = withInventory.reduce((s, c) => s + c.inventoryGrams, 0);
+
+  return (
+    <Link
+      to="/filament"
+      className="card block hover:shadow-lg transition-shadow hover:border-[#e68a00] border border-transparent"
+      style={{ textDecoration: 'none' }}
+    >
+      <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-widest mb-4">Filament</h2>
+
+      {/* Total inventory */}
+      <div className="flex items-end gap-2 mb-3">
+        <span className="text-3xl font-bold text-[#ff9900]">{(totalGrams / 1000).toFixed(2)}</span>
+        <span className="text-sm text-[#9ca3af] mb-1">kg on hand</span>
+      </div>
+
+      {/* Stock alerts */}
+      {critical.length > 0 && (
+        <div
+          className="flex items-center justify-between py-1 px-2 rounded mb-1 text-xs font-semibold"
+          style={{ background: '#450a0a', color: '#fca5a5' }}
+        >
+          <span>Critical</span>
+          <span>{critical.length} color{critical.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+      {low.length > 0 && (
+        <div
+          className="flex items-center justify-between py-1 px-2 rounded mb-1 text-xs font-semibold"
+          style={{ background: '#422006', color: '#fdba74' }}
+        >
+          <span>Low Stock</span>
+          <span>{low.length} color{low.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+
+      {/* Top colors */}
+      {sorted.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {sorted.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 text-xs">
+              <span
+                style={{ width: 10, height: 10, borderRadius: '50%', background: c.hex, flexShrink: 0, display: 'inline-block', border: '1px solid rgba(255,255,255,0.15)' }}
+              />
+              <span className="text-[#d1d5db] truncate flex-1">{c.name}</span>
+              <span className="text-[#9ca3af] shrink-0">{c.inventoryGrams.toFixed(0)}g</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {withInventory.length === 0 && (
+        <p className="text-sm text-[#6b7280]">No inventory tracked yet</p>
+      )}
+
+      <p className="text-xs text-[#6b7280] mt-4">View Inventory →</p>
+    </Link>
+  );
+}
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+const statusColors: Record<string, { color: string; bg: string; label: string }> = {
+  draft:     { color: '#9ca3af', bg: '#3a3a3a',  label: 'Draft' },
+  sent:      { color: '#93c5fd', bg: '#1e3a5f',  label: 'Sent' },
+  paid:      { color: '#86efac', bg: '#14532d',  label: 'Paid' },
+  shipped:   { color: '#c4b5fd', bg: '#3b1a6b',  label: 'Shipped' },
+  cancelled: { color: '#fca5a5', bg: '#450a0a',  label: 'Cancelled' },
+};
+
 export const Dashboard: React.FC = () => {
   const { items: queueItems, isLoading: queueLoading } = useQueue();
   const { invoices, isLoading: invoicesLoading } = useSalesInvoices();
-  const { customers, isLoading: customersLoading } = useCustomers();
   const { products, isLoading: productsLoading } = useProducts();
+  const { colors, isLoading: colorsLoading } = useColors();
 
   const pending = queueItems.filter((i) => i.status === 'pending').length;
   const printing = queueItems.filter((i) => i.status === 'printing').length;
@@ -85,10 +162,8 @@ export const Dashboard: React.FC = () => {
   const fmt = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
   const activeProducts = products.filter((p) => p.active).length;
-
   const recentInvoices = invoices.slice(0, 5);
-
-  const isLoading = queueLoading || invoicesLoading || customersLoading || productsLoading;
+  const isLoading = queueLoading || invoicesLoading || productsLoading || colorsLoading;
 
   if (isLoading) {
     return (
@@ -113,7 +188,7 @@ export const Dashboard: React.FC = () => {
               label={`Pending${pendingQty !== pending ? ` (${pendingQty} pcs)` : ''}`}
               count={pending}
               color="#e5e5e5"
-              bg="#2d2d2d"
+              bg="#3a3a3a"
             />
             <Pill
               label={`Printing${printingQty !== printing ? ` (${printingQty} pcs)` : ''}`}
@@ -130,10 +205,10 @@ export const Dashboard: React.FC = () => {
         {/* Invoices */}
         <StatCard title="Invoices" to="/invoices">
           <div className="divide-y divide-[#2d2d2d]">
-            <Pill label="Draft" count={draft} color="#d1d5db" bg="#2d2d2d" />
-            <Pill label="Sent" count={sent} color="#93c5fd" bg="#1e3a5f" />
-            <Pill label="Shipped" count={shipped} color="#2dd4bf" bg="#0d3330" />
-            <Pill label="Paid" count={paid} color="#86efac" bg="#14532d" />
+            <Pill label="Draft"    count={draft}     color="#9ca3af" bg="#3a3a3a" />
+            <Pill label="Sent"     count={sent}      color="#93c5fd" bg="#1e3a5f" />
+            <Pill label="Shipped"  count={shipped}   color="#c4b5fd" bg="#3b1a6b" />
+            <Pill label="Paid"     count={paid}      color="#86efac" bg="#14532d" />
             {cancelled > 0 && (
               <Pill label="Cancelled" count={cancelled} color="#fca5a5" bg="#450a0a" />
             )}
@@ -165,13 +240,8 @@ export const Dashboard: React.FC = () => {
           )}
         </StatCard>
 
-        {/* Customers */}
-        <StatCard title="Customers" to="/customers">
-          <div className="flex items-end gap-2 mt-2">
-            <span className="text-5xl font-bold text-[#ff9900]">{customers.length}</span>
-            <span className="text-sm text-[#9ca3af] mb-2">total</span>
-          </div>
-        </StatCard>
+        {/* Filament (replaces Customers) */}
+        <FilamentCard colors={colors} />
 
         {/* Products */}
         <StatCard title="Products" to="/products">

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useColors } from '../../hooks/useColors';
+import { useManufacturers } from '../../hooks/useManufacturers';
 import type { Color } from '@wizqueue/shared';
 
 const inputSt: React.CSSProperties = {
@@ -10,15 +11,22 @@ const inputSt: React.CSSProperties = {
 
 function AddColorForm({ onDone }: { onDone: () => void }) {
   const { create, isCreating } = useColors();
+  const { manufacturers } = useManufacturers();
   const [name, setName] = useState('');
   const [hex, setHex] = useState('#ff9900');
+  const [manufacturerId, setManufacturerId] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    await create({ name: name.trim(), hex });
+    await create({
+      name: name.trim(),
+      hex,
+      manufacturerId: manufacturerId ? parseInt(manufacturerId) : null,
+    });
     setName('');
     setHex('#ff9900');
+    setManufacturerId('');
     onDone();
   };
 
@@ -55,6 +63,22 @@ function AddColorForm({ onDone }: { onDone: () => void }) {
             />
           </div>
         </div>
+        {manufacturers.length > 0 && (
+          <div>
+            <label className="block text-xs font-medium text-iron-300 mb-1">Manufacturer</label>
+            <select
+              value={manufacturerId}
+              onChange={(e) => setManufacturerId(e.target.value)}
+              className="px-3 py-2 rounded-lg text-iron-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              style={inputSt}
+            >
+              <option value="">— None —</option>
+              {manufacturers.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex gap-2">
           <button type="submit" disabled={!name.trim() || isCreating} className="btn-primary btn-sm">
             {isCreating ? 'Adding…' : 'Add Color'}
@@ -67,13 +91,19 @@ function AddColorForm({ onDone }: { onDone: () => void }) {
 }
 
 function ColorRow({ color }: { color: Color }) {
-  const { update, delete: deleteColor } = useColors();
+  const { update, delete: deleteColor, addSpool } = useColors();
+  const { manufacturers } = useManufacturers();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(color.name);
   const [hex, setHex] = useState(color.hex);
+  const [manufacturerId, setManufacturerId] = useState<string>(color.manufacturerId ? String(color.manufacturerId) : '');
 
   const save = async () => {
-    await update(color.id, { name: name.trim(), hex });
+    await update(color.id, {
+      name: name.trim(),
+      hex,
+      manufacturerId: manufacturerId ? parseInt(manufacturerId) : null,
+    });
     setEditing(false);
   };
 
@@ -94,6 +124,20 @@ function ColorRow({ color }: { color: Color }) {
         <td className="px-4 py-2">
           <input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
         </td>
+        <td className="px-4 py-2">
+          <select
+            value={manufacturerId}
+            onChange={(e) => setManufacturerId(e.target.value)}
+            className="px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+            style={inputSt}
+          >
+            <option value="">— None —</option>
+            {manufacturers.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </td>
+        <td className="px-4 py-2 text-sm text-iron-400">{color.inventoryGrams.toFixed(0)}g</td>
         <td className="px-4 py-2 text-sm text-iron-400">{color.active ? 'Active' : 'Inactive'}</td>
         <td className="px-4 py-2">
           <div className="flex gap-1.5">
@@ -124,6 +168,20 @@ function ColorRow({ color }: { color: Color }) {
         </div>
       </td>
       <td className="px-4 py-3 text-sm font-medium text-iron-50">{color.name}</td>
+      <td className="px-4 py-3 text-xs text-iron-400">{color.manufacturer?.name ?? '—'}</td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-iron-300">{color.inventoryGrams.toFixed(0)}g</span>
+          <button
+            onClick={() => addSpool(color.id)}
+            className="text-xs px-2 py-0.5 rounded font-medium transition-colors"
+            style={{ background: '#2d2d2d', color: '#ff9900', border: '1px solid rgba(255,153,0,0.3)' }}
+            title={`Add ${color.manufacturer?.fullSpoolNetWeightG ?? 1000}g spool`}
+          >
+            + Spool
+          </button>
+        </div>
+      </td>
       <td className="px-4 py-3">
         <button
           onClick={() => update(color.id, { active: !color.active })}
@@ -156,11 +214,11 @@ export const ColorsPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-iron-50">Color Catalog</h2>
-          <p className="text-sm text-iron-400 mt-0.5">Manage print colors available for invoice line items and queue jobs</p>
+          <p className="text-sm text-iron-400 mt-0.5">Manage print colors, manufacturers, and inventory</p>
         </div>
         {!showAdd && (
           <button onClick={() => setShowAdd(true)} className="btn-primary btn-sm">+ Add Color</button>
@@ -169,12 +227,14 @@ export const ColorsPage: React.FC = () => {
 
       {showAdd && <AddColorForm onDone={() => setShowAdd(false)} />}
 
-      <div className="card-surface">
+      <div className="card-surface overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr style={{ background: 'linear-gradient(to bottom, #4a4a4a, #3a3a3a)' }}>
               <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-40">Swatch</th>
               <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Name</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-32">Manufacturer</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-40">Inventory</th>
               <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-24">Status</th>
               <th className="px-4 py-2.5 w-32" />
             </tr>
@@ -182,7 +242,7 @@ export const ColorsPage: React.FC = () => {
           <tbody>
             {colors.map((c) => <ColorRow key={c.id} color={c} />)}
             {colors.length === 0 && (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-iron-500 text-sm">No colors yet</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-iron-500 text-sm">No colors yet</td></tr>
             )}
           </tbody>
         </table>

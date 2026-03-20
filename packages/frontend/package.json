@@ -1,6 +1,6 @@
 {
   "name": "@wizqueue/frontend",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Frontend React application for wizqueue",
   "type": "module",
   "scripts": {
@@ -17,6 +17,7 @@
     "@tanstack/react-query": "^5.17.9",
     "@wizqueue/shared": "^1.0.0",
     "axios": "^1.6.5",
+    "lucide-react": "^0.577.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.49.3",

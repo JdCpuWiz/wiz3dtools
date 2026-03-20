@@ -37,12 +37,22 @@ export const useColors = () => {
     onError: (error: Error) => toast.error(`Failed: ${error.message}`),
   });
 
+  const addSpoolMutation = useMutation({
+    mutationFn: colorApi.addSpool,
+    onSuccess: (color) => {
+      queryClient.invalidateQueries({ queryKey: ['colors'] });
+      toast.success(`Spool added — ${color.inventoryGrams.toFixed(0)}g on hand`);
+    },
+    onError: (error: Error) => toast.error(`Failed: ${error.message}`),
+  });
+
   return {
     colors: query.data || [],
     isLoading: query.isLoading,
     create: (data: CreateColorDto) => createMutation.mutateAsync(data),
     update: (id: number, data: UpdateColorDto) => updateMutation.mutateAsync({ id, data }),
     delete: (id: number) => deleteMutation.mutateAsync(id),
+    addSpool: (id: number) => addSpoolMutation.mutateAsync(id),
     isCreating: createMutation.isPending,
   };
 };

@@ -25,6 +25,8 @@ export type {
 // Product types
 export type {
   Product,
+  ProductColor,
+  ProductColorDto,
   CreateProductDto,
   UpdateProductDto,
 } from './types/product';
@@ -56,6 +58,9 @@ export type {
 
 // Color types
 export type {
+  Manufacturer,
+  CreateManufacturerDto,
+  UpdateManufacturerDto,
   Color,
   ItemColor,
   ItemColorDto,

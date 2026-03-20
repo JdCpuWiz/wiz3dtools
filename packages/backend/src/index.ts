@@ -18,6 +18,7 @@ import salesInvoiceRoutes from './routes/sales-invoice.routes.js';
 import productRoutes from './routes/product.routes.js';
 import usersRoutes from './routes/users.routes.js';
 import colorRoutes from './routes/color.routes.js';
+import manufacturerRoutes from './routes/manufacturer.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -105,6 +106,7 @@ app.use('/api/sales-invoices', salesInvoiceRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/colors', colorRoutes);
+app.use('/api/manufacturers', manufacturerRoutes);
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {

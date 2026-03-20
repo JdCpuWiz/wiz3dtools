@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Header } from './Header';
+import { Menu } from 'lucide-react';
+import { SideNav } from './SideNav';
 import { useAuth } from '../../context/AuthContext';
 
 interface LayoutProps {
@@ -8,9 +9,10 @@ interface LayoutProps {
   onUploadClick?: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, onUploadClick }) => {
+export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { idleWarning, resetIdleTimer, logout } = useAuth();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [countdown, setCountdown] = useState(60);
 
   useEffect(() => {
@@ -25,14 +27,59 @@ export const Layout: React.FC<LayoutProps> = ({ children, onUploadClick }) => {
     navigate('/login', { replace: true });
   };
 
-  const handleStayLoggedIn = () => {
-    resetIdleTimer();
-  };
-
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0a0a0a' }}>
-      <Header onUploadClick={onUploadClick} />
+    <div className="flex min-h-screen" style={{ backgroundColor: '#0a0a0a' }}>
+      <SideNav open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 md:hidden"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Mobile header */}
+        <header
+          className="md:hidden flex items-center gap-3 px-4 py-3 shrink-0"
+          style={{
+            backgroundColor: '#111111',
+            borderBottom: '1px solid #2d2d2d',
+            position: 'sticky',
+            top: 0,
+            zIndex: 20,
+          }}
+        >
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="text-iron-400 hover:text-iron-200 p-1"
+            aria-label="Open menu"
+          >
+            <Menu size={20} />
+          </button>
+          <img
+            src="/wiz3d_prints_logo.png"
+            alt="Wiz3D Prints"
+            style={{ width: 32, height: 32, objectFit: 'contain' }}
+          />
+          <span className="text-sm font-bold text-iron-50">Wiz3d Tools</span>
+        </header>
+
+        <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
+          {children}
+        </main>
+
+        <footer
+          className="py-3 border-t text-center text-xs text-iron-500"
+          style={{ backgroundColor: '#111111', borderColor: '#2d2d2d' }}
+        >
+          Wiz3d Tools — 3D Printing Business Suite
+        </footer>
+      </div>
+
+      {/* Idle timeout modal */}
       {idleWarning && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
@@ -46,7 +93,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onUploadClick }) => {
               <span className="text-[#ff9900] font-bold">{countdown}s</span>.
             </p>
             <div className="flex gap-3 justify-center">
-              <button onClick={handleStayLoggedIn} className="btn-primary px-6 py-2 text-sm">
+              <button onClick={resetIdleTimer} className="btn-primary px-6 py-2 text-sm">
                 Stay Signed In
               </button>
               <button onClick={handleLogoutNow} className="btn-secondary px-6 py-2 text-sm">
@@ -56,18 +103,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, onUploadClick }) => {
           </div>
         </div>
       )}
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
-      <footer
-        className="py-4 border-t"
-        style={{ backgroundColor: '#1a1a1a', borderColor: '#2d2d2d' }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-iron-400">
-          Wiz3d Tools — 3D Printing Business Suite
-        </div>
-      </footer>
     </div>
   );
 };

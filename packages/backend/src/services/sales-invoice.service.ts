@@ -2,7 +2,8 @@ import { SalesInvoiceModel } from '../models/sales-invoice.model.js';
 import { InvoiceLineItemModel } from '../models/invoice-line-item.model.js';
 import { QueueItemModel } from '../models/queue-item.model.js';
 import { ProductModel } from '../models/product.model.js';
-import { QueueItemColorModel } from '../models/item-color.model.js';
+import { ProductColorModel } from '../models/product-color.model.js';
+import { LineItemColorModel, QueueItemColorModel } from '../models/item-color.model.js';
 import { sendShippingEmail } from './email.service.js';
 import { pool } from '../config/database.js';
 import type {
@@ -45,7 +46,32 @@ export class SalesInvoiceService {
 
   async addLineItem(invoiceId: number, data: CreateLineItemDto): Promise<InvoiceLineItem> {
     await this.getById(invoiceId); // ensure exists
-    return InvoiceLineItemModel.create(invoiceId, data);
+    const lineItem = await InvoiceLineItemModel.create(invoiceId, data);
+
+    // Auto-populate colors+weights from product if a product is linked
+    if (data.productId) {
+      try {
+        const productColors = await ProductColorModel.findByProduct(data.productId);
+        if (productColors.length > 0) {
+          await LineItemColorModel.setColors(
+            lineItem.id,
+            productColors.map((pc, i) => ({
+              colorId: pc.colorId,
+              isPrimary: i === 0,
+              note: null,
+              sortOrder: pc.sortOrder,
+              weightGrams: pc.weightGrams,
+            })),
+          );
+          const colors = await LineItemColorModel.findByLineItem(lineItem.id);
+          return { ...lineItem, colors };
+        }
+      } catch (err) {
+        console.error('Auto-populate product colors error (non-fatal):', err);
+      }
+    }
+
+    return lineItem;
   }
 
   async updateLineItem(invoiceId: number, itemId: number, data: Partial<CreateLineItemDto>): Promise<InvoiceLineItem> {

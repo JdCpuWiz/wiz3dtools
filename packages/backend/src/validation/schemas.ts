@@ -118,20 +118,52 @@ export const createColorSchema = z.object({
   hex: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Hex color must be in format #RRGGBB'),
   active: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
+  manufacturerId: nullish(z.number().int().positive()),
 });
 
-export const updateColorSchema = createColorSchema.partial();
+export const updateColorSchema = createColorSchema.partial().extend({
+  inventoryGrams: z.number().min(0).optional(),
+});
 
 const itemColorEntrySchema = z.object({
   colorId: z.number().int().positive('colorId must be a positive integer'),
   isPrimary: z.boolean(),
   note: nullish(z.string().max(200)),
   sortOrder: z.number().int().min(0),
+  weightGrams: z.number().min(0).optional().default(0),
 });
 
 export const setItemColorsSchema = z.object({
   colors: z.array(itemColorEntrySchema).optional().default([]),
 });
+
+// ---------------------------------------------------------------------------
+// Product Colors
+// ---------------------------------------------------------------------------
+
+const productColorEntrySchema = z.object({
+  colorId: z.number().int().positive('colorId must be a positive integer'),
+  weightGrams: z.number().min(0, 'Weight must be non-negative'),
+  sortOrder: z.number().int().min(0).optional().default(0),
+});
+
+export const setProductColorsSchema = z.object({
+  colors: z.array(productColorEntrySchema).optional().default([]),
+});
+
+// ---------------------------------------------------------------------------
+// Manufacturers
+// ---------------------------------------------------------------------------
+
+export const createManufacturerSchema = z.object({
+  name: z.string().min(1, 'Manufacturer name is required').max(100),
+  emptySpoolWeightG: z.number().min(0, 'Empty spool weight must be non-negative'),
+  fullSpoolNetWeightG: z.number().min(0, 'Full spool net weight must be non-negative'),
+  lowThresholdG: z.number().min(0).optional(),
+  criticalThresholdG: z.number().min(0).optional(),
+});
+
+export const updateManufacturerSchema = createManufacturerSchema.partial();
 
 // ---------------------------------------------------------------------------
 // Sales Invoices

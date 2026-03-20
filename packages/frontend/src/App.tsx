@@ -16,6 +16,8 @@ import { InvoiceDetail } from './components/invoices/InvoiceDetail';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { UsersPage } from './components/admin/UsersPage';
 import { ColorsPage } from './components/admin/ColorsPage';
+import { ManufacturersPage } from './components/admin/ManufacturersPage';
+import { FilamentPage } from './pages/FilamentPage';
 import { useQueue } from './hooks/useQueue';
 import { useProducts } from './hooks/useProducts';
 import { useColors } from './hooks/useColors';
@@ -133,16 +135,16 @@ function QueueView() {
 
   if (showUpload) {
     return (
-      <Layout onUploadClick={() => setShowUpload(true)}>
+      <Layout>
         <UploadZone onClose={() => setShowUpload(false)} />
       </Layout>
     );
   }
 
   return (
-    <Layout onUploadClick={() => setShowUpload(true)}>
+    <Layout>
       <div className="space-y-6">
-        {/* Counter/filter boxes + Add Item button + hint */}
+        {/* Counter/filter boxes + Add Item button + Upload button */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="card py-0 px-0 flex items-stretch overflow-hidden" style={{ background: 'linear-gradient(to bottom, #3a3a3a, #2d2d2d)' }}>
             {([
@@ -168,6 +170,9 @@ function QueueView() {
           </div>
           <button onClick={() => setShowAddItem((v) => !v)} className="btn-secondary btn-sm">
             {showAddItem ? 'Cancel' : '+ Add Item'}
+          </button>
+          <button onClick={() => setShowUpload(true)} className="btn-secondary btn-sm">
+            Upload Invoice
           </button>
           <span className="text-sm" style={{ color: '#6b7280' }}>Drag and drop to reorder</span>
         </div>
@@ -199,6 +204,8 @@ function App() {
           <Route path="/products/:id" element={<ProtectedRoute><Layout><ProductForm /></Layout></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><Layout><UsersPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/colors" element={<ProtectedRoute><Layout><ColorsPage /></Layout></ProtectedRoute>} />
+          <Route path="/admin/manufacturers" element={<ProtectedRoute><Layout><ManufacturersPage /></Layout></ProtectedRoute>} />
+          <Route path="/filament" element={<ProtectedRoute><Layout><FilamentPage /></Layout></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

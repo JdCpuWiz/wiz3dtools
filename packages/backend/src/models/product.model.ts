@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import type { Product, CreateProductDto, UpdateProductDto } from '@wizqueue/shared';
+import { ProductColorModel } from './product-color.model.js';
 
 const SELECT = `
   id, name, description, sku, unit_price as "unitPrice",
@@ -7,17 +8,33 @@ const SELECT = `
   created_at as "createdAt", updated_at as "updatedAt"
 `;
 
+async function attachColors(rows: Record<string, unknown>[]): Promise<Product[]> {
+  return Promise.all(
+    rows.map(async (r) => {
+      const colors = await ProductColorModel.findByProduct(r.id as number);
+      const totalWeightGrams = colors.reduce((sum, c) => sum + c.weightGrams, 0);
+      return {
+        ...r,
+        unitPrice: parseFloat(r.unitPrice as string),
+        colors,
+        totalWeightGrams,
+      } as Product;
+    }),
+  );
+}
+
 export class ProductModel {
   static async findAll(activeOnly = false): Promise<Product[]> {
     const where = activeOnly ? 'WHERE active = TRUE' : '';
     const result = await pool.query(`SELECT ${SELECT} FROM products ${where} ORDER BY name ASC`);
-    return result.rows.map(r => ({ ...r, unitPrice: parseFloat(r.unitPrice) }));
+    return attachColors(result.rows);
   }
 
   static async findById(id: number): Promise<Product | null> {
     const result = await pool.query(`SELECT ${SELECT} FROM products WHERE id = $1`, [id]);
     if (!result.rows[0]) return null;
-    return { ...result.rows[0], unitPrice: parseFloat(result.rows[0].unitPrice) };
+    const [product] = await attachColors([result.rows[0]]);
+    return product;
   }
 
   static async create(data: CreateProductDto): Promise<Product> {
@@ -27,7 +44,8 @@ export class ProductModel {
        RETURNING ${SELECT}`,
       [data.name, data.description || null, data.sku || null, data.unitPrice, data.active ?? true],
     );
-    return { ...result.rows[0], unitPrice: parseFloat(result.rows[0].unitPrice) };
+    const [product] = await attachColors([result.rows[0]]);
+    return product;
   }
 
   static async update(id: number, data: UpdateProductDto): Promise<Product | null> {
@@ -50,7 +68,8 @@ export class ProductModel {
       values,
     );
     if (!result.rows[0]) return null;
-    return { ...result.rows[0], unitPrice: parseFloat(result.rows[0].unitPrice) };
+    const [product] = await attachColors([result.rows[0]]);
+    return product;
   }
 
   static async delete(id: number): Promise<boolean> {
@@ -93,7 +112,6 @@ export class ProductModel {
   }
 
   static async suggestSku(name: string, excludeId?: number): Promise<string> {
-    // Build prefix from first char of each alpha word in the name
     const words = name.split(/[\s\-_]+/).filter((w) => /[a-zA-Z]/.test(w));
     const prefix = words.map((w) => w.replace(/[^a-zA-Z]/g, '')[0] || '').join('').toUpperCase() || 'SKU';
 

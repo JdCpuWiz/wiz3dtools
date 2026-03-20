@@ -90,6 +90,13 @@ export const InvoiceDetail: React.FC = () => {
   const taxAmount = invoice.taxExempt ? 0 : subtotal * invoice.taxRate;
   const total = subtotal + (invoice.shippingCost || 0) + taxAmount;
 
+  // Shipment weight: sum of (color weightGrams × quantity) per line item
+  const totalWeightGrams = invoice.lineItems.reduce((sum, li) => {
+    const itemGrams = (li.colors || []).reduce((s, c) => s + (c.weightGrams || 0), 0);
+    return sum + itemGrams * li.quantity;
+  }, 0);
+  const totalWeightOz = totalWeightGrams * 0.035274;
+
   const confirmIfPaid = () => {
     if (isShipped) { window.alert('This invoice has been shipped and cannot be modified.'); return false; }
     if (invoice.status !== 'paid') return true;
@@ -492,6 +499,14 @@ export const InvoiceDetail: React.FC = () => {
                 inputSt={inputSt}
               />
             </div>
+            {totalWeightOz > 0 && (
+              <div className="flex justify-between w-64">
+                <span className="text-iron-400">Est. Weight</span>
+                <span className="text-sm font-medium" style={{ color: '#9ca3af' }}>
+                  {totalWeightOz.toFixed(2)} oz ({totalWeightGrams.toFixed(0)}g)
+                </span>
+              </div>
+            )}
             <div className="flex justify-between w-64">
               <span className="text-iron-400">{invoice.taxExempt ? 'Tax (exempt)' : `IA Sales Tax (${(invoice.taxRate * 100).toFixed(0)}%)`}</span>
               <span className="font-medium text-iron-50">${taxAmount.toFixed(2)}</span>

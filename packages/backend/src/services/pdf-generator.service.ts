@@ -25,12 +25,17 @@ function formatDate(dateInput: Date | string): string {
   });
 }
 
-function calcTotals(invoice: SalesInvoice): { subtotal: number; shippingCost: number; taxAmount: number; total: number } {
+function calcTotals(invoice: SalesInvoice): { subtotal: number; shippingCost: number; taxAmount: number; total: number; totalWeightOz: number } {
   const subtotal = invoice.lineItems.reduce((sum: number, li: InvoiceLineItem) => sum + li.quantity * li.unitPrice, 0);
   const shippingCost = invoice.shippingCost || 0;
   const taxAmount = invoice.taxExempt ? 0 : subtotal * invoice.taxRate;
   const total = subtotal + shippingCost + taxAmount;
-  return { subtotal, shippingCost, taxAmount, total };
+  const totalWeightGrams = invoice.lineItems.reduce((sum: number, li: InvoiceLineItem) => {
+    const itemGrams = (li.colors || []).reduce((s, c) => s + ((c as any).weightGrams || 0), 0);
+    return sum + itemGrams * li.quantity;
+  }, 0);
+  const totalWeightOz = totalWeightGrams * 0.035274;
+  return { subtotal, shippingCost, taxAmount, total, totalWeightOz };
 }
 
 export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer> {
@@ -282,10 +287,12 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     doc.moveTo(M, rowY).lineTo(R, rowY).lineWidth(0.5).strokeColor(MID_GRAY).stroke();
 
     // ── Totals (light grey box) ────────────────────────────────────────────
-    const { subtotal, shippingCost, taxAmount, total } = calcTotals(invoice);
+    const { subtotal, shippingCost, taxAmount, total, totalWeightOz } = calcTotals(invoice);
+    const hasWeight = totalWeightOz > 0;
 
     let totalsRows = 1; // subtotal
     if (shippingCost > 0) totalsRows++;
+    if (hasWeight) totalsRows++; // weight line
     totalsRows++; // tax or exempt
 
     const totalsBoxH_est = BOX_PAD + totalsRows * 18 + 6 + 26 + BOX_PAD;
@@ -314,6 +321,12 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     if (shippingCost > 0) {
       doc.text('Shipping:', labelX, tY, { width: 100 });
       doc.text(formatCurrency(shippingCost), valueX, tY, { width: valueW, align: 'right' });
+      tY += 18;
+    }
+
+    if (hasWeight) {
+      doc.text('Est. Weight:', labelX, tY, { width: 100 });
+      doc.text(`${totalWeightOz.toFixed(2)} oz`, valueX, tY, { width: valueW, align: 'right' });
       tY += 18;
     }
 
