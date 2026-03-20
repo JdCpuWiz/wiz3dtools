@@ -226,7 +226,7 @@ export const ProductForm: React.FC = () => {
               Enter per-color filament usage from your slicer (in grams per print).
               {totalGrams > 0 && (
                 <span className="ml-2 font-semibold" style={{ color: '#ff9900' }}>
-                  Total: {totalGrams.toFixed(1)}g
+                  Total: {totalGrams.toFixed(2)}g
                 </span>
               )}
             </p>
@@ -254,7 +254,7 @@ export const ProductForm: React.FC = () => {
                   <input
                     type="number"
                     min="0"
-                    step="0.1"
+                    step="0.01"
                     value={entry.weightGrams}
                     onChange={(e) => updateWeight(entry.colorId, e.target.value)}
                     className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-right"
