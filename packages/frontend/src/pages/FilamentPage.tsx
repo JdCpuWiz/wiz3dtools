@@ -19,10 +19,10 @@ function stockStatus(color: Color): 'critical' | 'low' | 'ok' | 'empty' {
 }
 
 const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  ok:       { label: 'OK',       color: '#86efac', bg: '#14532d' },
-  low:      { label: 'Low',      color: '#fdba74', bg: '#422006' },
-  critical: { label: 'Critical', color: '#fca5a5', bg: '#450a0a' },
-  empty:    { label: 'Empty',    color: '#9ca3af', bg: '#2d2d2d' },
+  ok:       { label: 'OK',       color: '#bbf7d0', bg: '#166534' },
+  low:      { label: 'Low',      color: '#fde68a', bg: '#92400e' },
+  critical: { label: 'Critical', color: '#fecaca', bg: '#991b1b' },
+  empty:    { label: 'Empty',    color: '#e5e7eb', bg: '#374151' },
 };
 
 function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean }) {
@@ -164,12 +164,12 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
                   <button onClick={() => setAddingGrams(false)} className="btn-secondary btn-sm text-xs">✕</button>
                 </div>
               ) : (
-                <button onClick={openAddSpool} className="btn-secondary btn-sm text-xs" title="Add spool">+ Spool</button>
+                <button onClick={openAddSpool} className="btn-secondary btn-sm text-xs whitespace-nowrap" title="Add spool">+ Spool</button>
               )
             )}
             <button
               onClick={() => update(color.id, { active: !color.active })}
-              className="btn-secondary btn-sm text-xs"
+              className="btn-secondary btn-sm text-xs whitespace-nowrap"
             >
               {disabled ? 'Enable' : 'Disable'}
             </button>
@@ -383,10 +383,10 @@ export const FilamentPage: React.FC = () => {
           <thead>
             <tr style={{ background: 'linear-gradient(to bottom, #4a4a4a, #3a3a3a)' }}>
               <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Color</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-32">Manufacturer</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-48">Inventory</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-24">Status</th>
-              {isAdmin && <th className="px-4 py-2.5 w-28" />}
+              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-36">Manufacturer</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-52">Inventory</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-28">Status</th>
+              {isAdmin && <th className="px-4 py-2.5 w-48" />}
             </tr>
           </thead>
           <tbody>
