@@ -36,15 +36,17 @@ const Pill: React.FC<{ label: string; count: number; color: string; bg: string }
   </div>
 );
 
-function FilamentCard({ colors }: { colors: Color[] }) {
+function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColorIds: Set<number> }) {
   const withInventory = colors.filter((c) => c.active);
 
-  // Low stock detection using manufacturer thresholds
+  // Low stock detection — only flag colors that are actually needed in active queue items
   const critical = withInventory.filter((c) => {
+    if (!neededColorIds.has(c.id)) return false;
     const threshold = c.manufacturer?.criticalThresholdG ?? 200;
     return c.inventoryGrams <= threshold;
   });
   const low = withInventory.filter((c) => {
+    if (!neededColorIds.has(c.id)) return false;
     const criticalT = c.manufacturer?.criticalThresholdG ?? 200;
     const lowT = c.manufacturer?.lowThresholdG ?? 500;
     return c.inventoryGrams > criticalT && c.inventoryGrams <= lowT;
@@ -69,20 +71,20 @@ function FilamentCard({ colors }: { colors: Color[] }) {
         <span className="text-sm text-[#9ca3af] mb-1">kg on hand</span>
       </div>
 
-      {/* Stock alerts */}
+      {/* Stock alerts — only shown when those colors are needed for active work */}
       {critical.length > 0 && (
         <div
           className="flex items-center justify-between py-1 px-2 rounded mb-1 text-xs font-semibold"
-          style={{ background: '#450a0a', color: '#fca5a5' }}
+          style={{ background: '#dc2626', color: '#ffffff' }}
         >
-          <span>Critical</span>
+          <span>⚠ Critical</span>
           <span>{critical.length} color{critical.length !== 1 ? 's' : ''}</span>
         </div>
       )}
       {low.length > 0 && (
         <div
           className="flex items-center justify-between py-1 px-2 rounded mb-1 text-xs font-semibold"
-          style={{ background: '#422006', color: '#fdba74' }}
+          style={{ background: '#f59e0b', color: '#000000' }}
         >
           <span>Low Stock</span>
           <span>{low.length} color{low.length !== 1 ? 's' : ''}</span>
@@ -160,6 +162,13 @@ export const Dashboard: React.FC = () => {
     .reduce((s, i) => s + calcTotal(i), 0);
 
   const fmt = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
+  // Colors needed by pending/printing queue items — drives filament stock alerts
+  const neededColorIds = new Set(
+    queueItems
+      .filter((i) => i.status === 'pending' || i.status === 'printing')
+      .flatMap((i) => (i.colors || []).map((c) => c.colorId))
+  );
 
   const activeProducts = products.filter((p) => p.active).length;
   const recentInvoices = invoices.slice(0, 5);
@@ -241,7 +250,7 @@ export const Dashboard: React.FC = () => {
         </StatCard>
 
         {/* Filament (replaces Customers) */}
-        <FilamentCard colors={colors} />
+        <FilamentCard colors={colors} neededColorIds={neededColorIds} />
 
         {/* Products */}
         <StatCard title="Products" to="/products">
