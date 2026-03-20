@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useManufacturers } from '../../hooks/useManufacturers';
-import type { Manufacturer } from '@wizqueue/shared';
+import { useColors } from '../../hooks/useColors';
+import type { Manufacturer, Color } from '@wizqueue/shared';
 
 const inputSt: React.CSSProperties = {
   background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)',
@@ -83,14 +84,84 @@ function AddForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function ManufacturerRow({ mfg }: { mfg: Manufacturer }) {
+function ColorEditRow({ color }: { color: Color }) {
+  const { update } = useColors();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(color.name);
+  const [hex, setHex] = useState(color.hex);
+
+  const save = async () => {
+    await update(color.id, { name: name.trim(), hex });
+    setEditing(false);
+  };
+
+  const cancel = () => {
+    setName(color.name);
+    setHex(color.hex);
+    setEditing(false);
+  };
+
+  return (
+    <tr style={{ borderTop: '1px solid #2a2a2a' }}>
+      <td className="pl-8 pr-3 py-2">
+        <div className="flex items-center gap-2">
+          <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: '50%', background: color.hex, border: `2px solid ${color.hex}`, flexShrink: 0 }} />
+          {editing ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="color"
+                value={hex}
+                onChange={(e) => setHex(e.target.value)}
+                className="w-8 h-7 rounded cursor-pointer border-0 bg-transparent"
+              />
+              <input
+                value={hex}
+                onChange={(e) => setHex(e.target.value)}
+                className="w-24 px-2 py-1 rounded text-iron-50 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary-500"
+                style={inputSt}
+              />
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); }}
+                autoFocus
+                className="w-48 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                style={inputSt}
+              />
+              <button onClick={save} className="btn-primary btn-sm text-xs">Save</button>
+              <button onClick={cancel} className="btn-secondary btn-sm text-xs">Cancel</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-iron-100">{color.name}</span>
+              <span className="text-xs text-iron-500 font-mono">{color.hex}</span>
+              {!color.active && (
+                <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#374151', color: '#9ca3af' }}>Disabled</span>
+              )}
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="px-3 py-2 text-right">
+        {!editing && (
+          <button onClick={() => setEditing(true)} className="btn-secondary btn-sm text-xs">Edit</button>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function ManufacturerRow({ mfg, colors }: { mfg: Manufacturer; colors: Color[] }) {
   const { update, delete: deleteMfg } = useManufacturers();
   const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState(mfg.name);
   const [empty, setEmpty] = useState(String(mfg.emptySpoolWeightG));
   const [net, setNet] = useState(String(mfg.fullSpoolNetWeightG));
   const [low, setLow] = useState(String(mfg.lowThresholdG));
   const [critical, setCritical] = useState(String(mfg.criticalThresholdG));
+
+  const mfgColors = colors.filter((c) => c.manufacturerId === mfg.id);
 
   const save = async () => {
     await update(mfg.id, {
@@ -108,61 +179,86 @@ function ManufacturerRow({ mfg }: { mfg: Manufacturer }) {
     deleteMfg(mfg.id);
   };
 
-  if (editing) {
-    return (
-      <tr style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(230,138,0,0.05)' }}>
-        <td className="px-4 py-2">
-          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
-        </td>
-        <td className="px-4 py-2">
-          <input type="number" value={empty} onChange={(e) => setEmpty(e.target.value)} className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
-        </td>
-        <td className="px-4 py-2">
-          <input type="number" value={net} onChange={(e) => setNet(e.target.value)} className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
-        </td>
-        <td className="px-4 py-2">
-          <input type="number" value={low} onChange={(e) => setLow(e.target.value)} className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
-        </td>
-        <td className="px-4 py-2">
-          <input type="number" value={critical} onChange={(e) => setCritical(e.target.value)} className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
-        </td>
-        <td className="px-4 py-2">
-          <div className="flex gap-1.5">
-            <button onClick={save} className="btn-primary btn-sm text-xs">Save</button>
-            <button onClick={() => setEditing(false)} className="btn-secondary btn-sm text-xs">Cancel</button>
-          </div>
-        </td>
-      </tr>
-    );
-  }
-
   return (
-    <tr style={{ borderTop: '1px solid #2d2d2d' }} className="hover:bg-iron-800/20 transition-colors">
-      <td className="px-4 py-3 text-sm font-medium text-iron-50">{mfg.name}</td>
-      <td className="px-4 py-3 text-sm text-iron-300">{mfg.emptySpoolWeightG}g</td>
-      <td className="px-4 py-3 text-sm text-iron-300">{mfg.fullSpoolNetWeightG}g</td>
-      <td className="px-4 py-3">
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#422006', color: '#fdba74' }}>
-          {mfg.lowThresholdG}g
-        </span>
-      </td>
-      <td className="px-4 py-3">
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#450a0a', color: '#fca5a5' }}>
-          {mfg.criticalThresholdG}g
-        </span>
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex gap-1.5">
-          <button onClick={() => setEditing(true)} className="btn-secondary btn-sm text-xs">Edit</button>
-          <button onClick={handleDelete} className="btn-danger btn-sm text-xs">Delete</button>
-        </div>
-      </td>
-    </tr>
+    <>
+      {editing ? (
+        <tr style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(230,138,0,0.05)' }}>
+          <td className="px-4 py-2">
+            <input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
+          </td>
+          <td className="px-4 py-2">
+            <input type="number" value={empty} onChange={(e) => setEmpty(e.target.value)} className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
+          </td>
+          <td className="px-4 py-2">
+            <input type="number" value={net} onChange={(e) => setNet(e.target.value)} className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
+          </td>
+          <td className="px-4 py-2">
+            <input type="number" value={low} onChange={(e) => setLow(e.target.value)} className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
+          </td>
+          <td className="px-4 py-2">
+            <input type="number" value={critical} onChange={(e) => setCritical(e.target.value)} className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
+          </td>
+          <td className="px-4 py-2">
+            <div className="flex gap-1.5">
+              <button onClick={save} className="btn-primary btn-sm text-xs">Save</button>
+              <button onClick={() => setEditing(false)} className="btn-secondary btn-sm text-xs">Cancel</button>
+            </div>
+          </td>
+        </tr>
+      ) : (
+        <tr style={{ borderTop: '1px solid #2d2d2d' }} className="hover:bg-iron-800/20 transition-colors">
+          <td className="px-4 py-3 text-sm font-medium text-iron-50">{mfg.name}</td>
+          <td className="px-4 py-3 text-sm text-iron-300">{mfg.emptySpoolWeightG}g</td>
+          <td className="px-4 py-3 text-sm text-iron-300">{mfg.fullSpoolNetWeightG}g</td>
+          <td className="px-4 py-3">
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#92400e', color: '#fde68a' }}>
+              {mfg.lowThresholdG}g
+            </span>
+          </td>
+          <td className="px-4 py-3">
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#991b1b', color: '#fecaca' }}>
+              {mfg.criticalThresholdG}g
+            </span>
+          </td>
+          <td className="px-4 py-3">
+            <div className="flex gap-1.5 items-center">
+              {mfgColors.length > 0 && (
+                <button
+                  onClick={() => setExpanded((v) => !v)}
+                  className="btn-secondary btn-sm text-xs whitespace-nowrap"
+                >
+                  {expanded ? '▲' : '▼'} Colors ({mfgColors.length})
+                </button>
+              )}
+              <button onClick={() => setEditing(true)} className="btn-secondary btn-sm text-xs">Edit</button>
+              <button onClick={handleDelete} className="btn-danger btn-sm text-xs">Delete</button>
+            </div>
+          </td>
+        </tr>
+      )}
+
+      {expanded && mfgColors.length > 0 && (
+        <tr style={{ borderTop: '1px solid #2d2d2d' }}>
+          <td colSpan={6} className="px-0 py-0">
+            <div style={{ background: 'rgba(0,0,0,0.25)' }}>
+              <table className="w-full text-sm">
+                <tbody>
+                  {mfgColors.map((c) => (
+                    <ColorEditRow key={c.id} color={c} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
 export const ManufacturersPage: React.FC = () => {
   const { manufacturers, isLoading } = useManufacturers();
+  const { colors } = useColors();
   const [showAdd, setShowAdd] = useState(false);
 
   if (isLoading) {
@@ -192,11 +288,11 @@ export const ManufacturersPage: React.FC = () => {
               <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Net Filament</th>
               <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Low Threshold</th>
               <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Critical Threshold</th>
-              <th className="px-4 py-2.5 w-32" />
+              <th className="px-4 py-2.5 w-48" />
             </tr>
           </thead>
           <tbody>
-            {manufacturers.map((m) => <ManufacturerRow key={m.id} mfg={m} />)}
+            {manufacturers.map((m) => <ManufacturerRow key={m.id} mfg={m} colors={colors} />)}
             {manufacturers.length === 0 && (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-iron-500 text-sm">No manufacturers yet</td></tr>
             )}
