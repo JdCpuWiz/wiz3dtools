@@ -200,8 +200,8 @@ function ColorRow({ color }: { color: Color }) {
       <td className="px-4 py-3 text-sm font-medium text-iron-50">{color.name}</td>
       <td className="px-4 py-3 text-xs text-iron-400">{color.manufacturer?.name ?? '—'}</td>
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-iron-300">{color.inventoryGrams.toFixed(0)}g</span>
+        <div className="flex items-center justify-end gap-2 flex-wrap">
+          <span className="text-sm text-iron-300 text-right">{color.inventoryGrams.toFixed(0)}g</span>
           {addingGrams ? (
             <div className="flex items-center gap-1">
               <input
@@ -283,7 +283,7 @@ export const ColorsPage: React.FC = () => {
               <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-40">Swatch</th>
               <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Name</th>
               <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-32">Manufacturer</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-40">Inventory</th>
+              <th className="text-right px-4 py-2.5 font-semibold text-iron-100 w-40">Inventory</th>
               <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-24">Status</th>
               <th className="px-4 py-2.5 w-32" />
             </tr>
