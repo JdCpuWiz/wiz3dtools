@@ -19,10 +19,10 @@ function stockStatus(color: Color): 'critical' | 'low' | 'ok' | 'empty' {
 }
 
 const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  ok:       { label: 'OK',       color: '#bbf7d0', bg: '#166534' },
-  low:      { label: 'Low',      color: '#fde68a', bg: '#92400e' },
-  critical: { label: 'Critical', color: '#fecaca', bg: '#991b1b' },
-  empty:    { label: 'Empty',    color: '#e5e7eb', bg: '#374151' },
+  ok:       { label: 'OK',       color: '#ffffff', bg: '#15803d' },
+  low:      { label: 'Low',      color: '#ffffff', bg: '#d97706' },
+  critical: { label: 'Critical', color: '#ffffff', bg: '#b91c1c' },
+  empty:    { label: 'Empty',    color: '#ffffff', bg: '#4b5563' },
 };
 
 function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean }) {
@@ -133,7 +133,7 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
       </td>
       <td className="px-4 py-3">
         {disabled ? (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" style={{ color: '#6b7280', background: '#1f1f1f' }}>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" style={{ color: '#ffffff', background: '#6b7280' }}>
             Disabled
           </span>
         ) : (

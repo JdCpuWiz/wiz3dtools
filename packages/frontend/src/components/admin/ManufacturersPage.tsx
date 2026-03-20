@@ -211,12 +211,12 @@ function ManufacturerRow({ mfg, colors }: { mfg: Manufacturer; colors: Color[] }
           <td className="px-4 py-3 text-sm text-iron-300">{mfg.emptySpoolWeightG}g</td>
           <td className="px-4 py-3 text-sm text-iron-300">{mfg.fullSpoolNetWeightG}g</td>
           <td className="px-4 py-3">
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#92400e', color: '#fde68a' }}>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#d97706', color: '#ffffff' }}>
               {mfg.lowThresholdG}g
             </span>
           </td>
           <td className="px-4 py-3">
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#991b1b', color: '#fecaca' }}>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#b91c1c', color: '#ffffff' }}>
               {mfg.criticalThresholdG}g
             </span>
           </td>

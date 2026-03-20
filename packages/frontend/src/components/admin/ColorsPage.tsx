@@ -237,8 +237,8 @@ function ColorRow({ color }: { color: Color }) {
           className="text-xs px-2 py-0.5 rounded-full font-medium transition-colors"
           style={
             color.active
-              ? { background: '#14532d', color: '#4ade80' }
-              : { background: '#374151', color: '#9ca3af' }
+              ? { background: '#15803d', color: '#ffffff' }
+              : { background: '#6b7280', color: '#ffffff' }
           }
         >
           {color.active ? 'Active' : 'Inactive'}

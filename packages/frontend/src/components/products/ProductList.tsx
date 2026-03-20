@@ -71,11 +71,11 @@ export const ProductList: React.FC = () => {
                   <td>
                     <button
                       onClick={() => update(product.id, { active: !product.active })}
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                        product.active
-                          ? 'bg-green-900/40 text-green-400 hover:bg-green-900/70'
-                          : 'bg-iron-800 text-iron-400 hover:bg-iron-700'
-                      }`}
+                      className="px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors"
+                      style={product.active
+                        ? { background: '#15803d', color: '#ffffff' }
+                        : { background: '#6b7280', color: '#ffffff' }
+                      }
                     >
                       {product.active ? 'Active' : 'Inactive'}
                     </button>

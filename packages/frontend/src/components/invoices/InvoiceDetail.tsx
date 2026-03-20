@@ -165,7 +165,7 @@ export const InvoiceDetail: React.FC = () => {
             Download PDF
           </button>
           {isShipped ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium" style={{ background: '#3b1a6b', color: '#c4b5fd', border: '1px solid #6d28d9' }}>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium" style={{ background: '#6d28d9', color: '#ffffff' }}>
               ✓ Shipped {new Date(invoice.shippedAt!).toLocaleDateString('en-US')}
             </span>
           ) : (
@@ -348,7 +348,7 @@ export const InvoiceDetail: React.FC = () => {
                 <button
                   onClick={() => { if (confirmIfPaid()) update(invoiceId, { taxExempt: !invoice.taxExempt }); }}
                   className="px-1.5 py-0.5 rounded text-xs transition-colors"
-                  style={{ background: '#3a1f00', color: '#ff9900' }}
+                  style={{ background: '#d97706', color: '#ffffff' }}
                 >
                   {invoice.taxExempt ? 'Remove exempt' : 'Set exempt'}
                 </button>

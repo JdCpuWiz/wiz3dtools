@@ -168,9 +168,9 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
       <td className="px-3 py-2.5">
         <div className="flex items-center gap-1.5 justify-end flex-wrap">
           {item.queueItemId ? (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: '#14532d', color: '#4ade80' }}>In queue</span>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: '#15803d', color: '#ffffff' }}>In queue</span>
           ) : onSendToQueue ? (
-            <button onClick={() => onSendToQueue(item.id)} className="btn-sm text-xs px-2 py-1 rounded font-medium transition-all" style={{ background: '#14532d', color: '#4ade80', border: '1px solid #166534' }}>
+            <button onClick={() => onSendToQueue(item.id)} className="btn-sm text-xs px-2 py-1 rounded font-medium transition-all" style={{ background: '#15803d', color: '#ffffff' }}>
               → Queue
             </button>
           ) : null}
