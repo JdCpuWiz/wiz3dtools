@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useColors } from '../hooks/useColors';
+import { useManufacturers } from '../hooks/useManufacturers';
 import { useAuth } from '../context/AuthContext';
-import type { Color } from '@wizqueue/shared';
+import type { Color, Manufacturer } from '@wizqueue/shared';
 
 function filamentGrams(color: Color): number {
   return color.inventoryGrams - (color.manufacturer?.emptySpoolWeightG ?? 0);
@@ -177,12 +178,136 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
   );
 }
 
+const inputSt: React.CSSProperties = {
+  background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)',
+  border: 'none',
+  boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)',
+};
+
+function AddColorForm({ existingColors, onDone }: { existingColors: Color[]; onDone: () => void }) {
+  const { create, isCreating } = useColors();
+  const { manufacturers } = useManufacturers();
+  const [name, setName] = useState('');
+  const [hex, setHex] = useState('#ff9900');
+  const [manufacturerId, setManufacturerId] = useState('');
+  const [initGrams, setInitGrams] = useState('0');
+  const [dupWarning, setDupWarning] = useState('');
+
+  const handleMfgChange = (mfgId: string) => {
+    setManufacturerId(mfgId);
+    setDupWarning('');
+    if (mfgId) {
+      const mfg = manufacturers.find((m: Manufacturer) => m.id === parseInt(mfgId));
+      if (mfg) setInitGrams(String(mfg.fullSpoolNetWeightG + mfg.emptySpoolWeightG));
+    } else {
+      setInitGrams('0');
+    }
+  };
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    setDupWarning('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    // Duplicate check: same name + same manufacturer
+    const mfgId = manufacturerId ? parseInt(manufacturerId) : null;
+    const dup = existingColors.find(
+      (c) => c.name.toLowerCase() === name.trim().toLowerCase() && (c.manufacturerId ?? null) === mfgId,
+    );
+    if (dup) {
+      setDupWarning(`"${dup.name}" already exists${dup.manufacturer ? ` for ${dup.manufacturer.name}` : ''}.`);
+      return;
+    }
+
+    const grams = parseFloat(initGrams) || 0;
+    await create({ name: name.trim(), hex, manufacturerId: mfgId, inventoryGrams: grams });
+    onDone();
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="card space-y-4">
+      <h3 className="font-semibold text-iron-50">Add New Color</h3>
+      <div className="flex items-end gap-3 flex-wrap">
+        <div className="flex-1 min-w-40">
+          <label className="block text-xs font-medium text-iron-300 mb-1">Color Name</label>
+          <input
+            value={name}
+            onChange={(e) => handleNameChange(e.target.value)}
+            placeholder="e.g. Galaxy Black, Fire Red…"
+            className="w-full px-3 py-2 rounded-lg text-iron-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            style={inputSt}
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-iron-300 mb-1">Hex Color</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={hex}
+              onChange={(e) => setHex(e.target.value)}
+              className="w-10 h-9 rounded cursor-pointer border-0 bg-transparent"
+            />
+            <input
+              value={hex}
+              onChange={(e) => setHex(e.target.value)}
+              placeholder="#ff9900"
+              className="w-28 px-3 py-2 rounded-lg text-iron-50 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
+              style={inputSt}
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-iron-300 mb-1">Manufacturer</label>
+          <select
+            value={manufacturerId}
+            onChange={(e) => handleMfgChange(e.target.value)}
+            className="px-3 py-2 rounded-lg text-iron-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            style={inputSt}
+          >
+            <option value="">— None —</option>
+            {manufacturers.map((m: Manufacturer) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-iron-300 mb-1">Initial Inventory (g)</label>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={initGrams}
+            onChange={(e) => setInitGrams(e.target.value)}
+            className="w-28 px-3 py-2 rounded-lg text-iron-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            style={inputSt}
+          />
+        </div>
+        <div className="flex gap-2">
+          <button type="submit" disabled={isCreating} className="btn-primary btn-sm">
+            {isCreating ? 'Adding…' : 'Add Color'}
+          </button>
+          <button type="button" onClick={onDone} className="btn-secondary btn-sm">Cancel</button>
+        </div>
+      </div>
+      {dupWarning && (
+        <p className="text-sm font-medium" style={{ color: '#fca5a5' }}>⚠ {dupWarning}</p>
+      )}
+    </form>
+  );
+}
+
 export const FilamentPage: React.FC = () => {
   const { colors, isLoading } = useColors();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
   const [filter, setFilter] = useState<'all' | 'low' | 'critical'>('all');
+  const [showAddColor, setShowAddColor] = useState(false);
 
   const activeColors = colors.filter((c) => c.active);
 
@@ -211,7 +336,14 @@ export const FilamentPage: React.FC = () => {
             {totalGrams.toFixed(0)}g total across {activeColors.length} active colors
           </p>
         </div>
+        {isAdmin && !showAddColor && (
+          <button onClick={() => setShowAddColor(true)} className="btn-primary btn-sm">+ New Color</button>
+        )}
       </div>
+
+      {showAddColor && isAdmin && (
+        <AddColorForm existingColors={colors} onDone={() => setShowAddColor(false)} />
+      )}
 
       {/* Summary pills */}
       <div className="flex gap-3 flex-wrap">

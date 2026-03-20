@@ -55,10 +55,10 @@ export class ColorModel {
 
   static async create(data: CreateColorDto): Promise<Color> {
     const result = await pool.query(
-      `INSERT INTO colors (name, hex, active, sort_order, manufacturer_id)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO colors (name, hex, active, sort_order, manufacturer_id, inventory_grams)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
-      [data.name, data.hex, data.active ?? true, data.sortOrder ?? 0, data.manufacturerId ?? null],
+      [data.name, data.hex, data.active ?? true, data.sortOrder ?? 0, data.manufacturerId ?? null, data.inventoryGrams ?? 0],
     );
     return (await this.findById(result.rows[0].id))!;
   }

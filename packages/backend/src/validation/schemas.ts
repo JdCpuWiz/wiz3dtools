@@ -119,6 +119,7 @@ export const createColorSchema = z.object({
   active: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
   manufacturerId: nullish(z.number().int().positive()),
+  inventoryGrams: z.number().min(0).optional(),
 });
 
 export const updateColorSchema = createColorSchema.partial().extend({

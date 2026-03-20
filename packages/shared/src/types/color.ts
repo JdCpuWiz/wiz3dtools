@@ -62,6 +62,7 @@ export interface CreateColorDto {
   active?: boolean;
   sortOrder?: number;
   manufacturerId?: number | null;
+  inventoryGrams?: number;
 }
 
 export interface UpdateColorDto {
