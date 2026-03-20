@@ -59,6 +59,10 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
     setSku(p.sku || '');
     setUnitPrice(p.unitPrice);
     if (p.description) setDetails(p.description);
+    const autoColors = [...(p.colors || [])]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((pc, idx) => ({ colorId: pc.colorId, isPrimary: idx === 0, note: null, sortOrder: idx }));
+    if (autoColors.length > 0) setDraftColors(autoColors);
   };
 
   const save = () => {

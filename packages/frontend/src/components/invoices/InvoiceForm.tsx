@@ -58,9 +58,12 @@ export const InvoiceForm: React.FC = () => {
   const applyProduct = (key: number, productId: number) => {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
+    const autoColors = [...(product.colors || [])]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((pc, idx) => ({ colorId: pc.colorId, isPrimary: idx === 0, note: null, sortOrder: idx }));
     setLineItems((prev) => prev.map((li) =>
       li._key === key
-        ? { ...li, productId: product.id, productName: product.name, sku: product.sku || undefined, unitPrice: product.unitPrice, details: product.description || li.details, _weightGrams: product.totalWeightGrams || 0 }
+        ? { ...li, productId: product.id, productName: product.name, sku: product.sku || undefined, unitPrice: product.unitPrice, details: product.description || li.details, _weightGrams: product.totalWeightGrams || 0, _colors: autoColors }
         : li,
     ));
   };

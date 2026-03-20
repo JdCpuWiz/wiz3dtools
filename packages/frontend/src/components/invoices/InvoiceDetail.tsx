@@ -107,6 +107,10 @@ export const InvoiceDetail: React.FC = () => {
     const p = products.find((pr) => pr.id === productId);
     if (!p) return;
     setNewItem({ productId: p.id, productName: p.name, sku: p.sku || undefined, unitPrice: p.unitPrice, details: p.description || '', quantity: newItem.quantity });
+    const autoColors = [...(p.colors || [])]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((pc, idx) => ({ colorId: pc.colorId, isPrimary: idx === 0, note: null, sortOrder: idx }));
+    setNewItemColors(autoColors);
   };
 
   const handleAddItem = async () => {
