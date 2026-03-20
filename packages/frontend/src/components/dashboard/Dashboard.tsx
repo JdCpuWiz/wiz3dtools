@@ -95,7 +95,7 @@ function FilamentCard({ colors }: { colors: Color[] }) {
           {sorted.map((c) => (
             <div key={c.id} className="flex items-center gap-2 text-xs">
               <span
-                style={{ width: 10, height: 10, borderRadius: '50%', background: c.hex, flexShrink: 0, display: 'inline-block', border: '1px solid rgba(255,255,255,0.15)' }}
+                style={{ width: 10, height: 10, borderRadius: '50%', background: c.hex, flexShrink: 0, display: 'inline-block', border: '1px solid #444444' }}
               />
               <span className="text-[#d1d5db] truncate flex-1">{c.name}</span>
               <span className="text-[#9ca3af] shrink-0">{c.inventoryGrams.toFixed(0)}g</span>

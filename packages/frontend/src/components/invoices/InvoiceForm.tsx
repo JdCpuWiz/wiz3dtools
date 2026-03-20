@@ -252,7 +252,7 @@ export const InvoiceForm: React.FC = () => {
                             className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors"
                             style={
                               li._colors.length > 0
-                                ? { background: 'rgba(255,153,0,0.12)', border: '1px solid rgba(255,153,0,0.3)', color: '#ff9900' }
+                                ? { background: '#3a1f00', border: '1px solid #b45309', color: '#ff9900' }
                                 : { background: '#2d2d2d', border: '1px solid #3a3a3a', color: '#9ca3af' }
                             }
                           >

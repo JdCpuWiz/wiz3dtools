@@ -21,7 +21,7 @@ export const ColorSwatch: React.FC<{ hex: string; name: string; size?: number }>
       height: size,
       borderRadius: '50%',
       background: hex,
-      border: '2px solid rgba(255,255,255,0.15)',
+      border: '2px solid #444444',
       flexShrink: 0,
     }}
   />
@@ -86,7 +86,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                 padding: '3px 8px 3px 4px',
                 borderRadius: 99,
                 border: sel ? '2px solid #ff9900' : '2px solid #3a3a3a',
-                background: sel ? 'rgba(255,153,0,0.12)' : 'rgba(45,45,45,0.8)',
+                background: sel ? '#3a1f00' : '#2d2d2d',
                 cursor: !sel && selected.length >= maxColors ? 'not-allowed' : 'pointer',
                 opacity: !sel && selected.length >= maxColors ? 0.4 : 1,
                 transition: 'border-color 0.15s',
@@ -119,8 +119,8 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                   gap: 8,
                   padding: '6px 8px',
                   borderRadius: 8,
-                  background: s.isPrimary ? 'rgba(255,153,0,0.08)' : 'rgba(45,45,45,0.6)',
-                  border: s.isPrimary ? '1px solid rgba(255,153,0,0.3)' : '1px solid #2d2d2d',
+                  background: s.isPrimary ? '#3a1f00' : '#2d2d2d',
+                  border: s.isPrimary ? '1px solid #b45309' : '1px solid #3a3a3a',
                 }}
               >
                 <ColorSwatch hex={color.hex} name={color.name} size={18} />
@@ -134,7 +134,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                     padding: '1px 6px',
                     borderRadius: 99,
                     border: 'none',
-                    background: s.isPrimary ? '#ff9900' : 'rgba(255,153,0,0.15)',
+                    background: s.isPrimary ? '#ff9900' : '#3a1f00',
                     color: s.isPrimary ? '#0a0a0a' : '#ff9900',
                     cursor: 'pointer',
                     fontWeight: 600,

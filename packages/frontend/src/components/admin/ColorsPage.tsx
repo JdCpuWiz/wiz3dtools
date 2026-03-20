@@ -160,7 +160,7 @@ function ColorRow({ color }: { color: Color }) {
               height: 28,
               borderRadius: '50%',
               background: color.hex,
-              border: '2px solid rgba(255,255,255,0.15)',
+              border: '2px solid #444444',
               flexShrink: 0,
             }}
           />
@@ -175,7 +175,7 @@ function ColorRow({ color }: { color: Color }) {
           <button
             onClick={() => addSpool(color.id)}
             className="text-xs px-2 py-0.5 rounded font-medium transition-colors"
-            style={{ background: '#2d2d2d', color: '#ff9900', border: '1px solid rgba(255,153,0,0.3)' }}
+            style={{ background: '#2d2d2d', color: '#ff9900', border: '1px solid #b45309' }}
             title={`Add ${color.manufacturer?.fullSpoolNetWeightG ?? 1000}g spool`}
           >
             + Spool
@@ -188,8 +188,8 @@ function ColorRow({ color }: { color: Color }) {
           className="text-xs px-2 py-0.5 rounded-full font-medium transition-colors"
           style={
             color.active
-              ? { background: 'rgba(34,197,94,0.2)', color: '#4ade80' }
-              : { background: 'rgba(107,114,128,0.2)', color: '#9ca3af' }
+              ? { background: '#14532d', color: '#4ade80' }
+              : { background: '#374151', color: '#9ca3af' }
           }
         >
           {color.active ? 'Active' : 'Inactive'}

@@ -134,7 +134,7 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
             {primaryColor && (
               <span
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium"
-                style={{ background: 'rgba(255,153,0,0.1)', border: '1px solid rgba(255,153,0,0.25)', color: '#ff9900' }}
+                style={{ background: '#3a1f00', border: '1px solid #b45309', color: '#ff9900' }}
                 title={`Primary: ${primaryColor.color?.name}${primaryColor.note ? ` — ${primaryColor.note}` : ''}`}
               >
                 <ColorSwatch hex={primaryColor.color?.hex || '#888'} name={primaryColor.color?.name || ''} size={10} />
@@ -164,9 +164,9 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
       <td className="px-3 py-2.5">
         <div className="flex items-center gap-1.5 justify-end flex-wrap">
           {item.queueItemId ? (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.2)', color: '#4ade80' }}>In queue</span>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: '#14532d', color: '#4ade80' }}>In queue</span>
           ) : onSendToQueue ? (
-            <button onClick={() => onSendToQueue(item.id)} className="btn-sm text-xs px-2 py-1 rounded font-medium transition-all" style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' }}>
+            <button onClick={() => onSendToQueue(item.id)} className="btn-sm text-xs px-2 py-1 rounded font-medium transition-all" style={{ background: '#14532d', color: '#4ade80', border: '1px solid #166534' }}>
               → Queue
             </button>
           ) : null}

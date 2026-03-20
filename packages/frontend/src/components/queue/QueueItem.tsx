@@ -145,7 +145,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                         title={`${c.color?.name}${c.note ? ` — ${c.note}` : ''}`}
                         style={
                           c.isPrimary
-                            ? { background: 'rgba(255,153,0,0.12)', border: '1px solid rgba(255,153,0,0.3)', color: '#ff9900' }
+                            ? { background: '#3a1f00', border: '1px solid #b45309', color: '#ff9900' }
                             : { background: '#2d2d2d', border: '1px solid #3a3a3a', color: '#9ca3af' }
                         }
                       >

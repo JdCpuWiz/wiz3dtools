@@ -54,7 +54,7 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
               height: 24,
               borderRadius: '50%',
               background: color.hex,
-              border: '2px solid rgba(255,255,255,0.15)',
+              border: '2px solid #444444',
               flexShrink: 0,
             }}
           />
