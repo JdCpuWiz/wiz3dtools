@@ -90,6 +90,8 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
               step="0.1"
               value={manualGrams}
               onChange={(e) => setManualGrams(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveManual(); if (e.key === 'Escape') { setEditing(false); setManualGrams(String(color.inventoryGrams.toFixed(0))); } }}
               className="w-24 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
               style={inputSt}
             />
@@ -99,14 +101,19 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <span
-              className="text-sm font-semibold cursor-pointer"
-              style={{ color: status === 'ok' ? '#e5e5e5' : style.color }}
-              onClick={() => isAdmin && setEditing(true)}
-              title={isAdmin ? 'Click to adjust manually' : undefined}
-            >
+            <span className="text-sm font-semibold" style={{ color: status === 'ok' ? '#e5e5e5' : style.color }}>
               {color.inventoryGrams.toFixed(0)}g
             </span>
+            {isAdmin && (
+              <button
+                onClick={() => { setManualGrams(String(color.inventoryGrams.toFixed(1))); setEditing(true); }}
+                className="text-iron-500 hover:text-iron-300 transition-colors"
+                title="Set inventory amount"
+                style={{ fontSize: 12, lineHeight: 1 }}
+              >
+                ✎
+              </button>
+            )}
             {pct !== null && (
               <div className="flex-1 min-w-16 max-w-24 h-1.5 rounded-full overflow-hidden" style={{ background: '#2d2d2d' }}>
                 <div

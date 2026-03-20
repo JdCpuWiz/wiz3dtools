@@ -97,6 +97,7 @@ function ColorRow({ color }: { color: Color }) {
   const [name, setName] = useState(color.name);
   const [hex, setHex] = useState(color.hex);
   const [manufacturerId, setManufacturerId] = useState<string>(color.manufacturerId ? String(color.manufacturerId) : '');
+  const [inventoryGrams, setInventoryGrams] = useState(color.inventoryGrams.toFixed(1));
   const [addingGrams, setAddingGrams] = useState(false);
   const [spoolGrams, setSpoolGrams] = useState('');
 
@@ -113,10 +114,12 @@ function ColorRow({ color }: { color: Color }) {
   };
 
   const save = async () => {
+    const parsedGrams = parseFloat(inventoryGrams);
     await update(color.id, {
       name: name.trim(),
       hex,
       manufacturerId: manufacturerId ? parseInt(manufacturerId) : null,
+      inventoryGrams: isNaN(parsedGrams) ? color.inventoryGrams : parsedGrams,
     });
     setEditing(false);
   };
@@ -151,12 +154,25 @@ function ColorRow({ color }: { color: Color }) {
             ))}
           </select>
         </td>
-        <td className="px-4 py-2 text-sm text-iron-400">{color.inventoryGrams.toFixed(0)}g</td>
+        <td className="px-4 py-2">
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={inventoryGrams}
+              onChange={(e) => setInventoryGrams(e.target.value)}
+              className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-right"
+              style={inputSt}
+            />
+            <span className="text-xs text-iron-400">g</span>
+          </div>
+        </td>
         <td className="px-4 py-2 text-sm text-iron-400">{color.active ? 'Active' : 'Inactive'}</td>
         <td className="px-4 py-2">
           <div className="flex gap-1.5">
             <button onClick={save} className="btn-primary btn-sm text-xs">Save</button>
-            <button onClick={() => { setName(color.name); setHex(color.hex); setEditing(false); }} className="btn-secondary btn-sm text-xs">Cancel</button>
+            <button onClick={() => { setName(color.name); setHex(color.hex); setInventoryGrams(color.inventoryGrams.toFixed(1)); setEditing(false); }} className="btn-secondary btn-sm text-xs">Cancel</button>
           </div>
         </td>
       </tr>
