@@ -362,7 +362,7 @@ export const FilamentPage: React.FC = () => {
           <button
             onClick={() => setFilter('low')}
             className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-            style={filter === 'low' ? { background: '#eab308', color: '#000000' } : { background: '#713f12', color: '#ffffff' }}
+            style={filter === 'low' ? { background: '#eab308', color: '#000000' } : { background: '#a16207', color: '#ffffff' }}
           >
             Low ({lowCount})
           </button>
@@ -371,7 +371,7 @@ export const FilamentPage: React.FC = () => {
           <button
             onClick={() => setFilter('critical')}
             className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-            style={filter === 'critical' ? { background: '#b91c1c', color: '#ffffff' } : { background: '#7f1d1d', color: '#ffffff' }}
+            style={filter === 'critical' ? { background: '#b91c1c', color: '#ffffff' } : { background: '#991b1b', color: '#ffffff' }}
           >
             Critical ({criticalCount})
           </button>
