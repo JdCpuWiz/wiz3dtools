@@ -90,7 +90,7 @@ function AddColorForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function ColorRow({ color }: { color: Color }) {
+function ColorRow({ color, index }: { color: Color; index: number }) {
   const { update, delete: deleteColor } = useColors();
   const { manufacturers } = useManufacturers();
   const [editing, setEditing] = useState(false);
@@ -179,8 +179,10 @@ function ColorRow({ color }: { color: Color }) {
     );
   }
 
+  const rowBg = index % 2 === 0 ? '#1e1e1e' : '#252525';
+
   return (
-    <tr style={{ borderTop: '1px solid #2d2d2d' }} className="transition-colors hover:bg-iron-800/20">
+    <tr style={{ borderTop: '1px solid #2d2d2d', background: rowBg }} className="transition-colors hover:bg-iron-800/20">
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <span
@@ -289,7 +291,7 @@ export const ColorsPage: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {colors.map((c) => <ColorRow key={c.id} color={c} />)}
+            {colors.map((c, i) => <ColorRow key={c.id} color={c} index={i} />)}
             {colors.length === 0 && (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-iron-500 text-sm">No colors yet</td></tr>
             )}
