@@ -318,7 +318,7 @@ export const FilamentPage: React.FC = () => {
     : activeColors.filter((c) => {
         const s = stockStatus(c);
         if (filter === 'critical') return s === 'critical' || s === 'empty';
-        if (filter === 'low') return s === 'low' || s === 'critical' || s === 'empty';
+        if (filter === 'low') return s === 'low';
         return true;
       });
 
