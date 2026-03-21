@@ -25,7 +25,7 @@ const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }>
   empty:    { label: 'Empty',    color: '#ffffff', bg: '#4b5563' },
 };
 
-function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean }) {
+function ColorInventoryRow({ color, isAdmin, index }: { color: Color; isAdmin: boolean; index: number }) {
   const { update } = useColors();
   const [editing, setEditing] = useState(false);
   const netGrams = filamentGrams(color);
@@ -61,7 +61,7 @@ function ColorInventoryRow({ color, isAdmin }: { color: Color; isAdmin: boolean 
     : null;
 
   return (
-    <tr style={{ borderTop: '1px solid #2d2d2d', opacity: disabled ? 0.45 : 1 }} className="hover:bg-iron-800/10 transition-colors">
+    <tr style={{ borderTop: '1px solid #2d2d2d', opacity: disabled ? 0.45 : 1, background: index % 2 === 0 ? '#181818' : '#232323' }} className="hover:bg-iron-800/10 transition-colors">
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <span
@@ -390,8 +390,8 @@ export const FilamentPage: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((c) => (
-              <ColorInventoryRow key={c.id} color={c} isAdmin={isAdmin} />
+            {filtered.map((c, i) => (
+              <ColorInventoryRow key={c.id} color={c} isAdmin={isAdmin} index={i} />
             ))}
             {filtered.length === 0 && (
               <tr>

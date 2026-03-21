@@ -151,7 +151,7 @@ function ColorEditRow({ color }: { color: Color }) {
   );
 }
 
-function ManufacturerRow({ mfg, colors }: { mfg: Manufacturer; colors: Color[] }) {
+function ManufacturerRow({ mfg, colors, index }: { mfg: Manufacturer; colors: Color[]; index: number }) {
   const { update, delete: deleteMfg } = useManufacturers();
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -206,7 +206,7 @@ function ManufacturerRow({ mfg, colors }: { mfg: Manufacturer; colors: Color[] }
           </td>
         </tr>
       ) : (
-        <tr style={{ borderTop: '1px solid #2d2d2d' }} className="hover:bg-iron-800/20 transition-colors">
+        <tr style={{ borderTop: '1px solid #2d2d2d', background: index % 2 === 0 ? '#181818' : '#232323' }} className="hover:bg-iron-800/20 transition-colors">
           <td className="px-4 py-3 text-sm font-medium text-iron-50">{mfg.name}</td>
           <td className="px-4 py-3 text-sm text-iron-300">{mfg.emptySpoolWeightG}g</td>
           <td className="px-4 py-3 text-sm text-iron-300">{mfg.fullSpoolNetWeightG}g</td>
@@ -292,7 +292,7 @@ export const ManufacturersPage: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {manufacturers.map((m) => <ManufacturerRow key={m.id} mfg={m} colors={colors} />)}
+            {manufacturers.map((m, i) => <ManufacturerRow key={m.id} mfg={m} colors={colors} index={i} />)}
             {manufacturers.length === 0 && (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-iron-500 text-sm">No manufacturers yet</td></tr>
             )}

@@ -110,6 +110,12 @@
   .wiz-table tbody tr {
     border-top: 1px solid #2d2d2d;
   }
+  .wiz-table tbody tr:nth-child(odd) {
+    background-color: #181818;
+  }
+  .wiz-table tbody tr:nth-child(even) {
+    background-color: #232323;
+  }
   .wiz-table tbody tr:hover {
     background-color: rgba(74, 74, 74, 0.3);
   }

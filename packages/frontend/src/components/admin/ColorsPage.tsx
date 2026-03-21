@@ -179,7 +179,7 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
     );
   }
 
-  const rowBg = index % 2 === 0 ? '#1e1e1e' : '#252525';
+  const rowBg = index % 2 === 0 ? '#181818' : '#232323';
 
   return (
     <tr style={{ borderTop: '1px solid #2d2d2d', background: rowBg }} className="transition-colors hover:bg-iron-800/20">
