@@ -1,5 +1,9 @@
 # WizQueue Implementation Summary
 
+> **Note:** This document is a snapshot of the initial 7-phase implementation (Sessions 1–3, early 2026). The application has grown significantly since then — see [`CHANGES.md`](CHANGES.md) for the full session-by-session history, and [`CLAUDE.md`](CLAUDE.md) for current architecture. Stats below (3 tables, 13 endpoints, etc.) reflect the original build only.
+
+---
+
 ## Overview
 
 ✅ **Complete** - All 7 phases of the implementation plan have been successfully completed.

@@ -6,6 +6,72 @@ Running log of completed work and what's still planned.
 
 ## Completed
 
+### Session 20 — UI styling overhaul (v1.3.16–1.3.28)
+
+**Solid status badges (global standard)**
+- All status indicators, value pills, toggle buttons, and filter tabs now use solid opaque backgrounds with high-contrast text — no more semi-transparent or dark-tinted backgrounds
+- Invoice statuses: Draft `#6b7280`, Sent `#1d4ed8`, Paid `#15803d`, Shipped `#6d28d9`, Cancelled `#b91c1c` — all white text
+- Active/Inactive product and color toggles: `#15803d` / `#6b7280`
+- FilamentPage: OK `#15803d`, Low `#eab308` (black text), Critical `#b91c1c`, Empty `#4b5563`, Disabled `#6b7280`
+- ManufacturersPage: Low threshold `#eab308`, Critical threshold `#b91c1c`
+- LineItemRow "In queue" badge and "→ Queue" button: `#15803d`
+- InvoiceDetail Shipped header badge: `#6d28d9`; Set/Remove exempt button: `#d97706`
+- Side nav active item: solid `#ff9900` with white text (was semi-transparent)
+- Standard codified in global `~/.claude/CLAUDE.md` for all future projects
+
+**Alternating row shading**
+- `wiz-table` CSS class gets nth-child odd/even rules (`#181818` / `#232323`), covering Products, Invoices, Customers tables automatically
+- ManufacturersPage, FilamentPage, ColorsPage: index-based alternating rows matching same palette
+
+**FilamentPage filter pills**
+- Inactive: neutral dark gray `#2d2d2d`; Active: yellow (`#eab308`) for Low, red (`#b91c1c`) for Critical
+- Low filter now shows only Low stock items (previously also included Critical)
+
+**ColorsPage**
+- Inventory column: right-aligned grams value + `+ Spool` button; white text for manufacturer and weight
+- `+ Spool` button: solid `#ff9900` with black text
+
+### Session 19 — Filament tracking deep dive (v1.2.1–1.3.15)
+
+- **InvoiceList weight column** — `hidden lg` column showing shipment weight in oz from line item color weights
+- **InvoiceForm weight preview** — Est. Weight row in totals panel derived from `product.totalWeightGrams` on product select
+- **Gross/net spool inventory** — `+ Spool` defaults to gross (filament + spool); all displays show net filament (gross − empty spool weight)
+- **FilamentPage enable/disable** — per-row toggle for admin; disabled rows dimmed at 45% opacity; excluded from low/critical alerts
+- **Add New Color form** on FilamentPage — name, hex, manufacturer, initial inventory; duplicate guard on name + manufacturer
+- **ManufacturersPage color inline edit** — expandable color list per manufacturer row; hex picker + name edit inline
+- **Color sort by manufacturer** — backend `ORDER BY m.name ASC NULLS LAST, c.name ASC`
+- **ColorPicker grouped palette** — colors grouped under manufacturer headers
+- **Swatch border fix** — all swatches use `border: 2px solid ${hex}` (matches swatch, invisible border)
+- **ProductForm custom color dropdown** — replaced native `<select>` with custom `ColorDropdown`; grouped by manufacturer, swatch per option
+- **Auto-populate line item colors from product** — selecting a product in InvoiceForm / InvoiceDetail / LineItemRow edit auto-fills colors from `product.colors`
+
+### Session 18 — Filament tracking v1 (v1.2.0)
+
+- **Manufacturers table** (migration 019) — `empty_spool_weight_g`, `full_spool_net_weight_g`, `low_threshold_g`, `critical_threshold_g`; Bambu Lab seeded (242g empty, 1007g net, 500g low, 200g critical)
+- **Colors gain manufacturer + inventory** (migration 020) — `manufacturer_id` FK, `inventory_grams DECIMAL(10,2)`
+- **Product colors table** (migration 021) — per-color weight from slicer data per product
+- **Line/queue item color weights** (migration 022) — `weight_grams` on `line_item_colors` + `queue_item_colors`
+- **FilamentPage** (`/filament`) — inventory table with progress bars, status badges, + Spool action, All/Low/Critical filter tabs
+- **ManufacturersPage** (`/admin/manufacturers`) — CRUD for manufacturers with spool weights and thresholds
+- **Side nav** — replaced top header nav with collapsible left sidebar (Operations / Filament / Admin sections)
+- **Dashboard filament card** — replaced Customers card; shows total kg, low/critical alerts, top colors by inventory
+- **Inventory deduction** — completing a queue item deducts `weight_grams` from `inventory_grams` on linked colors
+- **Est. Weight on invoice PDF** — shown in totals section alongside shipping cost
+
+### Session 17 — Security hardening (v1.1.1–v1.1.2)
+
+- **M1 — Zod input validation** on all 8 controllers (queue, upload, customer, product, sales-invoice, auth, users, color)
+- **H7 — HttpOnly cookies** — JWT moved from `Authorization` header / localStorage to HttpOnly cookie `wiz3d_token` (`SameSite=Strict`, `Secure` in prod); `POST /api/auth/logout` clears it server-side
+- **M2 — CSRF protection** — 48-char hex `csrfToken` claim in JWT; validated as `X-CSRF-Token` header on all mutating requests; frontend stores in React state only
+
+### Session 16 — Versioning, security audit, idle timeout (v1.1.0)
+
+- **Versioning** — version injected at build time via `vite.config.ts` `define`; displayed in side nav footer and returned by `/health` + `/` endpoints
+- **Full security audit** — `SECURITY.md` created; all C1-C3, H1-H9, M1-M9, L1-L3 items identified and tracked
+- **Idle session timeout** — 30min inactivity → 60s countdown modal → auto-logout; implemented in `AuthContext.tsx` + `Layout.tsx`
+- **M3 — Audit logging** (migration 018) — `audit_logs` table; logs actor/action/resource/timestamp for user management and invoice sensitive ops
+- **multer patch** — added `limits: { fileSize: 20MB }` to prevent unbounded upload
+
 ### Session 15 — Shipped status, carrier/tracking, product data cleanup, units_sold accuracy
 
 **Shipped status display**
@@ -161,12 +227,4 @@ Running log of completed work and what's still planned.
 
 ## Outstanding / Planned
 
-### Queue improvements
-- [ ] **Include product SKU on invoicing screen** — show SKU on invoice line items, queue cards, and printed PDF
-- [ ] **Upload screen back navigation** — a way to return to queue without closing the upload modal
-
-### Future ideas
-- [ ] Dashboard / summary page (items in queue, invoices outstanding, revenue this month)
-- [ ] Customer invoice history view
-- [ ] Product sales report / export
-- [ ] Bulk status update on queue items
+- [ ] **Upload screen back navigation** — a way to return to queue without closing the upload modal (deprioritized)

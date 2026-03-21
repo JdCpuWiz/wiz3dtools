@@ -1,90 +1,90 @@
-# WizQueue - 3D Printing Queue Generator
+# Wiz3D Tools — 3D Printing Business Suite
 
-Self-hosted web application for managing 3D printing queues with automated PDF invoice processing.
+Self-hosted web application for managing a 3D printing business: print queue, sales invoices, customers, products, filament inventory, and more.
 
 ## Features
 
-- 📄 PDF invoice upload and automated product extraction
-- 🤖 AI-powered extraction using Ollama vision LLM
-- 📋 Drag-and-drop queue management
-- ✏️ Edit and delete queue items
-- 🗄️ PostgreSQL database storage
-- 🎨 Clean, responsive UI with Tailwind CSS
+- **Print Queue** — drag-and-drop queue with status tracking (Pending / Printing / Completed); bulk status actions; color swatch display
+- **Sales Invoices** — full invoice lifecycle (Draft → Sent → Paid → Shipped); PDF generation; email delivery; line items with product picker; tax-exempt support; carrier + tracking numbers
+- **Customers** — full CRUD with invoice history per customer
+- **Products** — catalog with SKU, pricing, units sold, revenue tracking; per-color filament weight from slicer data
+- **Filament Inventory** — track inventory by color and manufacturer; spool weight management; low/critical stock alerts; auto-deduct on queue completion
+- **Manufacturers** — manage spool weights and low/critical thresholds per manufacturer
+- **Color Catalog** — admin-managed print color list (pre-seeded with Bambu Lab PLA colors); colors assigned to line items and queue items
+- **PDF Invoice Upload** — Ollama vision LLM extracts products from supplier PDF invoices → auto-populates queue
+- **Dashboard** — revenue stats, queue summary, filament inventory overview, recent invoices
+- **Auth** — JWT (HttpOnly cookie), CSRF protection, role-based access (admin / user), idle session timeout
+- **Admin** — user management, color catalog, manufacturer management, audit logging
 
 ## Tech Stack
 
 - **Frontend**: React + Vite + TypeScript + Tailwind CSS
-- **Backend**: Node.js + Express + TypeScript
-- **Database**: PostgreSQL
-- **AI**: Ollama (llava or llama3.2-vision)
-- **Deployment**: Docker + Docker Compose
+- **Backend**: Node.js + Express + TypeScript (ESM)
+- **Database**: PostgreSQL (22 migrations)
+- **AI**: Ollama (`minicpm-v:8b` vision model)
+- **Deployment**: Docker + Docker Compose + Nginx
 
 ## Project Structure
 
 ```
-wizqueue/
+wiz3dtools/
 ├── packages/
 │   ├── backend/       # Express API server
-│   ├── frontend/      # React application
+│   ├── frontend/      # React SPA
 │   └── shared/        # Shared TypeScript types
 └── infrastructure/    # Docker and deployment configs
 ```
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- Node.js >= 20.19.0 or >= 22.0.0
+- Node.js >= 20.19.0
 - PostgreSQL >= 14
-- Ollama with vision model
+- Ollama with `minicpm-v:8b` model
 
-### Installation
+### Local Development
 
-1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd wizqueue
-```
-
-2. Install dependencies:
-```bash
+cd wiz3dtools
 npm install
-```
-
-3. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-4. Set up database:
-```bash
+cp .env.example .env        # fill in DATABASE_*, JWT_SECRET, SMTP_*, COMPANY_*
 npm run migrate
-```
-
-5. Start Ollama and pull vision model:
-```bash
-ollama serve
-ollama pull minicpm-v:8b  # Recommended for invoice processing
-# Or use: ollama pull llava
-```
-
-6. Start development servers:
-```bash
 npm run dev
 ```
 
-The frontend will be available at http://localhost:5173 and the backend at http://localhost:3000.
+Frontend: http://localhost:5173 · Backend: http://localhost:3000
 
-## Development
+### Docker (Production)
 
-- `npm run dev` - Start both frontend and backend in development mode
-- `npm run build` - Build both packages for production
-- `npm run migrate` - Run database migrations
+```bash
+cp .env.example .env        # fill in all values
+npm run migrate
+docker compose up -d --build
+```
 
-## Deployment
+Register the first admin user (gets admin role automatically):
 
-See [infrastructure/README.md](infrastructure/README.md) for deployment instructions.
+```bash
+curl -X POST http://localhost:3000/api/auth/register -H "Content-Type: application/json" -d '{"username":"admin","password":"yourpassword"}'
+```
+
+### Deploy Updates
+
+```bash
+git pull origin master
+npm run migrate
+docker compose up -d --build
+```
+
+## Documentation
+
+- [`CLAUDE.md`](CLAUDE.md) — architecture reference and AI assistant instructions
+- [`CHANGES.md`](CHANGES.md) — full session-by-session change log
+- [`SECURITY.md`](SECURITY.md) — security audit and controls
+- [`DEPLOYMENT.md`](DEPLOYMENT.md) — production deployment guide
+- [`GETTING_STARTED.md`](GETTING_STARTED.md) — detailed local development guide
 
 ## License
 
