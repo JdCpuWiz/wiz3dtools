@@ -20,7 +20,7 @@ function stockStatus(color: Color): 'critical' | 'low' | 'ok' | 'empty' {
 
 const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
   ok:       { label: 'OK',       color: '#ffffff', bg: '#15803d' },
-  low:      { label: 'Low',      color: '#ffffff', bg: '#d97706' },
+  low:      { label: 'Low',      color: '#000000', bg: '#eab308' },
   critical: { label: 'Critical', color: '#ffffff', bg: '#b91c1c' },
   empty:    { label: 'Empty',    color: '#ffffff', bg: '#4b5563' },
 };
@@ -362,7 +362,7 @@ export const FilamentPage: React.FC = () => {
           <button
             onClick={() => setFilter('low')}
             className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-            style={filter === 'low' ? { background: '#d97706', color: '#ffffff' } : { background: '#78350f', color: '#ffffff' }}
+            style={filter === 'low' ? { background: '#eab308', color: '#000000' } : { background: '#713f12', color: '#ffffff' }}
           >
             Low ({lowCount})
           </button>

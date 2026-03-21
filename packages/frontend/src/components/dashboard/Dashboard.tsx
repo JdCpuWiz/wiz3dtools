@@ -90,7 +90,7 @@ function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColor
       {low.length > 0 && (
         <div
           className="flex items-center justify-between py-1 px-2 rounded mb-1 text-xs font-semibold"
-          style={{ background: '#f59e0b', color: '#000000' }}
+          style={{ background: '#eab308', color: '#000000' }}
         >
           <span>Low Stock</span>
           <span>{low.length} color{low.length !== 1 ? 's' : ''}</span>
