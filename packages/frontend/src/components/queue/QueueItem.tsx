@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { QueueItem as QueueItemType } from '@wizqueue/shared';
 import { useQueue } from '../../hooks/useQueue';
 import { useColors } from '../../hooks/useColors';
+import { usePrinters } from '../../hooks/usePrinters';
 import { QueueItemEdit } from './QueueItemEdit';
 import { ColorSwatch } from '../common/ColorPicker';
 
@@ -126,8 +127,11 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
   const [completingQty, setCompletingQty] = useState<number | null>(null);
   const [editingQty, setEditingQty] = useState(false);
   const [qtyValue, setQtyValue] = useState(item.quantity);
+  const [pickingPrinter, setPickingPrinter] = useState(false);
+  const [pendingPrinterName, setPendingPrinterName] = useState<string>(item.printerName || '');
   const { delete: deleteItem, updateStatus, update } = useQueue();
   const { colors } = useColors();
+  const { printers } = usePrinters();
 
   const {
     attributes,
@@ -193,9 +197,20 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
       } else {
         requestComplete(1);
       }
+    } else if (newStatus === 'printing') {
+      setPendingPrinterName(item.printerName || '');
+      setPickingPrinter(true);
     } else {
       updateStatus({ id: item.id, status: newStatus });
     }
+  };
+
+  const confirmPrinting = () => {
+    if (pendingPrinterName !== (item.printerName || '')) {
+      update({ id: item.id, data: { printerName: pendingPrinterName || undefined } });
+    }
+    updateStatus({ id: item.id, status: 'printing' });
+    setPickingPrinter(false);
   };
 
   const handlePartialComplete = () => {
@@ -362,6 +377,25 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                 <button onClick={() => setPartialQty(null)} className="btn-secondary btn-sm">
                   Cancel
                 </button>
+              </div>
+            )}
+
+            {/* Printer picker when switching to Printing */}
+            {pickingPrinter && (
+              <div className="mt-3 p-3 rounded-lg bg-[#1a1a1a] border border-[#3a3a3a] flex items-center gap-3 flex-wrap">
+                <span className="text-sm text-[#d1d5db]">Assign printer:</span>
+                <select
+                  value={pendingPrinterName}
+                  onChange={(e) => setPendingPrinterName(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg text-sm bg-[#2d2d2d] text-iron-100 border border-[#3a3a3a] focus:outline-none focus:border-[#ff9900]"
+                >
+                  <option value="">— no printer —</option>
+                  {printers.filter((p) => p.active).map((p) => (
+                    <option key={p.id} value={p.name}>{p.name}{p.model ? ` (${p.model})` : ''}</option>
+                  ))}
+                </select>
+                <button onClick={confirmPrinting} className="btn-primary btn-sm">Start Printing</button>
+                <button onClick={() => setPickingPrinter(false)} className="btn-secondary btn-sm">Cancel</button>
               </div>
             )}
 

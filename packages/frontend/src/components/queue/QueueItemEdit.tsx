@@ -5,6 +5,7 @@ import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { useQueue } from '../../hooks/useQueue';
 import { useColors } from '../../hooks/useColors';
+import { usePrinters } from '../../hooks/usePrinters';
 import { ColorPicker } from '../common/ColorPicker';
 import { colorApi } from '../../services/api';
 import type { QueueItem, UpdateQueueItemDto, ItemColorDto } from '@wizqueue/shared';
@@ -22,6 +23,7 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
 }) => {
   const { updateAsync, invalidate } = useQueue();
   const { colors: availableColors } = useColors();
+  const { printers } = usePrinters();
   const [draftColors, setDraftColors] = useState<ItemColorDto[]>([]);
 
   const {
@@ -46,6 +48,7 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
         isPrimary: c.isPrimary,
         note: c.note,
         sortOrder: c.sortOrder,
+        weightGrams: c.weightGrams ?? 0,
       })),
     );
   }, [item.id]);
@@ -56,6 +59,8 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
     invalidate();
     onClose();
   };
+
+  const activePrinters = printers.filter((p) => p.active);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Queue Item">
@@ -107,12 +112,6 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
           error={errors.priority?.message}
         />
 
-        <Input
-          label="Printer"
-          {...register('printerName')}
-          placeholder="e.g. P1S #1, X1C, Bambu 2..."
-        />
-
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Notes
@@ -125,6 +124,22 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
           />
         </div>
 
+        {/* Printer assignment */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Printer
+          </label>
+          <select
+            {...register('printerName')}
+            className="input"
+          >
+            <option value="">— unassigned —</option>
+            {activePrinters.map((p) => (
+              <option key={p.id} value={p.name}>{p.name}{p.model ? ` (${p.model})` : ''}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Colors */}
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: '#ff9900' }}>
@@ -135,6 +150,7 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
             selected={draftColors}
             onChange={setDraftColors}
             maxColors={4}
+            showWeight={true}
           />
         </div>
 

@@ -29,6 +29,9 @@ import type {
   UpdateColorDto,
   ItemColor,
   ItemColorDto,
+  Printer,
+  CreatePrinterDto,
+  UpdatePrinterDto,
 } from '@wizqueue/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -375,6 +378,30 @@ export const manufacturerApi = {
 
   delete: async (id: number): Promise<void> => {
     await api.delete(`/manufacturers/${id}`);
+  },
+};
+
+// Printer API
+export const printerApi = {
+  getAll: async (): Promise<Printer[]> => {
+    const response = await api.get<ApiResponse<Printer[]>>('/printers');
+    return response.data.data || [];
+  },
+
+  create: async (data: CreatePrinterDto): Promise<Printer> => {
+    const response = await api.post<ApiResponse<Printer>>('/printers', data);
+    if (!response.data.data) throw new Error('Failed to create printer');
+    return response.data.data;
+  },
+
+  update: async (id: number, data: UpdatePrinterDto): Promise<Printer> => {
+    const response = await api.put<ApiResponse<Printer>>(`/printers/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update printer');
+    return response.data.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/printers/${id}`);
   },
 };
 

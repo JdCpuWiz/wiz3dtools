@@ -19,6 +19,7 @@ import productRoutes from './routes/product.routes.js';
 import usersRoutes from './routes/users.routes.js';
 import colorRoutes from './routes/color.routes.js';
 import manufacturerRoutes from './routes/manufacturer.routes.js';
+import printerRoutes from './routes/printer.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -107,6 +108,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/colors', colorRoutes);
 app.use('/api/manufacturers', manufacturerRoutes);
+app.use('/api/printers', printerRoutes);
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {

@@ -67,3 +67,10 @@ export type {
   CreateColorDto,
   UpdateColorDto,
 } from './types/color';
+
+// Printer types
+export type {
+  Printer,
+  CreatePrinterDto,
+  UpdatePrinterDto,
+} from './types/printer';

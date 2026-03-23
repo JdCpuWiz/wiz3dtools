@@ -16,6 +16,7 @@ import { InvoiceDetail } from './components/invoices/InvoiceDetail';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { UsersPage } from './components/admin/UsersPage';
 import { ColorsPage } from './components/admin/ColorsPage';
+import { PrintersPage } from './components/admin/PrintersPage';
 import { ManufacturersPage } from './components/admin/ManufacturersPage';
 import { FilamentPage } from './pages/FilamentPage';
 import { useQueue } from './hooks/useQueue';
@@ -205,6 +206,7 @@ function App() {
           <Route path="/admin/users" element={<ProtectedRoute><Layout><UsersPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/colors" element={<ProtectedRoute><Layout><ColorsPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/manufacturers" element={<ProtectedRoute><Layout><ManufacturersPage /></Layout></ProtectedRoute>} />
+          <Route path="/admin/printers" element={<ProtectedRoute><Layout><PrintersPage /></Layout></ProtectedRoute>} />
           <Route path="/filament" element={<ProtectedRoute><Layout><FilamentPage /></Layout></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

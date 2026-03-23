@@ -24,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
     ...(user?.role === 'admin' ? [
       { to: '/admin/users', label: 'Users', exact: false },
       { to: '/admin/colors', label: 'Colors', exact: false },
+      { to: '/admin/printers', label: 'Printers', exact: false },
     ] : []),
   ];
   const isQueueView = location.pathname === '/queue';

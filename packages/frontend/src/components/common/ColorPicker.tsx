@@ -6,6 +6,7 @@ interface ColorPickerProps {
   selected: ItemColorDto[];
   onChange: (colors: ItemColorDto[]) => void;
   maxColors?: number;
+  showWeight?: boolean;
 }
 
 export const ColorSwatch: React.FC<{ hex: string; name: string; size?: number }> = ({
@@ -32,6 +33,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   selected,
   onChange,
   maxColors = 4,
+  showWeight = false,
 }) => {
   const activeColors = availableColors.filter((c) => c.active);
 
@@ -41,7 +43,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     const isPrimary = selected.length === 0;
     onChange([
       ...selected,
-      { colorId, isPrimary, note: null, sortOrder: selected.length },
+      { colorId, isPrimary, note: null, sortOrder: selected.length, weightGrams: 0 },
     ]);
   };
 
@@ -49,7 +51,6 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     const next = selected
       .filter((s) => s.colorId !== colorId)
       .map((s, i) => ({ ...s, sortOrder: i }));
-    // If we removed the primary, make first one primary
     if (next.length > 0 && !next.some((s) => s.isPrimary)) {
       next[0] = { ...next[0], isPrimary: true };
     }
@@ -62,6 +63,11 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
 
   const setNote = (colorId: number, note: string) => {
     onChange(selected.map((s) => (s.colorId === colorId ? { ...s, note: note || null } : s)));
+  };
+
+  const setWeight = (colorId: number, value: string) => {
+    const w = parseFloat(value);
+    onChange(selected.map((s) => (s.colorId === colorId ? { ...s, weightGrams: isNaN(w) ? 0 : w } : s)));
   };
 
   const isSelected = (colorId: number) => selected.some((s) => s.colorId === colorId);
@@ -122,7 +128,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         )}
       </div>
 
-      {/* Selected colors with note inputs */}
+      {/* Selected colors with note + optional weight inputs */}
       {selected.length > 0 && (
         <div className="space-y-2">
           {selected.map((s) => {
@@ -139,6 +145,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                   borderRadius: 8,
                   background: s.isPrimary ? '#3a1f00' : '#2d2d2d',
                   border: s.isPrimary ? '1px solid #b45309' : '1px solid #3a3a3a',
+                  flexWrap: 'wrap',
                 }}
               >
                 <ColorSwatch hex={color.hex} name={color.name} size={18} />
@@ -165,10 +172,11 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                   type="text"
                   value={s.note || ''}
                   onChange={(e) => setNote(s.colorId, e.target.value)}
-                  placeholder="short note (e.g. body, eyes)"
+                  placeholder="note (e.g. body, eyes)"
                   maxLength={60}
                   style={{
                     flex: 1,
+                    minWidth: 80,
                     padding: '2px 8px',
                     borderRadius: 6,
                     border: 'none',
@@ -179,6 +187,32 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                     outline: 'none',
                   }}
                 />
+                {showWeight && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={s.weightGrams ?? 0}
+                      onChange={(e) => setWeight(s.colorId, e.target.value)}
+                      placeholder="0"
+                      title="Filament weight in grams"
+                      style={{
+                        width: 64,
+                        padding: '2px 6px',
+                        borderRadius: 6,
+                        border: 'none',
+                        background: 'rgba(10,10,10,0.5)',
+                        boxShadow: 'inset 0 1px 3px rgb(0 0 0 / 0.4)',
+                        color: '#fb923c',
+                        fontSize: 12,
+                        outline: 'none',
+                        textAlign: 'right',
+                      }}
+                    />
+                    <span style={{ fontSize: 11, color: '#6b7280' }}>g</span>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => removeColor(s.colorId)}
