@@ -63,8 +63,8 @@ export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
 
           {/* Desktop Nav */}
           <nav
-            className="hidden sm:flex items-center gap-1 p-1 rounded-xl"
-            style={{ background: 'rgba(10,10,10,0.6)' }}
+            className="hidden sm:flex items-center gap-0.5 p-1 rounded-xl overflow-x-auto"
+            style={{ background: 'rgba(10,10,10,0.6)', flexShrink: 1, minWidth: 0 }}
           >
             {navItems.map(({ to, label, exact }) => (
               <NavLink
@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({ onUploadClick }) => {
                 to={to}
                 end={exact}
                 className={({ isActive }) =>
-                  `px-5 py-2 text-sm font-medium transition-all duration-200 ${
+                  `px-3 py-2 text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                     isActive ? 'nav-tab-active' : 'nav-tab-inactive'
                   }`
                 }
