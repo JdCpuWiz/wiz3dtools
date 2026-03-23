@@ -233,10 +233,23 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 | `/invoices/:id` | `InvoiceDetail` | |
 | `/admin/users` | `UsersPage` | Admin only — list/create/edit/delete users |
 | `/admin/colors` | `ColorsPage` | Admin only — manage print color catalog |
+| `/admin/printers` | `PrintersPage` | Admin only — manage printer list for queue assignment |
+| `/admin/manufacturers` | `ManufacturersPage` | Admin only — manage filament manufacturers |
+| `/filament` | `FilamentPage` | Filament inventory overview |
 | `/login` | `LoginPage` | No Layout wrapper, full-page form |
 
-### Navigation order
-**Dashboard → Customers → Products → Invoices → Queue → Users → Colors** (Users + Colors tabs visible to admin role only)
+### Navigation — left side nav (SideNav.tsx)
+The app uses a **collapsible left sidebar** (`SideNav.tsx`), NOT a top header. `Header.tsx` has been deleted.
+
+**Layout**: `Layout.tsx` renders `<SideNav>` on the left + main content area. Mobile shows a hamburger button that slides the sidebar in.
+
+**Sidebar sections** (each collapsible):
+- *(top)* Dashboard
+- **Operations**: Queue, Customers, Products, Invoices
+- **Filament**: Inventory, Manufacturers (admin only)
+- **Admin** *(admin role only)*: Users, Colors, Printers
+
+To add a new nav item, edit `SideNav.tsx` — add a `<NavItem>` inside the appropriate section.
 
 ### Key files
 ```
@@ -260,8 +273,8 @@ hooks/
   useColors.ts          color catalog; create/update/delete (admin)
 components/
   layout/
-    Layout.tsx          iron-950 background, sticky header, footer
-    Header.tsx          Frosted-glass sticky nav; Users + Colors tabs for admins
+    Layout.tsx          Sidebar + main content wrapper; idle timeout modal
+    SideNav.tsx         Collapsible left sidebar — THE nav. Add items here, NOT Header.tsx (deleted)
   common/
     StatusBadge.tsx     draft/sent/paid/cancelled colored badges
     Button.tsx
@@ -291,6 +304,7 @@ components/
   admin/
     UsersPage.tsx       List users, add user, inline email edit, role dropdown, reset password, delete
     ColorsPage.tsx      Add/edit/delete Bambu Lab PLA colors; toggle active; live swatch preview
+    PrintersPage.tsx    Add/edit/delete printers (name + model); active toggle; used in queue assignment
 ```
 
 ### Branding
