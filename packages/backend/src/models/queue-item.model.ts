@@ -8,7 +8,7 @@ import { QueueItemColorModel } from './item-color.model.js';
 
 const SELECT_FIELDS = `
   id, product_name as "productName", sku, details, quantity, position,
-  status, invoice_id as "invoiceId", priority, notes,
+  status, invoice_id as "invoiceId", priority, notes, printer_name as "printerName",
   created_at as "createdAt", updated_at as "updatedAt"
 `;
 
@@ -44,12 +44,12 @@ export class QueueItemModel {
     const query = `
       INSERT INTO queue_items (
         product_name, sku, details, quantity, position, status,
-        invoice_id, priority, notes
+        invoice_id, priority, notes, printer_name
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING
         id, product_name as "productName", sku, details, quantity, position,
-        status, invoice_id as "invoiceId", priority, notes,
+        status, invoice_id as "invoiceId", priority, notes, printer_name as "printerName",
         created_at as "createdAt", updated_at as "updatedAt"
     `;
 
@@ -63,6 +63,7 @@ export class QueueItemModel {
       data.invoiceId || null,
       data.priority || 0,
       data.notes || null,
+      data.printerName || null,
     ];
 
     const result = await pool.query(query, values);
@@ -81,12 +82,12 @@ export class QueueItemModel {
         const query = `
           INSERT INTO queue_items (
             product_name, sku, details, quantity, position, status,
-            invoice_id, priority, notes
+            invoice_id, priority, notes, printer_name
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING
             id, product_name as "productName", sku, details, quantity, position,
-            status, invoice_id as "invoiceId", priority, notes,
+            status, invoice_id as "invoiceId", priority, notes, printer_name as "printerName",
             created_at as "createdAt", updated_at as "updatedAt"
         `;
 
@@ -100,6 +101,7 @@ export class QueueItemModel {
           item.invoiceId || null,
           item.priority || 0,
           item.notes || null,
+          item.printerName || null,
         ];
 
         const result = await client.query(query, values);
@@ -153,6 +155,10 @@ export class QueueItemModel {
       fields.push(`notes = $${paramCount++}`);
       values.push(data.notes);
     }
+    if (data.printerName !== undefined) {
+      fields.push(`printer_name = $${paramCount++}`);
+      values.push(data.printerName ?? null);
+    }
 
     if (fields.length === 0) {
       return this.findById(id);
@@ -166,7 +172,7 @@ export class QueueItemModel {
       WHERE id = $${paramCount}
       RETURNING
         id, product_name as "productName", sku, details, quantity, position,
-        status, invoice_id as "invoiceId", priority, notes,
+        status, invoice_id as "invoiceId", priority, notes, printer_name as "printerName",
         created_at as "createdAt", updated_at as "updatedAt"
     `;
 

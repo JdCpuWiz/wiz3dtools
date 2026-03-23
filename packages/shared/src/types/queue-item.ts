@@ -13,6 +13,7 @@ export interface QueueItem {
   invoiceId: number | null;
   priority: number;
   notes: string | null;
+  printerName: string | null;
   colors: ItemColor[];
   createdAt: string;
   updatedAt: string;
@@ -28,6 +29,7 @@ export interface CreateQueueItemDto {
   invoiceId?: number;
   priority?: number;
   notes?: string;
+  printerName?: string;
 }
 
 export interface UpdateQueueItemDto {
@@ -39,6 +41,7 @@ export interface UpdateQueueItemDto {
   status?: QueueItemStatus;
   priority?: number;
   notes?: string;
+  printerName?: string;
 }
 
 export interface ReorderQueueDto {

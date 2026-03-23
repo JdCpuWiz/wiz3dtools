@@ -1,0 +1,1 @@
+ALTER TABLE queue_items ADD COLUMN IF NOT EXISTS printer_name VARCHAR(100);

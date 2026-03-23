@@ -38,6 +38,7 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
       quantity: item.quantity,
       priority: item.priority,
       notes: item.notes || '',
+      printerName: item.printerName || '',
     });
     setDraftColors(
       (item.colors || []).map((c) => ({
@@ -104,6 +105,12 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
             valueAsNumber: true,
           })}
           error={errors.priority?.message}
+        />
+
+        <Input
+          label="Printer"
+          {...register('printerName')}
+          placeholder="e.g. P1S #1, X1C, Bambu 2..."
         />
 
         <div>

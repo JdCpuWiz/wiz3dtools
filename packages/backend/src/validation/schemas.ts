@@ -92,6 +92,7 @@ export const createQueueItemSchema = z.object({
   invoiceId: nullish(z.number().int().positive()),
   priority: z.number().int().optional(),
   notes: nullish(z.string().max(2000)),
+  printerName: nullish(z.string().max(100)),
 });
 
 export const updateQueueItemSchema = createQueueItemSchema.partial();

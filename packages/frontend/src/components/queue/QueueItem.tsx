@@ -271,25 +271,45 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                   </p>
                 )}
 
-                {/* Color swatches */}
+                {/* Color swatches + filament weight */}
                 {(item.colors || []).length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                    {(item.colors || []).map((c) => (
-                      <span
-                        key={c.id}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                        title={`${c.color?.name}${c.note ? ` — ${c.note}` : ''}`}
-                        style={
-                          c.isPrimary
-                            ? { background: '#3a1f00', border: '1px solid #b45309', color: '#ff9900' }
-                            : { background: '#2d2d2d', border: '1px solid #3a3a3a', color: '#9ca3af' }
-                        }
-                      >
-                        <ColorSwatch hex={c.color?.hex || '#888'} name={c.color?.name || ''} size={12} />
-                        <span>{c.isPrimary ? <strong>{c.color?.name}</strong> : c.color?.name}</span>
-                        {c.note && <span style={{ opacity: 0.7 }}> · {c.note}</span>}
-                      </span>
-                    ))}
+                  <div className="mt-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {(item.colors || []).map((c) => {
+                        const weightPerUnit = c.weightGrams ?? 0;
+                        const totalWeight = weightPerUnit * item.quantity;
+                        return (
+                          <span
+                            key={c.id}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                            title={`${c.color?.name}${c.note ? ` — ${c.note}` : ''}${weightPerUnit > 0 ? ` · ${weightPerUnit}g/ea` : ''}`}
+                            style={
+                              c.isPrimary
+                                ? { background: '#3a1f00', border: '1px solid #b45309', color: '#ff9900' }
+                                : { background: '#2d2d2d', border: '1px solid #3a3a3a', color: '#9ca3af' }
+                            }
+                          >
+                            <ColorSwatch hex={c.color?.hex || '#888'} name={c.color?.name || ''} size={12} />
+                            <span>{c.isPrimary ? <strong>{c.color?.name}</strong> : c.color?.name}</span>
+                            {c.note && <span style={{ opacity: 0.7 }}> · {c.note}</span>}
+                            {totalWeight > 0 && (
+                              <span style={{ opacity: 0.85, marginLeft: 2 }}>· {totalWeight.toFixed(1)}g</span>
+                            )}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    {(() => {
+                      const totalG = (item.colors || []).reduce(
+                        (sum, c) => sum + (c.weightGrams ?? 0) * item.quantity,
+                        0,
+                      );
+                      return totalG > 0 ? (
+                        <p className="text-xs mt-1" style={{ color: '#9ca3af' }}>
+                          Total filament: <span style={{ color: '#d1d5db', fontWeight: 500 }}>{totalG.toFixed(1)}g</span>
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                 )}
               </div>
@@ -365,6 +385,17 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                 {item.priority > 0 && (
                   <span className="text-sm text-[#ff9900] font-medium">
                     Priority: {item.priority}
+                  </span>
+                )}
+                {item.printerName && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
+                    style={{ background: '#1e293b', color: '#93c5fd', border: '1px solid #1e40af' }}
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
+                    </svg>
+                    {item.printerName}
                   </span>
                 )}
               </div>
