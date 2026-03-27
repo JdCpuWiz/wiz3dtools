@@ -68,25 +68,30 @@ export async function generateSalesReportPdf(report: SalesReportSummary): Promis
     y = 82;
 
     // ── Summary Box ───────────────────────────────────────────────────────
-    const summaryItems = [
+    const summaryItems: { label: string; value: string; mono: boolean; bold?: boolean; indent?: boolean }[] = [
       { label: 'Invoices Included', value: String(report.invoiceCount), mono: false },
       { label: 'Gross Sales (ex. tax & shipping)', value: fmt(report.totalSubtotal), mono: true },
+      { label: '  Taxable Sales', value: fmt(report.taxableSubtotal), mono: true, indent: true },
+      { label: '  Tax-Exempt Sales', value: fmt(report.taxExemptSubtotal), mono: true, indent: true },
       { label: 'Total Shipping Collected', value: fmt(report.totalShipping), mono: true },
       { label: 'Total Sales Tax Collected', value: fmt(report.totalTax), mono: true },
       { label: 'Grand Total Revenue', value: fmt(report.grandTotal), mono: true, bold: true },
     ];
 
-    const boxH = 12 + summaryItems.length * 16 + 4;
+    const boxH = 12 + summaryItems.reduce((h, i) => h + (i.indent ? 13 : 16), 0) + 4;
     doc.rect(M, y, CW, boxH).fill(BOX_BG);
     doc.rect(M, y, 4, boxH).fill(ORANGE);
 
     let sy = y + 8;
     for (const item of summaryItems) {
-      doc.font(item.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(10).fillColor(DARK)
-        .text(item.label, M + 12, sy, { continued: true, width: CW - 12 });
+      const labelColor = item.indent ? '#555555' : DARK;
+      const fontSize = item.indent ? 9 : 10;
+      const leftPad = item.indent ? 20 : 12;
+      doc.font(item.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize).fillColor(labelColor)
+        .text(item.label.trim(), M + leftPad, sy, { continued: true, width: CW - leftPad });
       doc.font(item.bold ? 'Helvetica-Bold' : (item.mono ? 'Courier' : 'Helvetica'))
         .text(item.value, M, sy, { align: 'right', width: CW - 4 });
-      sy += 16;
+      sy += item.indent ? 13 : 16;
     }
 
     y = y + boxH + 16;
@@ -122,11 +127,15 @@ export async function generateSalesReportPdf(report: SalesReportSummary): Promis
       const bg = rowIdx % 2 === 0 ? '#ffffff' : LIGHT_GRAY;
       doc.rect(M, ty, CW, ROW_H).fill(bg);
 
+      const statusLabel = row.taxExempt
+        ? `${row.status.charAt(0).toUpperCase() + row.status.slice(1)} / TE`
+        : row.status.charAt(0).toUpperCase() + row.status.slice(1);
+
       const cells = [
         { val: row.invoiceNumber, align: 'left' as const },
         { val: fmtDate(row.issuedDate), align: 'left' as const },
         { val: row.customerName, align: 'left' as const },
-        { val: row.status.charAt(0).toUpperCase() + row.status.slice(1), align: 'center' as const, color: statusColor(row.status) },
+        { val: statusLabel, align: 'center' as const, color: statusColor(row.status) },
         { val: fmt(row.subtotal), align: 'right' as const },
         { val: row.shippingCost > 0 ? fmt(row.shippingCost) : '—', align: 'right' as const },
         { val: row.taxAmount > 0 ? fmt(row.taxAmount) : '—', align: 'right' as const },

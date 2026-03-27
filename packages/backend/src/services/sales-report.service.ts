@@ -6,6 +6,7 @@ export interface SalesReportRow {
   issuedDate: Date;
   customerName: string;
   status: string;
+  taxExempt: boolean;
   subtotal: number;
   shippingCost: number;
   taxAmount: number;
@@ -17,6 +18,8 @@ export interface SalesReportSummary {
   endDate: string;
   invoiceCount: number;
   totalSubtotal: number;
+  taxableSubtotal: number;
+  taxExemptSubtotal: number;
   totalShipping: number;
   totalTax: number;
   grandTotal: number;
@@ -49,7 +52,8 @@ export async function getSalesReport(startDate: string, endDate: string): Promis
   const rows: SalesReportRow[] = result.rows.map((row: Record<string, unknown>) => {
     const subtotal = parseFloat(row.subtotal as string) || 0;
     const shippingCost = parseFloat(row.shipping_cost as string) || 0;
-    const taxAmount = row.tax_exempt ? 0 : subtotal * parseFloat(row.tax_rate as string);
+    const taxExempt = row.tax_exempt as boolean;
+    const taxAmount = taxExempt ? 0 : subtotal * parseFloat(row.tax_rate as string);
     const total = subtotal + shippingCost + taxAmount;
     return {
       id: row.id as number,
@@ -57,6 +61,7 @@ export async function getSalesReport(startDate: string, endDate: string): Promis
       issuedDate: row.issued_date as Date,
       customerName: row.customer_name as string,
       status: row.status as string,
+      taxExempt,
       subtotal,
       shippingCost,
       taxAmount,
@@ -64,11 +69,16 @@ export async function getSalesReport(startDate: string, endDate: string): Promis
     };
   });
 
+  const taxableSubtotal = rows.filter(r => !r.taxExempt).reduce((s, r) => s + r.subtotal, 0);
+  const taxExemptSubtotal = rows.filter(r => r.taxExempt).reduce((s, r) => s + r.subtotal, 0);
+
   return {
     startDate,
     endDate,
     invoiceCount: rows.length,
     totalSubtotal: rows.reduce((s, r) => s + r.subtotal, 0),
+    taxableSubtotal,
+    taxExemptSubtotal,
     totalShipping: rows.reduce((s, r) => s + r.shippingCost, 0),
     totalTax: rows.reduce((s, r) => s + r.taxAmount, 0),
     grandTotal: rows.reduce((s, r) => s + r.total, 0),
