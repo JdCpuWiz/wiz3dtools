@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PrinterCheck, Users, Package, FileText,
   Layers, Factory, Palette, ShieldCheck, ChevronDown,
-  LogOut, X, Printer,
+  LogOut, X, Printer, BarChart2,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -132,6 +132,7 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
               <NavItem to="/customers" label="Customers" icon={<Users size={15} />} onClick={onClose} />
               <NavItem to="/products" label="Products" icon={<Package size={15} />} onClick={onClose} />
               <NavItem to="/invoices" label="Invoices" icon={<FileText size={15} />} onClick={onClose} />
+              <NavItem to="/reports/sales" label="Sales Report" icon={<BarChart2 size={15} />} onClick={onClose} />
             </>
           )}
 

@@ -432,3 +432,27 @@ export const userApi = {
     await api.delete(`/users/${id}`);
   },
 };
+
+// Reports API
+export const reportsApi = {
+  getSalesReport: async (startDate: string, endDate: string) => {
+    const response = await api.get<ApiResponse<unknown>>(`/reports/sales?startDate=${startDate}&endDate=${endDate}`);
+    return response.data.data;
+  },
+
+  downloadSalesReportPdf: async (startDate: string, endDate: string): Promise<void> => {
+    const base = import.meta.env.VITE_API_URL || '/api';
+    const url = `${base}/reports/sales/pdf?startDate=${startDate}&endDate=${endDate}`;
+    const response = await fetch(url, { credentials: 'include' });
+    if (!response.ok) throw new Error('Failed to download sales report');
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = `sales-report-${startDate}-to-${endDate}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(objectUrl);
+  },
+};

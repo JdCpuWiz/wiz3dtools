@@ -19,6 +19,7 @@ import { ColorsPage } from './components/admin/ColorsPage';
 import { PrintersPage } from './components/admin/PrintersPage';
 import { ManufacturersPage } from './components/admin/ManufacturersPage';
 import { FilamentPage } from './pages/FilamentPage';
+import { SalesReportPage } from './components/reports/SalesReportPage';
 import { useQueue } from './hooks/useQueue';
 import { useProducts } from './hooks/useProducts';
 import { useColors } from './hooks/useColors';
@@ -208,6 +209,7 @@ function App() {
           <Route path="/admin/manufacturers" element={<ProtectedRoute><Layout><ManufacturersPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/printers" element={<ProtectedRoute><Layout><PrintersPage /></Layout></ProtectedRoute>} />
           <Route path="/filament" element={<ProtectedRoute><Layout><FilamentPage /></Layout></ProtectedRoute>} />
+          <Route path="/reports/sales" element={<ProtectedRoute><Layout><SalesReportPage /></Layout></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
