@@ -28,22 +28,22 @@ export async function getSalesReport(startDate: string, endDate: string): Promis
     SELECT
       si.id,
       si.invoice_number,
-      COALESCE(si.issued_date, si.created_at) AS issued_date,
+      si.created_at AS issued_date,
       si.status,
       si.tax_rate,
       si.tax_exempt,
       si.shipping_cost,
-      COALESCE(c.name, 'Walk-in') AS customer_name,
+      COALESCE(c.contact_name, c.business_name, 'Walk-in') AS customer_name,
       COALESCE(SUM(li.quantity * li.unit_price), 0) AS subtotal
     FROM sales_invoices si
     LEFT JOIN customers c ON si.customer_id = c.id
     LEFT JOIN invoice_line_items li ON li.invoice_id = si.id
     WHERE si.status IN ('sent', 'paid', 'shipped')
-      AND COALESCE(si.issued_date, si.created_at)::date >= $1::date
-      AND COALESCE(si.issued_date, si.created_at)::date <= $2::date
-    GROUP BY si.id, si.invoice_number, si.issued_date, si.created_at, si.status,
-             si.tax_rate, si.tax_exempt, si.shipping_cost, c.name
-    ORDER BY COALESCE(si.issued_date, si.created_at) ASC, si.invoice_number ASC
+      AND si.created_at::date >= $1::date
+      AND si.created_at::date <= $2::date
+    GROUP BY si.id, si.invoice_number, si.created_at, si.status,
+             si.tax_rate, si.tax_exempt, si.shipping_cost, c.contact_name, c.business_name
+    ORDER BY si.created_at ASC, si.invoice_number ASC
   `, [startDate, endDate]);
 
   const rows: SalesReportRow[] = result.rows.map((row: Record<string, unknown>) => {
