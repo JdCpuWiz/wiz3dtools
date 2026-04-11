@@ -55,6 +55,22 @@ services:
     depends_on:
       - backend
 
+  mcp:
+    build:
+      context: ./mcp
+      dockerfile: Dockerfile
+    container_name: wizqueue-mcp
+    restart: unless-stopped
+    ports:
+      - "8014:8014"
+    environment:
+      - WIZ3DTOOLS_URL=${WIZ3DTOOLS_URL:-http://backend:3000}
+      - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
+    networks:
+      - wizqueue
+    depends_on:
+      - backend
+
 networks:
   wizqueue:
     driver: bridge

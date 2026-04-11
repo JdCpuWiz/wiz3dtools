@@ -12,7 +12,22 @@ declare global {
 const COOKIE_NAME = 'wiz3d_token';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+const MCP_SERVICE_TOKEN = process.env.MCP_SERVICE_TOKEN;
+
+function checkServiceToken(req: Request): boolean {
+  if (!MCP_SERVICE_TOKEN) return false;
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return false;
+  const token = authHeader.slice(7);
+  if (token !== MCP_SERVICE_TOKEN) return false;
+  // Inject a synthetic admin user so downstream guards work
+  req.user = { userId: 0, username: 'mcp-service', role: 'admin', csrfToken: '' };
+  return true;
+}
+
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  if (checkServiceToken(req)) return next();
+
   const token = req.cookies?.[COOKIE_NAME];
   if (!token) {
     res.status(401).json({ success: false, error: 'Authentication required' });
