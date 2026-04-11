@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import queue
 import ssl
 import threading
 import time
@@ -20,7 +21,7 @@ from typing import Any
 
 import httpx
 import paho.mqtt.client as mqtt
-from flask import Flask, jsonify
+from flask import Flask, Response, jsonify
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("bambu-monitor")
@@ -359,6 +360,7 @@ class BambuPrinterClient:
                 f"[{self.state.printer_name}] Connected (session_present={flags.get('session present', 0)}), "
                 f"subscribed to {topic} (result={result})"
             )
+            broadcast_state()
         else:
             logger.error(
                 f"[{self.state.printer_name}] MQTT connect refused rc={rc}: "
@@ -374,6 +376,7 @@ class BambuPrinterClient:
                 f"[{self.state.printer_name}] Disconnected unexpectedly rc={rc} "
                 f"(MQTT_ERR_CONN_LOST) — paho will reconnect with backoff"
             )
+        broadcast_state()
 
     def _on_message(self, client, userdata, msg):
         try:
@@ -426,6 +429,8 @@ class BambuPrinterClient:
         # State transition handling (outside lock to avoid deadlock)
         if new_state and new_state != prev_state:
             self._handle_state_transition(prev_state, new_state)
+
+        broadcast_state()
 
     def _handle_state_transition(self, prev: str | None, new: str):
         logger.info(f"[{self.state.printer_name}] State: {prev} → {new}")
@@ -501,6 +506,26 @@ class BambuMonitor:
 
 monitor = BambuMonitor()
 
+# ── SSE broadcast ──────────────────────────────────────────────────────────────
+
+_sse_clients: list[queue.Queue] = []
+_sse_lock = threading.Lock()
+
+
+def broadcast_state() -> None:
+    """Push current printer state to all connected SSE clients."""
+    data = json.dumps(monitor.get_all_status())
+    with _sse_lock:
+        dead = [q for q in _sse_clients if q.full()]
+        for q in dead:
+            _sse_clients.remove(q)
+        for q in _sse_clients:
+            try:
+                q.put_nowait(data)
+            except queue.Full:
+                pass
+
+
 # ── Flask REST API ─────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
@@ -516,6 +541,40 @@ def health():
     connected = sum(1 for s in monitor.states.values() if s.connected)
     total     = len(monitor.states)
     return jsonify({"status": "ok", "connected": connected, "total": total})
+
+
+@app.route("/events")
+def events():
+    """SSE stream — pushes full printer state on every MQTT update."""
+    q: queue.Queue = queue.Queue(maxsize=20)
+    with _sse_lock:
+        _sse_clients.append(q)
+
+    # Send current state immediately so the client doesn't wait for next MQTT tick
+    initial = json.dumps(monitor.get_all_status())
+    q.put_nowait(initial)
+
+    def generate():
+        try:
+            while True:
+                try:
+                    data = q.get(timeout=25)
+                    yield f"data: {data}\n\n"
+                except queue.Empty:
+                    # Keepalive comment so nginx/proxies don't close the connection
+                    yield ": keepalive\n\n"
+        finally:
+            with _sse_lock:
+                try:
+                    _sse_clients.remove(q)
+                except ValueError:
+                    pass
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.route("/reload", methods=["POST"])

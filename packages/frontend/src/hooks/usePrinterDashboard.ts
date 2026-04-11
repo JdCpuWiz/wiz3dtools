@@ -1,16 +1,68 @@
-import { useQuery } from '@tanstack/react-query';
-import { bambuApi } from '../services/api';
+import { useEffect, useRef, useState } from 'react';
 import type { PrinterLiveStatus } from '@wizqueue/shared';
 
 export function usePrinterDashboard() {
-  const { data: liveStatuses = [], isLoading, error } = useQuery({
-    queryKey: ['bambu-live'],
-    queryFn: bambuApi.getLiveStatus,
-    refetchInterval: 5_000,
-    retry: false,
-  });
+  const [liveStatuses, setLiveStatuses] = useState<PrinterLiveStatus[]>([]);
+  const [error, setError] = useState<Error | null>(null);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  return { liveStatuses, isLoading, error };
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+
+    async function connect() {
+      try {
+        const res = await fetch('/api/bambu/events', {
+          credentials: 'include',
+          signal: controller.signal,
+          headers: { Accept: 'text/event-stream' },
+        });
+
+        if (!res.ok || !res.body) throw new Error(`SSE connect failed: ${res.status}`);
+        setError(null);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+
+        while (active) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+
+          // Process complete SSE lines
+          const lines = buf.split('\n');
+          buf = lines.pop() ?? '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              setLiveStatuses(parsed);
+            } catch {
+              // ignore malformed event
+            }
+          }
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError' || !active) return;
+        setError(err);
+        setLiveStatuses([]);
+        // Reconnect after 3s
+        retryTimer.current = setTimeout(() => { if (active) connect(); }, 3000);
+      }
+    }
+
+    connect();
+
+    return () => {
+      active = false;
+      controller.abort();
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+    };
+  }, []);
+
+  return { liveStatuses, error };
 }
 
 // Format seconds to "Xh Ym" or "Ym" or "< 1m"

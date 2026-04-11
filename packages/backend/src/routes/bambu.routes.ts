@@ -12,6 +12,27 @@ export function notifyBambuMonitorReload(): void {
   req.end();
 }
 
+// Proxy SSE stream from bambu-monitor — real-time printer state push
+router.get('/events', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const upstream = http.get(`${BAMBU_MONITOR_URL}/events`, (proxyRes) => {
+    proxyRes.pipe(res, { end: true });
+    proxyRes.on('error', () => res.end());
+  });
+  upstream.on('error', () => {
+    // Monitor is down — send an empty-data event so the client degrades gracefully
+    res.write('data: []\n\n');
+    res.end();
+  });
+  // Clean up upstream when client disconnects
+  req.on('close', () => upstream.destroy());
+});
+
 // Proxy live printer status from bambu-monitor service
 router.get('/live', async (_req: Request, res: Response, _next: NextFunction) => {
   try {
