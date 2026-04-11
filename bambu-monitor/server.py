@@ -287,7 +287,7 @@ def sync_go2rtc_streams(configs: list[dict]) -> None:
         if not (serial and ip and code):
             continue
         desired.add(serial)
-        rtsp_url = f"rtsps://bblp:{code}@{ip}:322/streaming/live/1"
+        rtsp_url = f"babycam://bblp:{code}@{ip}"
         try:
             httpx.put(
                 f"{GO2RTC_URL}/api/streams",
