@@ -85,7 +85,7 @@ services:
       - WIZ3DTOOLS_URL=${WIZ3DTOOLS_URL:-http://backend:3000}
       - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
       - MONITOR_PORT=8015
-      - CONFIG_RELOAD_S=${BAMBU_CONFIG_RELOAD_S:-300}
+      - CONFIG_RELOAD_S=${BAMBU_CONFIG_RELOAD_S:-60}
     networks:
       - wizqueue
     extra_hosts:

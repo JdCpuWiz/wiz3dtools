@@ -3,19 +3,36 @@ import { usePrinterDashboard, formatTimeRemaining, getPrinterStatusStyle } from 
 import { useFilamentJobs } from '../../hooks/useFilamentJobs';
 import { usePrinters } from '../../hooks/usePrinters';
 import { useColors } from '../../hooks/useColors';
-import type { PrinterLiveStatus, FilamentJob } from '@wizqueue/shared';
+import type { PrinterLiveStatus, FilamentJob, Printer } from '@wizqueue/shared';
 
 // ── Printer Card ───────────────────────────────────────────────────────────────
 
-function PrinterCard({ status, printerName }: { status: PrinterLiveStatus | null; printerName: string }) {
-  const style = status ? getPrinterStatusStyle(status) : { label: 'Not Configured', bg: '#4b5563', text: '#ffffff' };
+function PrinterCard({
+  status,
+  printer,
+  monitorOnline,
+}: {
+  status: PrinterLiveStatus | null;
+  printer: Printer;
+  monitorOnline: boolean;
+}) {
+  const hasBambuConfig = !!(printer.ipAddress && printer.serialNumber);
+
+  const style = status
+    ? getPrinterStatusStyle(status)
+    : !hasBambuConfig
+      ? { label: 'No Bambu Config', bg: '#4b5563', text: '#ffffff' }
+      : !monitorOnline
+        ? { label: 'Monitor Offline', bg: '#b91c1c', text: '#ffffff' }
+        : { label: 'Connecting…', bg: '#6b7280', text: '#ffffff' };
+
   const isRunning = status?.gcodeState === 'RUNNING';
 
   return (
     <div className="card flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-iron-50">{printerName}</h3>
+        <h3 className="text-lg font-bold text-iron-50">{printer.name}</h3>
         <span
           className="px-2 py-0.5 rounded text-xs font-semibold"
           style={{ background: style.bg, color: style.text }}
@@ -94,7 +111,11 @@ function PrinterCard({ status, printerName }: { status: PrinterLiveStatus | null
         </div>
       ) : (
         <p className="text-iron-600 text-sm text-center py-4">
-          {status === null ? 'Bambu config not set — edit in Admin → Printers' : 'Connecting...'}
+          {!hasBambuConfig
+            ? 'Set IP, serial, and access code in Admin → Printers to enable monitoring.'
+            : !monitorOnline
+              ? 'Bambu monitor service is offline. Check container logs.'
+              : 'Establishing MQTT connection… LAN Mode must be enabled on the printer.'}
         </p>
       )}
     </div>
@@ -241,6 +262,9 @@ export const PrinterDashboard: React.FC = () => {
   const { liveStatuses, error } = usePrinterDashboard();
   const { printers } = usePrinters();
 
+  // Monitor is considered online if we got data back (even an empty array) with no error
+  const monitorOnline = !error;
+
   // Build per-printer display — match by printerId
   const statusById = Object.fromEntries(
     liveStatuses.map((s) => [s.printerId, s]),
@@ -278,8 +302,9 @@ export const PrinterDashboard: React.FC = () => {
           {activePrinters.map((printer) => (
             <PrinterCard
               key={printer.id}
-              printerName={printer.name}
+              printer={printer}
               status={statusById[printer.id] ?? null}
+              monitorOnline={monitorOnline}
             />
           ))}
         </div>
