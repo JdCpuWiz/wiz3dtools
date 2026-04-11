@@ -299,15 +299,19 @@ def get_camera_jpeg(ip: str, access_code: str, timeout: float = 5.0) -> bytes | 
         #   bytes  8-15 : padding (zeros)
         #   bytes 16-47 : username "bblp", null-padded to 32 bytes
         #   bytes 48-79 : access_code, null-padded to 32 bytes
+        # Auth packet format from bambu_connect / HA Bambu integration:
+        #   0x00000040 (little-endian) at bytes 0-3
+        #   0x00003000 (little-endian) at bytes 4-7  ← version field
+        #   zeros at bytes 8-15
+        #   "bblp" null-padded to 32 bytes at 16-47
+        #   access_code null-padded to 32 bytes at 48-79
         auth = bytearray(80)
-        auth[0:4] = b'\x40\x00\x00\x00'
-        auth[4:8] = b'\x03\x00\x00\x00'
-        username = b'bblp'
-        auth[16:16 + len(username)] = username
-        code_bytes = access_code.encode()[:32]
-        auth[48:48 + len(code_bytes)] = code_bytes
+        auth[0:4] = struct.pack("<I", 0x40)      # b'\x40\x00\x00\x00'
+        auth[4:8] = struct.pack("<I", 0x3000)    # b'\x00\x30\x00\x00'
+        auth[16:48] = b'bblp'.ljust(32, b'\x00')
+        auth[48:80] = access_code.encode('ascii', errors='ignore').ljust(32, b'\x00')[:32]
         ssl_sock.sendall(bytes(auth))
-        logger.info(f"Camera {ip}: auth sent, reading stream...")
+        logger.info(f"Camera {ip}: auth sent ({len(access_code)}-char code), reading stream...")
 
         # Read the stream until we have one complete JPEG (FF D8 … FF D9)
         buf       = bytearray()
@@ -324,7 +328,7 @@ def get_camera_jpeg(ip: str, access_code: str, timeout: float = 5.0) -> bytes | 
                 logger.info(f"Camera {ip}: connection closed by printer after {len(buf)} bytes")
                 break
             buf.extend(chunk)
-            logger.debug(f"Camera {ip}: {len(buf)} bytes, first 8: {bytes(buf[:8]).hex()}")
+            logger.info(f"Camera {ip}: +{len(chunk)} bytes (total {len(buf)}), first 16: {bytes(buf[:16]).hex()}")
 
             if start_idx == -1:
                 idx = bytes(buf).find(b'\xff\xd8\xff')
@@ -641,4 +645,4 @@ if __name__ == "__main__":
 
     logger.info(f"Starting REST API on port {MONITOR_PORT}")
     from waitress import serve
-    serve(app, host="0.0.0.0", port=MONITOR_PORT, threads=4)
+    serve(app, host="0.0.0.0", port=MONITOR_PORT, threads=16)
