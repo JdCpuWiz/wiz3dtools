@@ -334,7 +334,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
               {/* Filament job summary — shown for completed items with bambu data */}
               {item.status === 'completed' && filamentJobs.length > 0 && (() => {
                 const jobName = filamentJobs[0].jobName;
-                const totalGrams = filamentJobs.reduce((s, j) => s + (j.filamentGrams ?? 0), 0);
+                const totalGrams = filamentJobs.reduce((s: number, j) => s + (j.filamentGrams ?? 0), 0);
                 return (
                   <div className="mt-3 rounded-lg p-3 space-y-2" style={{ background: '#1a1a1a', border: '1px solid #2d2d2d' }}>
                     <div className="flex items-center justify-between">
