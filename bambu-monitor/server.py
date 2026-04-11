@@ -24,10 +24,7 @@ from flask import Flask, jsonify
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("bambu-monitor")
-
-# Set paho loggers to DEBUG so TLS/protocol errors appear in the log.
-# Each printer gets its own paho.<serial> logger (set in _connect).
-logging.getLogger("paho").setLevel(logging.DEBUG)
+logging.getLogger("paho").setLevel(logging.WARNING)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
@@ -320,9 +317,6 @@ class BambuPrinterClient:
         tls_ctx.check_hostname = False
         tls_ctx.verify_mode = ssl.CERT_NONE
         client.tls_set_context(tls_ctx)
-
-        # Route paho's internal log to our logger so we can see TLS/protocol errors
-        client.enable_logger(logging.getLogger(f"paho.{self.state.serial}"))
 
         # Delegate all reconnect logic to paho's built-in loop_start() mechanism.
         # min_delay=5 so the first retry waits 5s; doubles each attempt up to 120s.
