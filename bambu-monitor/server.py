@@ -32,6 +32,7 @@ WIZ3DTOOLS_URL   = os.getenv("WIZ3DTOOLS_URL", "http://backend:3000").rstrip("/"
 SERVICE_TOKEN    = os.getenv("MCP_SERVICE_TOKEN", "")
 MONITOR_PORT     = int(os.getenv("MONITOR_PORT", "8015"))
 CONFIG_RELOAD_S  = int(os.getenv("CONFIG_RELOAD_S", "300"))  # re-fetch printer configs every 5min
+GO2RTC_URL       = os.getenv("GO2RTC_URL", "http://go2rtc:1984").rstrip("/")
 
 BAMBU_MQTT_PORT  = 8883
 BAMBU_USERNAME   = "bblp"
@@ -268,6 +269,43 @@ def process_print_finish(state: PrinterState, colors: list[dict]) -> None:
             )
 
 
+# ── go2rtc camera stream sync ─────────────────────────────────────────────────
+
+def sync_go2rtc_streams(configs: list[dict]) -> None:
+    """Register/remove printer camera streams in go2rtc (best-effort, non-fatal)."""
+    try:
+        r = httpx.get(f"{GO2RTC_URL}/api/streams", timeout=5)
+        current_streams: set[str] = set(r.json().keys()) if r.is_success else set()
+    except Exception:
+        current_streams = set()
+
+    desired: set[str] = set()
+    for cfg in configs:
+        serial = cfg.get("serialNumber")
+        ip     = cfg.get("ipAddress")
+        code   = cfg.get("accessCode")
+        if not (serial and ip and code):
+            continue
+        desired.add(serial)
+        rtsp_url = f"rtsps://bblp:{code}@{ip}:322/streaming/live/1"
+        try:
+            httpx.put(
+                f"{GO2RTC_URL}/api/streams",
+                params={"name": serial, "src": rtsp_url},
+                timeout=5,
+            )
+        except Exception as e:
+            logger.debug(f"go2rtc: failed to register stream for {serial}: {e}")
+
+    # Remove streams whose printers have been deleted
+    for serial in current_streams - desired:
+        try:
+            httpx.delete(f"{GO2RTC_URL}/api/streams", params={"name": serial}, timeout=5)
+            logger.info(f"go2rtc: removed stream for deleted printer {serial}")
+        except Exception as e:
+            logger.debug(f"go2rtc: failed to remove stream for {serial}: {e}")
+
+
 # ── MQTT Client ────────────────────────────────────────────────────────────────
 
 class BambuPrinterClient:
@@ -485,6 +523,9 @@ class BambuMonitor:
                 self.clients[serial].stop()
                 del self.clients[serial]
                 del self.states[serial]
+
+        # Keep go2rtc camera streams in sync with current printer config
+        sync_go2rtc_streams(configs)
 
     def get_all_status(self) -> list[dict]:
         with self._lock:
