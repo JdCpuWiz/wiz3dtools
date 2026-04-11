@@ -5,6 +5,7 @@ import type { QueueItem as QueueItemType } from '@wizqueue/shared';
 import { useQueue } from '../../hooks/useQueue';
 import { useColors } from '../../hooks/useColors';
 import { usePrinters } from '../../hooks/usePrinters';
+import { useQueueItemFilament } from '../../hooks/useFilamentJobs';
 import { QueueItemEdit } from './QueueItemEdit';
 import { ColorSwatch } from '../common/ColorPicker';
 
@@ -132,6 +133,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
   const { delete: deleteItem, updateStatus, update } = useQueue();
   const { colors } = useColors();
   const { printers } = usePrinters();
+  const filamentJobs = useQueueItemFilament(item.status === 'completed' ? item.id : undefined);
 
   const {
     attributes,
@@ -328,6 +330,46 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                   </div>
                 )}
               </div>
+
+              {/* Filament job summary — shown for completed items with bambu data */}
+              {item.status === 'completed' && filamentJobs.length > 0 && (() => {
+                const jobName = filamentJobs[0].jobName;
+                const totalGrams = filamentJobs.reduce((s, j) => s + (j.filamentGrams ?? 0), 0);
+                return (
+                  <div className="mt-3 rounded-lg p-3 space-y-2" style={{ background: '#1a1a1a', border: '1px solid #2d2d2d' }}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#6b7280' }}>Filament Used</span>
+                      {jobName && <span className="text-xs truncate ml-2 max-w-[60%] text-right" style={{ color: '#9ca3af' }}>{jobName}</span>}
+                    </div>
+                    <div className="space-y-1">
+                      {filamentJobs.map((j) => (
+                        <div key={j.id} className="flex items-center gap-2 text-xs">
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{
+                              background: j.colorHex ? `#${j.colorHex}` : (j.amsColorHex ? `#${j.amsColorHex.slice(0, 6)}` : '#4b5563'),
+                              border: `1px solid ${j.colorHex ? `#${j.colorHex}` : '#4b5563'}`,
+                            }}
+                          />
+                          <span className="flex-1 truncate" style={{ color: '#d1d5db' }}>
+                            {j.colorName ?? (j.amsColorHex ? `#${j.amsColorHex.slice(0, 6).toUpperCase()}` : 'Unknown')}
+                            {j.amsMaterial && <span className="ml-1" style={{ color: '#6b7280' }}>({j.amsMaterial})</span>}
+                          </span>
+                          {j.filamentGrams !== null && j.filamentGrams > 0 && (
+                            <span className="shrink-0 font-medium" style={{ color: '#9ca3af' }}>{j.filamentGrams.toFixed(1)}g</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {totalGrams > 0 && (
+                      <div className="flex justify-between pt-1 border-t" style={{ borderColor: '#2d2d2d' }}>
+                        <span className="text-xs" style={{ color: '#6b7280' }}>Total</span>
+                        <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>{totalGrams.toFixed(1)}g</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Quantity Badge — click to edit inline */}
               <div className="flex-shrink-0">

@@ -1,12 +1,50 @@
 import React, { useState } from 'react';
 import { usePrinterDashboard, formatTimeRemaining, getPrinterStatusStyle } from '../../hooks/usePrinterDashboard';
-import { useFilamentJobs } from '../../hooks/useFilamentJobs';
+import { useFilamentJobs, useLastPrinterJob } from '../../hooks/useFilamentJobs';
 import { usePrinters } from '../../hooks/usePrinters';
 import { useColors } from '../../hooks/useColors';
 import { useQueue } from '../../hooks/useQueue';
 import type { PrinterLiveStatus, FilamentJob, Printer, QueueItem } from '@wizqueue/shared';
 
 // ── Printer Card ───────────────────────────────────────────────────────────────
+
+function FilamentSummary({ jobs }: { jobs: FilamentJob[] }) {
+  if (jobs.length === 0) return null;
+  const jobName = jobs[0].jobName;
+  const totalGrams = jobs.reduce((s, j) => s + (j.filamentGrams ?? 0), 0);
+  return (
+    <div className="border-t pt-3 mt-1" style={{ borderColor: '#2d2d2d' }}>
+      <p className="text-xs font-semibold text-iron-400 uppercase tracking-wide mb-2">Last Print</p>
+      {jobName && <p className="text-xs text-iron-300 truncate mb-2">{jobName}</p>}
+      <div className="space-y-1">
+        {jobs.map((j) => (
+          <div key={j.id} className="flex items-center gap-2 text-xs">
+            <div
+              className="w-3 h-3 rounded-full flex-shrink-0"
+              style={{
+                background: j.colorHex ? `#${j.colorHex}` : (j.amsColorHex ? `#${j.amsColorHex.slice(0, 6)}` : '#4b5563'),
+                border: `1px solid ${j.colorHex ? `#${j.colorHex}` : '#4b5563'}`,
+              }}
+            />
+            <span className="text-iron-300 flex-1 truncate">
+              {j.colorName ?? (j.amsColorHex ? `#${j.amsColorHex.slice(0, 6).toUpperCase()}` : 'Unknown')}
+              {j.amsMaterial && <span className="text-iron-500 ml-1">({j.amsMaterial})</span>}
+            </span>
+            {j.filamentGrams !== null && j.filamentGrams > 0 && (
+              <span className="text-iron-400 shrink-0 font-medium">{j.filamentGrams.toFixed(1)}g</span>
+            )}
+          </div>
+        ))}
+      </div>
+      {totalGrams > 0 && (
+        <div className="flex justify-between mt-2 pt-1 border-t" style={{ borderColor: '#3a3a3a' }}>
+          <span className="text-xs text-iron-500">Total</span>
+          <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>{totalGrams.toFixed(1)}g</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function PrinterCard({
   status,
@@ -18,6 +56,7 @@ function PrinterCard({
   monitorOnline: boolean;
 }) {
   const hasBambuConfig = !!(printer.ipAddress && printer.serialNumber);
+  const lastJob = useLastPrinterJob(printer.name);
 
   const style = status
     ? getPrinterStatusStyle(status)
@@ -116,6 +155,8 @@ function PrinterCard({
               : 'Establishing MQTT connection… LAN Mode must be enabled on the printer.'}
         </p>
       )}
+
+      <FilamentSummary jobs={lastJob} />
     </div>
   );
 }
