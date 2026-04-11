@@ -19,12 +19,14 @@ export const PrintersPage: React.FC = () => {
   // Add form
   const [newName, setNewName]   = useState('');
   const [newModel, setNewModel] = useState('');
+  const [newColor, setNewColor] = useState('#6b7280');
   const [newBambu, setNewBambu] = useState<BambuFields>(emptyBambu());
 
   // Edit state
   const [editingId, setEditingId]   = useState<number | null>(null);
   const [editName, setEditName]     = useState('');
   const [editModel, setEditModel]   = useState('');
+  const [editColor, setEditColor]   = useState('#6b7280');
   const [editBambu, setEditBambu]   = useState<BambuFields>(emptyBambu());
 
   const handleAdd = () => {
@@ -33,12 +35,14 @@ export const PrintersPage: React.FC = () => {
       name: newName.trim(),
       model: newModel.trim() || undefined,
       active: true,
+      badgeColor: newColor,
       ipAddress: newBambu.ipAddress.trim() || undefined,
       serialNumber: newBambu.serialNumber.trim() || undefined,
       accessCode: newBambu.accessCode.trim() || undefined,
     });
     setNewName('');
     setNewModel('');
+    setNewColor('#6b7280');
     setNewBambu(emptyBambu());
   };
 
@@ -46,6 +50,7 @@ export const PrintersPage: React.FC = () => {
     setEditingId(p.id);
     setEditName(p.name);
     setEditModel(p.model || '');
+    setEditColor(p.badgeColor || '#6b7280');
     setEditBambu({
       ipAddress: p.ipAddress || '',
       serialNumber: p.serialNumber || '',
@@ -58,6 +63,7 @@ export const PrintersPage: React.FC = () => {
     const updateData: any = {
       name: editName.trim(),
       model: editModel.trim() || undefined,
+      badgeColor: editColor,
       ipAddress: editBambu.ipAddress.trim() || undefined,
       serialNumber: editBambu.serialNumber.trim() || undefined,
     };
@@ -106,6 +112,24 @@ export const PrintersPage: React.FC = () => {
                 onChange={(e) => setNewModel(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                 placeholder="e.g. Bambu P1S" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-iron-300 mb-1">Badge Color</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={newColor}
+                  onChange={(e) => setNewColor(e.target.value)}
+                  className="rounded cursor-pointer border-0"
+                  style={{ width: 36, height: 34, padding: 2, background: '#2d2d2d' }}
+                />
+                <span
+                  className="px-2 py-0.5 rounded text-xs font-semibold"
+                  style={{ background: newColor, color: '#ffffff' }}
+                >
+                  {newName.trim() || 'Preview'}
+                </span>
+              </div>
             </div>
           </div>
           <div className="border-t pt-3" style={{ borderColor: '#3a3a3a' }}>
@@ -166,6 +190,24 @@ export const PrintersPage: React.FC = () => {
                       onChange={(e) => setEditModel(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null); }} />
                   </div>
+                  <div>
+                    <label className="block text-xs font-medium text-iron-300 mb-1">Badge Color</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={editColor}
+                        onChange={(e) => setEditColor(e.target.value)}
+                        className="rounded cursor-pointer border-0"
+                        style={{ width: 36, height: 34, padding: 2, background: '#2d2d2d' }}
+                      />
+                      <span
+                        className="px-2 py-0.5 rounded text-xs font-semibold"
+                        style={{ background: editColor, color: '#ffffff' }}
+                      >
+                        {editName.trim() || 'Preview'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 <div className="border-t pt-3" style={{ borderColor: '#3a3a3a' }}>
                   <p className="text-xs text-iron-400 mb-2">Bambu Configuration</p>
@@ -203,9 +245,14 @@ export const PrintersPage: React.FC = () => {
               /* ── Read mode ── */
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
-                  <div>
-                    <span className="font-medium text-iron-100">{p.name}</span>
-                    {p.model && <span className="text-iron-500 text-sm ml-2">{p.model}</span>}
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="px-2 py-0.5 rounded text-xs font-semibold"
+                      style={{ background: p.badgeColor || '#4b5563', color: '#ffffff' }}
+                    >
+                      {p.name}
+                    </span>
+                    {p.model && <span className="text-iron-500 text-sm">{p.model}</span>}
                   </div>
                   {/* Bambu config badge */}
                   {hasBambuConfig(p) ? (

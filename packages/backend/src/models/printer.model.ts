@@ -7,6 +7,7 @@ const SELECT_FIELDS = `
   sort_order    as "sortOrder",
   ip_address    as "ipAddress",
   serial_number as "serialNumber",
+  badge_color   as "badgeColor",
   created_at    as "createdAt"
 `;
 
@@ -48,8 +49,8 @@ export class PrinterModel {
 
   static async create(data: CreatePrinterDto): Promise<Printer> {
     const result = await pool.query(
-      `INSERT INTO printers (name, model, active, sort_order, ip_address, serial_number, access_code)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO printers (name, model, active, sort_order, ip_address, serial_number, access_code, badge_color)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING ${SELECT_FIELDS}`,
       [
         data.name,
@@ -59,6 +60,7 @@ export class PrinterModel {
         data.ipAddress || null,
         data.serialNumber || null,
         data.accessCode || null,
+        data.badgeColor || null,
       ],
     );
     return result.rows[0];
@@ -75,6 +77,7 @@ export class PrinterModel {
     if (data.ipAddress !== undefined)    { fields.push(`ip_address = $${p++}`);    values.push(data.ipAddress || null); }
     if (data.serialNumber !== undefined) { fields.push(`serial_number = $${p++}`); values.push(data.serialNumber || null); }
     if (data.accessCode !== undefined)   { fields.push(`access_code = $${p++}`);   values.push(data.accessCode || null); }
+    if (data.badgeColor !== undefined)   { fields.push(`badge_color = $${p++}`);   values.push(data.badgeColor || null); }
     if (fields.length === 0) return this.findById(id);
     values.push(id);
     const result = await pool.query(

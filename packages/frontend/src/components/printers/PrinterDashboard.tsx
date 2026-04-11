@@ -33,7 +33,12 @@ function PrinterCard({
     <div className="card flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-iron-50">{printer.name}</h3>
+        <span
+          className="px-2 py-0.5 rounded text-sm font-bold"
+          style={{ background: printer.badgeColor || '#4b5563', color: '#ffffff' }}
+        >
+          {printer.name}
+        </span>
         <span
           className="px-2 py-0.5 rounded text-xs font-semibold"
           style={{ background: style.bg, color: style.text }}

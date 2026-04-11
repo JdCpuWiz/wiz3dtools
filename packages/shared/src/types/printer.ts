@@ -6,6 +6,7 @@ export interface Printer {
   sortOrder: number;
   ipAddress: string | null;
   serialNumber: string | null;
+  badgeColor: string | null;
   // accessCode is write-only — never returned in API responses
   createdAt: string;
 }
@@ -18,6 +19,7 @@ export interface CreatePrinterDto {
   ipAddress?: string;
   serialNumber?: string;
   accessCode?: string;
+  badgeColor?: string;
 }
 
 export interface UpdatePrinterDto {
@@ -28,6 +30,7 @@ export interface UpdatePrinterDto {
   ipAddress?: string;
   serialNumber?: string;
   accessCode?: string;
+  badgeColor?: string;
 }
 
 export interface FilamentJob {

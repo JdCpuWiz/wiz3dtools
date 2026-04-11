@@ -1,0 +1,1 @@
+ALTER TABLE printers ADD COLUMN IF NOT EXISTS badge_color VARCHAR(7);

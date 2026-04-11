@@ -138,7 +138,12 @@ function PrinterSummaryCard({ printer, status }: { printer: Printer; status: Pri
     <div className="card flex flex-col gap-2" style={{ minWidth: 0 }}>
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold text-iron-50 truncate">{printer.name}</span>
+        <span
+          className="px-2 py-0.5 rounded text-xs font-semibold truncate"
+          style={{ background: printer.badgeColor || '#4b5563', color: '#ffffff' }}
+        >
+          {printer.name}
+        </span>
         <span
           className="px-2 py-0.5 rounded text-xs font-semibold shrink-0"
           style={{ background: style.bg, color: style.text }}

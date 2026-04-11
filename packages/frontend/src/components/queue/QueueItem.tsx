@@ -429,17 +429,21 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                     In-house
                   </span>
                 )}
-                {item.printerName && (
-                  <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
-                    style={{ background: '#1e293b', color: '#93c5fd', border: '1px solid #1e40af' }}
-                  >
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
-                    </svg>
-                    {item.printerName}
-                  </span>
-                )}
+                {item.printerName && (() => {
+                  const assignedPrinter = printers.find((p) => p.name === item.printerName);
+                  const badgeBg = assignedPrinter?.badgeColor || '#4b5563';
+                  return (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
+                      style={{ background: badgeBg, color: '#ffffff' }}
+                    >
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
+                      </svg>
+                      {item.printerName}
+                    </span>
+                  );
+                })()}
               </div>
 
               {/* Actions */}
