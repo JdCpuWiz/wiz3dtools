@@ -15,6 +15,7 @@ const SELECT_FIELDS = `
   fj.color_id        as "colorId",
   c.name             as "colorName",
   c.hex              as "colorHex",
+  fj.queue_item_id   as "queueItemId",
   fj.status,
   fj.created_at      as "createdAt",
   fj.resolved_at     as "resolvedAt"
@@ -30,6 +31,7 @@ export interface CreateFilamentJobDto {
   remainEnd?: number | null;
   filamentGrams?: number | null;
   colorId?: number | null;
+  queueItemId?: number | null;
   status?: 'pending' | 'auto_resolved' | 'resolved' | 'skipped';
 }
 
@@ -77,8 +79,8 @@ export class FilamentJobModel {
     const result = await pool.query(
       `INSERT INTO filament_jobs
          (printer_id, job_name, ams_slot_id, ams_color_hex, ams_material,
-          remain_start, remain_end, filament_grams, color_id, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+          remain_start, remain_end, filament_grams, color_id, queue_item_id, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        RETURNING id`,
       [
         data.printerId ?? null,
@@ -90,6 +92,7 @@ export class FilamentJobModel {
         data.remainEnd ?? null,
         data.filamentGrams ?? null,
         data.colorId ?? null,
+        data.queueItemId ?? null,
         data.status ?? 'pending',
       ],
     );

@@ -5,4 +5,3 @@ Begin my reviewing and then interview with questions to plan on how to act on th
 Once an item is completed it can be removed from the list but the file should remain even if it is empty.
 THe items on the list are numbered just for convenience and not order of importance.
 
-3. In-house print job recording — record filament usage without an invoice (for personal/internal prints)

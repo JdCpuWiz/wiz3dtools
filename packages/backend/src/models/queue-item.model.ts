@@ -9,7 +9,7 @@ import { QueueItemColorModel } from './item-color.model.js';
 const SELECT_FIELDS = `
   id, product_name as "productName", sku, details, quantity, position,
   status, invoice_id as "invoiceId", priority, notes, printer_name as "printerName",
-  created_at as "createdAt", updated_at as "updatedAt"
+  is_inhouse as "isInhouse", created_at as "createdAt", updated_at as "updatedAt"
 `;
 
 async function attachColors(rows: QueueItem[]): Promise<QueueItem[]> {
@@ -44,13 +44,13 @@ export class QueueItemModel {
     const query = `
       INSERT INTO queue_items (
         product_name, sku, details, quantity, position, status,
-        invoice_id, priority, notes, printer_name
+        invoice_id, priority, notes, printer_name, is_inhouse
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING
         id, product_name as "productName", sku, details, quantity, position,
         status, invoice_id as "invoiceId", priority, notes, printer_name as "printerName",
-        created_at as "createdAt", updated_at as "updatedAt"
+        is_inhouse as "isInhouse", created_at as "createdAt", updated_at as "updatedAt"
     `;
 
     const values = [
@@ -64,6 +64,7 @@ export class QueueItemModel {
       data.priority || 0,
       data.notes || null,
       data.printerName || null,
+      data.isInhouse ?? false,
     ];
 
     const result = await pool.query(query, values);
@@ -82,13 +83,13 @@ export class QueueItemModel {
         const query = `
           INSERT INTO queue_items (
             product_name, sku, details, quantity, position, status,
-            invoice_id, priority, notes, printer_name
+            invoice_id, priority, notes, printer_name, is_inhouse
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
           RETURNING
             id, product_name as "productName", sku, details, quantity, position,
             status, invoice_id as "invoiceId", priority, notes, printer_name as "printerName",
-            created_at as "createdAt", updated_at as "updatedAt"
+            is_inhouse as "isInhouse", created_at as "createdAt", updated_at as "updatedAt"
         `;
 
         const values = [
@@ -102,6 +103,7 @@ export class QueueItemModel {
           item.priority || 0,
           item.notes || null,
           item.printerName || null,
+          item.isInhouse ?? false,
         ];
 
         const result = await client.query(query, values);
@@ -159,6 +161,10 @@ export class QueueItemModel {
       fields.push(`printer_name = $${paramCount++}`);
       values.push(data.printerName ?? null);
     }
+    if (data.isInhouse !== undefined) {
+      fields.push(`is_inhouse = $${paramCount++}`);
+      values.push(data.isInhouse);
+    }
 
     if (fields.length === 0) {
       return this.findById(id);
@@ -173,12 +179,26 @@ export class QueueItemModel {
       RETURNING
         id, product_name as "productName", sku, details, quantity, position,
         status, invoice_id as "invoiceId", priority, notes, printer_name as "printerName",
-        created_at as "createdAt", updated_at as "updatedAt"
+        is_inhouse as "isInhouse", created_at as "createdAt", updated_at as "updatedAt"
     `;
 
     const result = await pool.query(query, values);
     if (!result.rows[0]) return null;
     const colors = await QueueItemColorModel.findByQueueItem(id);
+    return { ...result.rows[0], colors };
+  }
+
+  /** Find the oldest in-house queue item for a printer with the given status. */
+  static async findInhouseForPrinter(printerName: string, status: string): Promise<QueueItem | null> {
+    const result = await pool.query(
+      `SELECT ${SELECT_FIELDS} FROM queue_items
+       WHERE is_inhouse = true AND printer_name = $1 AND status = $2
+       ORDER BY position ASC, created_at ASC
+       LIMIT 1`,
+      [printerName, status],
+    );
+    if (!result.rows[0]) return null;
+    const colors = await QueueItemColorModel.findByQueueItem(result.rows[0].id);
     return { ...result.rows[0], colors };
   }
 

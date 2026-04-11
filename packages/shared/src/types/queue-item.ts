@@ -14,6 +14,7 @@ export interface QueueItem {
   priority: number;
   notes: string | null;
   printerName: string | null;
+  isInhouse: boolean;
   colors: ItemColor[];
   createdAt: string;
   updatedAt: string;
@@ -30,6 +31,7 @@ export interface CreateQueueItemDto {
   priority?: number;
   notes?: string;
   printerName?: string;
+  isInhouse?: boolean;
 }
 
 export interface UpdateQueueItemDto {
@@ -42,6 +44,7 @@ export interface UpdateQueueItemDto {
   priority?: number;
   notes?: string;
   printerName?: string;
+  isInhouse?: boolean;
 }
 
 export interface ReorderQueueDto {

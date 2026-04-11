@@ -188,6 +188,25 @@ def match_color_by_hex(ams_hex: str | None, colors: list[dict]) -> dict | None:
     return None
 
 
+def inhouse_transition(printer_name: str, event: str) -> int | None:
+    """Advance the oldest in-house queue item for this printer.
+    event='start' → pending→printing; event='finish' → printing→completed.
+    Returns the queue_item_id if a matching item was found, else None.
+    """
+    try:
+        r = httpx.post(
+            f"{WIZ3DTOOLS_URL}/api/queue/inhouse-transition",
+            headers={**_api_headers(), "Content-Type": "application/json"},
+            json={"printerName": printer_name, "event": event},
+            timeout=5,
+        )
+        r.raise_for_status()
+        return r.json().get("queueItemId")
+    except Exception as e:
+        logger.debug(f"inhouse-transition ({event}) for '{printer_name}' failed: {e}")
+        return None
+
+
 def create_filament_job(
     printer_id: int,
     job_name: str | None,
@@ -197,6 +216,7 @@ def create_filament_job(
     color_id: int | None,
     status: str,
     filament_grams: float | None = None,
+    queue_item_id: int | None = None,
 ) -> None:
     slot_id = f"{slot.ams_id}.{slot.tray_id}"
     payload = {
@@ -209,6 +229,7 @@ def create_filament_job(
         "remainEnd": remain_end,
         "filamentGrams": filament_grams,
         "colorId": color_id,
+        "queueItemId": queue_item_id,
         "status": status,
     }
     try:
@@ -224,7 +245,7 @@ def create_filament_job(
         logger.error(f"Failed to create filament job: {e}")
 
 
-def process_print_finish(state: PrinterState, colors: list[dict]) -> None:
+def process_print_finish(state: PrinterState, colors: list[dict], queue_item_id: int | None = None) -> None:
     """On print FINISH: calculate which slots were used, create filament jobs."""
     used_slots = state.get_used_slots()
     if not used_slots:
@@ -249,6 +270,7 @@ def process_print_finish(state: PrinterState, colors: list[dict]) -> None:
                 color_id=matched_color["id"],
                 status="auto_resolved",
                 filament_grams=grams,
+                queue_item_id=queue_item_id,
             )
 
         else:
@@ -262,6 +284,7 @@ def process_print_finish(state: PrinterState, colors: list[dict]) -> None:
                 color_id=None,
                 status="pending",
                 filament_grams=None,
+                queue_item_id=queue_item_id,
             )
             logger.info(
                 f"[{state.printer_name}] No color match for {slot.tray_color} ({slot.tray_type}) "
@@ -448,13 +471,17 @@ class BambuPrinterClient:
         logger.info(f"[{self.state.printer_name}] State: {prev} → {new}")
 
         if new == "RUNNING" and prev in (None, "IDLE", "FINISH", "FAILED"):
-            # Print started — snapshot AMS remain
+            # Print started — snapshot AMS remain + advance any in-house queue item
             self.state.take_ams_snapshot()
             logger.info(f"[{self.state.printer_name}] Print started, AMS snapshot taken.")
+            inhouse_transition(self.state.printer_name, "start")
 
         elif new == "FINISH":
             logger.info(f"[{self.state.printer_name}] Print finished: {self.state.subtask_name}")
-            process_print_finish(self.state, self._colors)
+            queue_item_id = inhouse_transition(self.state.printer_name, "finish")
+            if queue_item_id:
+                logger.info(f"[{self.state.printer_name}] Linked to in-house queue item {queue_item_id}")
+            process_print_finish(self.state, self._colors, queue_item_id=queue_item_id)
 
 
 # ── Monitor Manager ────────────────────────────────────────────────────────────

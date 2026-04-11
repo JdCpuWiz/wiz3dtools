@@ -1,10 +1,34 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { QueueController } from '../controllers/queue.controller.js';
 import { ColorController } from '../controllers/color.controller.js';
+import { QueueItemModel } from '../models/queue-item.model.js';
 
 const router = Router();
 const queueController = new QueueController();
 const colorController = new ColorController();
+
+// Called by Bambu monitor when a print starts or finishes on a printer.
+// Finds the oldest in-house queue item assigned to that printer and advances
+// its status: pending → printing (on start) or printing → completed (on finish).
+// Returns { queueItemId } so the caller can link filament_jobs to it.
+// Service-token only (userId === 0).
+router.post('/inhouse-transition', async (req: Request, res: Response, _next: NextFunction) => {
+  const { printerName, event } = req.body as { printerName?: string; event?: string };
+  if (!printerName || (event !== 'start' && event !== 'finish')) {
+    res.status(400).json({ success: false, error: 'printerName and event (start|finish) required' });
+    return;
+  }
+  const fromStatus = event === 'start' ? 'pending' : 'printing';
+  const toStatus   = event === 'start' ? 'printing' : 'completed';
+
+  const item = await QueueItemModel.findInhouseForPrinter(printerName, fromStatus);
+  if (!item) {
+    res.json({ success: true, queueItemId: null });
+    return;
+  }
+  await QueueItemModel.update(item.id, { status: toStatus as any });
+  res.json({ success: true, queueItemId: item.id });
+});
 
 // Get all queue items
 router.get('/', (req, res, next) => queueController.getAll(req, res, next));

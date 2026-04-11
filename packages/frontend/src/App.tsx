@@ -24,6 +24,7 @@ import { PrinterDashboard } from './components/printers/PrinterDashboard';
 import { useQueue } from './hooks/useQueue';
 import { useProducts } from './hooks/useProducts';
 import { useColors } from './hooks/useColors';
+import { usePrinters } from './hooks/usePrinters';
 import { ColorPicker } from './components/common/ColorPicker';
 import { colorApi } from './services/api';
 import type { ItemColorDto } from '@wizqueue/shared';
@@ -36,12 +37,17 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
   const { create, invalidate } = useQueue();
   const { products } = useProducts(true); // active only
   const { colors: availableColors } = useColors();
+  const { printers } = usePrinters();
   const [productName, setProductName] = useState('');
   const [sku, setSku] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [details, setDetails] = useState('');
   const [notes, setNotes] = useState('');
+  const [printerName, setPrinterName] = useState('');
+  const [isInhouse, setIsInhouse] = useState(false);
   const [draftColors, setDraftColors] = useState<ItemColorDto[]>([]);
+
+  const activePrinters = printers.filter((p) => p.active);
 
   const applyProduct = (productId: number) => {
     const p = products.find((pr) => pr.id === productId);
@@ -54,7 +60,15 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
   const handleSubmit = async () => {
     if (!productName.trim()) return;
     create(
-      { productName, sku: sku || undefined, quantity, details: details || undefined, notes: notes || undefined },
+      {
+        productName,
+        sku: sku || undefined,
+        quantity,
+        details: details || undefined,
+        notes: notes || undefined,
+        printerName: printerName || undefined,
+        isInhouse,
+      },
       {
         onSuccess: async (newItem) => {
           if (draftColors.length > 0) {
@@ -77,6 +91,26 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
         <button onClick={onClose} className="text-iron-500 hover:text-iron-300 text-lg leading-none">×</button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* In-house toggle */}
+        <div className="sm:col-span-2">
+          <button
+            type="button"
+            onClick={() => setIsInhouse((v) => !v)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={isInhouse
+              ? { background: '#1d4ed8', color: '#ffffff' }
+              : { background: '#2d2d2d', color: '#9ca3af' }}
+          >
+            <span style={{ fontSize: 16 }}>{isInhouse ? '✓' : '○'}</span>
+            In-house / Personal Print
+          </button>
+          {isInhouse && (
+            <p className="text-xs text-iron-500 mt-1">
+              Filament will be tracked automatically when the print finishes on the Bambu printer.
+            </p>
+          )}
+        </div>
+
         {products.length > 0 && (
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-iron-100 mb-1">Pick from Product Catalog</label>
@@ -94,7 +128,7 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
           </div>
         )}
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-iron-100 mb-1">Product Name *</label>
+          <label className="block text-sm font-medium text-iron-100 mb-1">Print Name *</label>
           <input value={productName} onChange={(e) => setProductName(e.target.value)} className={cellInput} style={inputSt} placeholder="e.g. Benchy, Phone Stand" autoFocus={products.length === 0} />
           {sku && <span className="block font-mono text-xs text-iron-500 mt-1">{sku}</span>}
         </div>
@@ -106,6 +140,27 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
           <label className="block text-sm font-medium text-iron-100 mb-1">Details</label>
           <input value={details} onChange={(e) => setDetails(e.target.value)} className={cellInput} style={inputSt} placeholder="Color, size, material…" />
         </div>
+        {activePrinters.length > 0 && (
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-iron-100 mb-1">
+              Printer {isInhouse && <span style={{ color: '#ff9900' }}>*</span>}
+            </label>
+            <select
+              className={cellInput}
+              style={selectSt}
+              value={printerName}
+              onChange={(e) => setPrinterName(e.target.value)}
+            >
+              <option value="">— unassigned —</option>
+              {activePrinters.map((p) => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+            {isInhouse && !printerName && (
+              <p className="text-xs mt-1" style={{ color: '#eab308' }}>Select a printer so filament can auto-track when the job finishes.</p>
+            )}
+          </div>
+        )}
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-iron-100 mb-1">Notes</label>
           <input value={notes} onChange={(e) => setNotes(e.target.value)} className={cellInput} style={inputSt} placeholder="Additional instructions…" />

@@ -54,8 +54,9 @@ export class QueueService {
   async updateItemStatus(id: number, status: string): Promise<QueueItem> {
     const item = await this.updateItem(id, { status: status as any });
 
-    // When an item is completed, deduct filament from inventory
-    if (status === 'completed') {
+    // When an item is completed, deduct filament from inventory.
+    // Skip for in-house prints — the Bambu monitor already deducted via filament_jobs.
+    if (status === 'completed' && !item.isInhouse) {
       try {
         const colors = await QueueItemColorModel.findByQueueItem(id);
         for (const c of colors) {

@@ -25,6 +25,7 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
   const { colors: availableColors } = useColors();
   const { printers } = usePrinters();
   const [draftColors, setDraftColors] = useState<ItemColorDto[]>([]);
+  const [isInhouse, setIsInhouse] = useState(item.isInhouse ?? false);
 
   const {
     register,
@@ -42,6 +43,7 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
       notes: item.notes || '',
       printerName: item.printerName || '',
     });
+    setIsInhouse(item.isInhouse ?? false);
     setDraftColors(
       (item.colors || []).map((c) => ({
         colorId: c.colorId,
@@ -54,7 +56,7 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
   }, [item.id]);
 
   const onSubmit = async (data: UpdateQueueItemDto) => {
-    await updateAsync({ id: item.id, data });
+    await updateAsync({ id: item.id, data: { ...data, isInhouse } });
     await colorApi.setQueueItemColors(item.id, draftColors);
     invalidate();
     onClose();
@@ -65,6 +67,26 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Queue Item">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* In-house toggle */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setIsInhouse((v) => !v)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={isInhouse
+              ? { background: '#1d4ed8', color: '#ffffff' }
+              : { background: '#2d2d2d', color: '#9ca3af' }}
+          >
+            <span style={{ fontSize: 16 }}>{isInhouse ? '✓' : '○'}</span>
+            In-house / Personal Print
+          </button>
+          {isInhouse && (
+            <p className="text-xs text-iron-500 mt-1">
+              Filament tracked automatically via Bambu monitor when the job finishes.
+            </p>
+          )}
+        </div>
+
         <Input
           label="Product Name"
           {...register('productName', { required: 'Product name is required' })}

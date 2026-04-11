@@ -421,6 +421,14 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                     Priority: {item.priority}
                   </span>
                 )}
+                {item.isInhouse && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
+                    style={{ background: '#1d4ed8', color: '#ffffff' }}
+                  >
+                    In-house
+                  </span>
+                )}
                 {item.printerName && (
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
