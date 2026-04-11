@@ -87,23 +87,35 @@ class PrinterState:
 
     def take_ams_snapshot(self):
         with self._lock:
+            # Include -1 (unknown remain) slots so we can detect them at print finish
             self._ams_snapshot = {
                 self.snapshot_key(s.ams_id, s.tray_id): s.remain
                 for s in self.ams_slots
                 if s.remain is not None
             }
 
-    def get_used_slots(self) -> list[tuple[AmsSlotState, float, float]]:
-        """Return slots where remain dropped by more than threshold. (slot, start%, end%)"""
+    def get_used_slots(self) -> list[tuple[AmsSlotState, float | None, float | None, bool]]:
+        """Return slots that were likely used during the print.
+
+        Returns list of (slot, start%, end%, unknown_remain) where:
+        - Normal slots: start/end are real percentages, delta >= threshold
+        - Unknown-remain slots: start == end == -1; unknown_remain=True
+          These are always included as a safeguard — filament was loaded but
+          the AMS cannot track quantity (no RFID weight data or uncalibrated).
+        """
         used = []
         for slot in self.ams_slots:
             key = self.snapshot_key(slot.ams_id, slot.tray_id)
             start = self._ams_snapshot.get(key)
             end = slot.remain
-            if start is not None and end is not None:
-                delta = start - end
-                if delta >= REMAIN_DELTA_THRESHOLD:
-                    used.append((slot, start, end))
+            if start is None or end is None:
+                continue
+            if start == -1 and end == -1:
+                # Slot was present at both snapshot and finish with unknown remain —
+                # include it so a pending job is always created for manual attribution
+                used.append((slot, None, None, True))
+            elif start >= 0 and end >= 0 and (start - end) >= REMAIN_DELTA_THRESHOLD:
+                used.append((slot, start, end, False))
         return used
 
     def to_dict(self) -> dict:
@@ -252,10 +264,29 @@ def process_print_finish(state: PrinterState, colors: list[dict], queue_item_id:
         logger.info(f"[{state.printer_name}] Print finished but no significant filament change detected.")
         return
 
-    for slot, remain_start, remain_end in used_slots:
+    for slot, remain_start, remain_end, unknown_remain in used_slots:
         matched_color = match_color_by_hex(slot.tray_color, colors)
 
-        if matched_color:
+        if unknown_remain:
+            # AMS reported -1 for this slot throughout — quantity untrackable.
+            # Always create a pending job so the user can manually attribute it.
+            logger.info(
+                f"[{state.printer_name}] Slot {slot.ams_id}.{slot.tray_id} has unknown remain "
+                f"({slot.tray_color} {slot.tray_type}) — creating pending job for manual attribution."
+            )
+            create_filament_job(
+                printer_id=state.printer_id,
+                job_name=state.subtask_name,
+                slot=slot,
+                remain_start=None,
+                remain_end=None,
+                color_id=matched_color["id"] if matched_color else None,
+                status="pending",
+                filament_grams=None,
+                queue_item_id=queue_item_id,
+            )
+
+        elif matched_color:
             # Auto-resolve: POST job with status=auto_resolved — backend deducts inventory automatically
             mfg = matched_color.get("manufacturer") or {}
             full_net = float(mfg.get("fullSpoolNetWeightG") or 1000)
@@ -274,7 +305,7 @@ def process_print_finish(state: PrinterState, colors: list[dict], queue_item_id:
             )
 
         else:
-            # No match — create pending job for manual attribution
+            # No color match — create pending job for manual attribution
             create_filament_job(
                 printer_id=state.printer_id,
                 job_name=state.subtask_name,
