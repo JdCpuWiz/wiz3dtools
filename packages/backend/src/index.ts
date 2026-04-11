@@ -83,6 +83,8 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many requests, please try again later' },
+  // Camera frame polling is high-frequency and already authenticated — exempt it
+  skip: (req) => req.path === '/bambu/camera/frame',
 });
 
 const loginLimiter = rateLimit({

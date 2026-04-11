@@ -34,7 +34,7 @@ function CameraFeed({ serial }: { serial: string }) {
     }
 
     fetchFrame();
-    const interval = setInterval(fetchFrame, 500);
+    const interval = setInterval(fetchFrame, 2000);
 
     return () => {
       active = false;
