@@ -47,6 +47,7 @@ export interface FilamentJob {
   colorId: number | null;
   colorName: string | null;
   colorHex: string | null;
+  queueItemId: number | null;
   status: 'pending' | 'auto_resolved' | 'resolved' | 'skipped';
   createdAt: string;
   resolvedAt: string | null;

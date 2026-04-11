@@ -69,6 +69,26 @@ export class FilamentJobController {
     } catch (error) { next(error); }
   }
 
+  async getLastByPrinter(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const { printerName } = req.query;
+      if (!printerName || typeof printerName !== 'string') {
+        res.status(400).json({ success: false, error: 'printerName is required' }); return;
+      }
+      const jobs = await FilamentJobModel.findLastByPrinter(printerName);
+      res.json({ success: true, data: jobs });
+    } catch (error) { next(error); }
+  }
+
+  async getByQueueItem(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const queueItemId = parseInt(req.params.queueItemId);
+      if (isNaN(queueItemId)) { res.status(400).json({ success: false, error: 'Invalid queueItemId' }); return; }
+      const jobs = await FilamentJobModel.findByQueueItem(queueItemId);
+      res.json({ success: true, data: jobs });
+    } catch (error) { next(error); }
+  }
+
   async skip(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const id = parseInt(req.params.id);

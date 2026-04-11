@@ -421,6 +421,20 @@ export const filamentJobApi = {
     };
   },
 
+  getLastByPrinter: async (printerName: string): Promise<FilamentJob[]> => {
+    const response = await api.get<ApiResponse<FilamentJob[]>>(
+      `/filament-jobs/last-print?printerName=${encodeURIComponent(printerName)}`,
+    );
+    return response.data.data ?? [];
+  },
+
+  getByQueueItem: async (queueItemId: number): Promise<FilamentJob[]> => {
+    const response = await api.get<ApiResponse<FilamentJob[]>>(
+      `/filament-jobs/by-queue-item/${queueItemId}`,
+    );
+    return response.data.data ?? [];
+  },
+
   resolve: async (id: number, colorId: number): Promise<FilamentJob> => {
     const response = await api.put<ApiResponse<FilamentJob>>(`/filament-jobs/${id}/resolve`, { colorId });
     if (!response.data.data) throw new Error('Failed to resolve job');

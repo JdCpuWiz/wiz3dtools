@@ -99,6 +99,46 @@ export class FilamentJobModel {
     return this.findById(result.rows[0].id) as Promise<FilamentJob>;
   }
 
+  // Returns all filament_job rows that belong to the most recently completed
+  // job for a given printer (matched by job_name).
+  static async findLastByPrinter(printerName: string): Promise<FilamentJob[]> {
+    const result = await pool.query(
+      `SELECT ${SELECT_FIELDS}
+       FROM filament_jobs fj
+       LEFT JOIN printers p ON p.id = fj.printer_id
+       LEFT JOIN colors c   ON c.id = fj.color_id
+       WHERE p.name = $1
+         AND fj.status IN ('auto_resolved', 'resolved', 'skipped')
+         AND fj.job_name IS NOT NULL
+         AND fj.job_name = (
+           SELECT fj2.job_name FROM filament_jobs fj2
+           LEFT JOIN printers p2 ON p2.id = fj2.printer_id
+           WHERE p2.name = $1
+             AND fj2.status IN ('auto_resolved', 'resolved', 'skipped')
+             AND fj2.job_name IS NOT NULL
+           ORDER BY fj2.created_at DESC LIMIT 1
+         )
+       ORDER BY fj.created_at DESC`,
+      [printerName],
+    );
+    return result.rows;
+  }
+
+  // Returns all filament_job rows linked to a specific queue item.
+  static async findByQueueItem(queueItemId: number): Promise<FilamentJob[]> {
+    const result = await pool.query(
+      `SELECT ${SELECT_FIELDS}
+       FROM filament_jobs fj
+       LEFT JOIN printers p ON p.id = fj.printer_id
+       LEFT JOIN colors c   ON c.id = fj.color_id
+       WHERE fj.queue_item_id = $1
+         AND fj.status IN ('auto_resolved', 'resolved', 'skipped')
+       ORDER BY fj.created_at ASC`,
+      [queueItemId],
+    );
+    return result.rows;
+  }
+
   static async resolve(id: number, colorId: number, filamentGrams: number): Promise<FilamentJob | null> {
     const result = await pool.query(
       `UPDATE filament_jobs

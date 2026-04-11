@@ -33,3 +33,25 @@ export function useFilamentJobs(status?: string) {
     isSkipping: skipMutation.isPending,
   };
 }
+
+// Last completed print job for a specific printer — used on the Printer Dashboard card.
+export function useLastPrinterJob(printerName: string) {
+  const { data } = useQuery({
+    queryKey: [...QUERY_KEY, 'last-print', printerName],
+    queryFn: () => filamentJobApi.getLastByPrinter(printerName),
+    refetchInterval: 30_000,
+    enabled: !!printerName,
+  });
+  return data ?? [];
+}
+
+// Filament jobs linked to a specific queue item — used on completed queue items.
+export function useQueueItemFilament(queueItemId: number | undefined) {
+  const { data } = useQuery({
+    queryKey: [...QUERY_KEY, 'queue-item', queueItemId],
+    queryFn: () => filamentJobApi.getByQueueItem(queueItemId!),
+    enabled: !!queueItemId,
+    staleTime: 60_000,
+  });
+  return data ?? [];
+}
