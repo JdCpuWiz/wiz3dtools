@@ -4,5 +4,3 @@ This is claude code's to do list to read when a session starts.  Wiz will add th
 Begin my reviewing and then interview with questions to plan on how to act on these items.
 Once an item is completed it can be removed from the list but the file should remain even if it is empty.
 THe items on the list are numbered just for convenience and not order of importance.
-
-1. i want to be able to record a print job's filament usage without having to create an invoice, for those projects that are in house only
