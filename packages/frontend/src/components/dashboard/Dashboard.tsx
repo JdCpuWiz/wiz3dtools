@@ -4,7 +4,9 @@ import { useQueue } from '../../hooks/useQueue';
 import { useSalesInvoices } from '../../hooks/useSalesInvoices';
 import { useProducts } from '../../hooks/useProducts';
 import { useColors } from '../../hooks/useColors';
-import type { SalesInvoice, Color } from '@wizqueue/shared';
+import { usePrinters } from '../../hooks/usePrinters';
+import { usePrinterDashboard, formatTimeRemaining, getPrinterStatusStyle } from '../../hooks/usePrinterDashboard';
+import type { SalesInvoice, Color, Printer, PrinterLiveStatus } from '@wizqueue/shared';
 
 interface StatCardProps {
   title: string;
@@ -121,6 +123,72 @@ function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColor
   );
 }
 
+function PrinterSummaryCard({ printer, status }: { printer: Printer; status: PrinterLiveStatus | null }) {
+  const hasBambuConfig = !!(printer.ipAddress && printer.serialNumber);
+  const style = status
+    ? getPrinterStatusStyle(status)
+    : !hasBambuConfig
+      ? { label: 'No Config', bg: '#4b5563', text: '#ffffff' }
+      : { label: 'Connecting…', bg: '#6b7280', text: '#ffffff' };
+
+  const isRunning = status?.gcodeState === 'RUNNING';
+  const isPaused  = status?.gcodeState === 'PAUSE';
+
+  return (
+    <div className="card flex flex-col gap-2" style={{ minWidth: 0 }}>
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold text-iron-50 truncate">{printer.name}</span>
+        <span
+          className="px-2 py-0.5 rounded text-xs font-semibold shrink-0"
+          style={{ background: style.bg, color: style.text }}
+        >
+          {style.label}
+        </span>
+      </div>
+
+      {/* Job progress */}
+      {status?.connected && (isRunning || isPaused) ? (
+        <>
+          {status.subtaskName && (
+            <p className="text-xs text-iron-400 truncate">{status.subtaskName}</p>
+          )}
+          <div className="w-full rounded-full h-1.5" style={{ background: '#2d2d2d' }}>
+            <div
+              className="h-1.5 rounded-full transition-all"
+              style={{
+                width: `${status.mcPercent ?? 0}%`,
+                background: isRunning ? '#ff9900' : '#eab308',
+              }}
+            />
+          </div>
+          <div className="flex justify-between text-xs text-iron-500">
+            <span>{status.mcPercent !== null ? `${status.mcPercent}%` : '—'}</span>
+            <span>⏱ {formatTimeRemaining(status.mcRemainingTime)}</span>
+          </div>
+          {/* Temps */}
+          <div className="flex gap-3 text-xs text-iron-400 pt-0.5">
+            {status.nozzleTemper !== null && (
+              <span>🔥 {status.nozzleTemper.toFixed(0)}°C</span>
+            )}
+            {status.bedTemper !== null && (
+              <span>⬛ {status.bedTemper.toFixed(0)}°C</span>
+            )}
+          </div>
+        </>
+      ) : status?.connected ? (
+        <p className="text-xs text-iron-600">
+          {status.nozzleTemper !== null ? `Nozzle ${status.nozzleTemper.toFixed(0)}°C` : 'Idle'}
+        </p>
+      ) : (
+        <p className="text-xs text-iron-600">
+          {!hasBambuConfig ? 'Configure in Admin → Printers' : 'Waiting for MQTT…'}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -138,6 +206,8 @@ export const Dashboard: React.FC = () => {
   const { invoices, isLoading: invoicesLoading } = useSalesInvoices();
   const { products, isLoading: productsLoading } = useProducts();
   const { colors, isLoading: colorsLoading } = useColors();
+  const { printers } = usePrinters();
+  const { liveStatuses } = usePrinterDashboard();
 
   const pending = queueItems.filter((i) => i.status === 'pending').length;
   const printing = queueItems.filter((i) => i.status === 'printing').length;
@@ -179,6 +249,9 @@ export const Dashboard: React.FC = () => {
   const activeProducts = products.filter((p) => p.active).length;
   const recentInvoices = invoices.slice(0, 5);
   const isLoading = queueLoading || invoicesLoading || productsLoading || colorsLoading;
+
+  const activePrinters = printers.filter((p) => p.active);
+  const statusById = Object.fromEntries(liveStatuses.map((s) => [s.printerId, s]));
 
   if (isLoading) {
     return (
@@ -269,6 +342,25 @@ export const Dashboard: React.FC = () => {
           )}
         </StatCard>
       </div>
+
+      {/* Printers */}
+      {activePrinters.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-widest">Printers</h2>
+            <Link to="/printers" className="text-xs text-[#ff9900] hover:text-[#e68a00]">View all →</Link>
+          </div>
+          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+            {activePrinters.map((printer) => (
+              <PrinterSummaryCard
+                key={printer.id}
+                printer={printer}
+                status={statusById[printer.id] ?? null}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Invoices */}
       {recentInvoices.length > 0 && (
