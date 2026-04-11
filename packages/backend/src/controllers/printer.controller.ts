@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { PrinterModel } from '../models/printer.model.js';
+import { notifyBambuMonitorReload } from '../routes/bambu.routes.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
 export class PrinterController {
@@ -33,6 +34,7 @@ export class PrinterController {
         serialNumber: serialNumber || undefined,
         accessCode: accessCode || undefined,
       });
+      notifyBambuMonitorReload();
       res.status(201).json({ success: true, data: printer });
     } catch (error) { next(error); }
   }
@@ -43,6 +45,7 @@ export class PrinterController {
       if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
       const printer = await PrinterModel.update(id, req.body);
       if (!printer) { res.status(404).json({ success: false, error: 'Printer not found' }); return; }
+      notifyBambuMonitorReload();
       res.json({ success: true, data: printer });
     } catch (error) { next(error); }
   }
@@ -53,6 +56,7 @@ export class PrinterController {
       if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
       const deleted = await PrinterModel.delete(id);
       if (!deleted) { res.status(404).json({ success: false, error: 'Printer not found' }); return; }
+      notifyBambuMonitorReload();
       res.json({ success: true, message: 'Printer deleted' });
     } catch (error) { next(error); }
   }

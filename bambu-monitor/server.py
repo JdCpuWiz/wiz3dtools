@@ -274,15 +274,10 @@ class BambuPrinterClient:
         self.state = state
         self._colors: list[dict] = []
         self._client: mqtt.Client | None = None
-        self._reconnect_thread: threading.Thread | None = None
         self._stop = False
-        self._reconnect_delay = 5  # seconds; doubles on each failure up to _RECONNECT_MAX
-
-    _RECONNECT_MAX = 120  # seconds
 
     def start(self):
         self._stop = False
-        self._reconnect_delay = 5
         self._connect()
 
     def stop(self):
@@ -310,8 +305,8 @@ class BambuPrinterClient:
         if self._stop:
             return
 
-        # Always clean up any previous client before creating a new one.
-        # Without this, stale loop_start() threads accumulate on every reconnect.
+        # Always clean up any previous client before creating a new one so
+        # stale loop_start() threads don't accumulate.
         self._cleanup_client()
 
         client = mqtt.Client(client_id="", clean_session=True, protocol=mqtt.MQTTv311)
@@ -321,6 +316,11 @@ class BambuPrinterClient:
         tls_ctx.check_hostname = False
         tls_ctx.verify_mode = ssl.CERT_NONE
         client.tls_set_context(tls_ctx)
+
+        # Delegate all reconnect logic to paho's built-in loop_start() mechanism.
+        # min_delay=5 so the first retry waits 5s; doubles each attempt up to 120s.
+        # This avoids fighting with our own manual reconnect thread.
+        client.reconnect_delay_set(min_delay=5, max_delay=120)
 
         client.on_connect    = self._on_connect
         client.on_disconnect = self._on_disconnect
@@ -333,47 +333,29 @@ class BambuPrinterClient:
             client.loop_start()
             logger.info(f"[{self.state.printer_name}] Connecting to {self.state.ip}:{BAMBU_MQTT_PORT}")
         except Exception as e:
+            # connect() itself threw (e.g. DNS failure, network unreachable).
+            # loop hasn't started yet so paho can't retry — schedule manually.
             logger.error(f"[{self.state.printer_name}] Connection failed: {e}")
-            self._schedule_reconnect()
-
-    def _schedule_reconnect(self):
-        if self._stop:
-            return
-        # Don't stack reconnect threads — if one is already waiting, let it run
-        if self._reconnect_thread and self._reconnect_thread.is_alive():
-            return
-        delay = self._reconnect_delay
-        self._reconnect_delay = min(self._reconnect_delay * 2, self._RECONNECT_MAX)
-        logger.info(f"[{self.state.printer_name}] Reconnecting in {delay}s (next: {self._reconnect_delay}s)...")
-
-        def _reconnect():
-            time.sleep(delay)
             if not self._stop:
-                self._connect()
-
-        t = threading.Thread(target=_reconnect, daemon=True, name=f"reconnect-{self.state.serial}")
-        self._reconnect_thread = t
-        t.start()
+                t = threading.Timer(10, self._connect)
+                t.daemon = True
+                t.start()
 
     def _on_connect(self, client, userdata, flags, rc):
         if rc == 0:
-            self._reconnect_delay = 5  # reset backoff on successful connect
             self.state.connected = True
             topic = f"device/{self.state.serial}/report"
             client.subscribe(topic)
             logger.info(f"[{self.state.printer_name}] Connected, subscribed to {topic}")
         else:
-            logger.error(f"[{self.state.printer_name}] MQTT connect failed rc={rc}")
-            self._schedule_reconnect()
+            logger.error(f"[{self.state.printer_name}] MQTT connect failed rc={rc} — paho will retry")
 
     def _on_disconnect(self, client, userdata, rc):
         self.state.connected = False
         if rc == 0:
             logger.info(f"[{self.state.printer_name}] Disconnected cleanly")
         else:
-            logger.warning(f"[{self.state.printer_name}] Disconnected unexpectedly rc={rc}")
-        if not self._stop:
-            self._schedule_reconnect()
+            logger.warning(f"[{self.state.printer_name}] Disconnected unexpectedly rc={rc} — paho will reconnect")
 
     def _on_message(self, client, userdata, msg):
         try:
@@ -515,6 +497,15 @@ def health():
     connected = sum(1 for s in monitor.states.values() if s.connected)
     total     = len(monitor.states)
     return jsonify({"status": "ok", "connected": connected, "total": total})
+
+
+@app.route("/reload", methods=["POST"])
+def reload():
+    """Immediately reload printer configs — called by wiz3dtools after any printer add/update/delete."""
+    logger.info("Config reload triggered via API")
+    monitor.load_and_sync()
+    connected = sum(1 for s in monitor.states.values() if s.connected)
+    return jsonify({"status": "ok", "printers": len(monitor.states), "connected": connected})
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────

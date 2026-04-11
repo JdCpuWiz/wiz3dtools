@@ -5,6 +5,18 @@ const router = Router();
 
 const BAMBU_MONITOR_URL = process.env.BAMBU_MONITOR_URL || 'http://bambu-monitor:8015';
 
+/**
+ * Fire-and-forget POST to bambu-monitor /reload.
+ * Called after any printer create/update/delete so the monitor picks up changes
+ * immediately instead of waiting for the periodic config reload.
+ */
+export function notifyBambuMonitorReload(): void {
+  const url = new URL('/reload', BAMBU_MONITOR_URL);
+  const req = http.request({ hostname: url.hostname, port: url.port || 80, path: url.pathname, method: 'POST' });
+  req.on('error', () => { /* non-fatal — monitor will catch up on next poll */ });
+  req.end();
+}
+
 // Proxy live printer status from bambu-monitor service
 router.get('/live', async (_req: Request, res: Response, _next: NextFunction) => {
   try {
