@@ -283,52 +283,66 @@ def get_camera_jpeg(ip: str, access_code: str, timeout: float = 5.0) -> bytes | 
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
+        ctx.set_ciphers('ALL:@SECLEVEL=0')
 
-        with socket.create_connection((ip, BAMBU_CAMERA_PORT), timeout=timeout) as raw:
-            ssl_sock = ctx.wrap_socket(raw)
-            ssl_sock.settimeout(timeout)
+        logger.info(f"Camera {ip}: opening TCP connection to port {BAMBU_CAMERA_PORT}...")
+        raw = socket.create_connection((ip, BAMBU_CAMERA_PORT), timeout=timeout)
+        raw.settimeout(timeout)  # must be set before wrap_socket for TLS handshake timeout
+        logger.info(f"Camera {ip}: TCP connected, starting TLS handshake...")
+        ssl_sock = ctx.wrap_socket(raw)
+        ssl_sock.settimeout(timeout)
+        logger.info(f"Camera {ip}: TLS OK, cipher={ssl_sock.cipher()}, sending auth...")
 
-            # 80-byte auth packet:
-            #   bytes  0-3  : 0x40 0x00 0x00 0x00
-            #   bytes  4-7  : 0x03 0x00 0x00 0x00
-            #   bytes  8-15 : padding (zeros)
-            #   bytes 16-47 : username "bblp", null-padded to 32 bytes
-            #   bytes 48-79 : access_code, null-padded to 32 bytes
-            auth = bytearray(80)
-            auth[0:4] = b'\x40\x00\x00\x00'
-            auth[4:8] = b'\x03\x00\x00\x00'
-            username = b'bblp'
-            auth[16:16 + len(username)] = username
-            code_bytes = access_code.encode()[:32]
-            auth[48:48 + len(code_bytes)] = code_bytes
-            ssl_sock.sendall(bytes(auth))
+        # 80-byte auth packet:
+        #   bytes  0-3  : 0x40 0x00 0x00 0x00
+        #   bytes  4-7  : 0x03 0x00 0x00 0x00
+        #   bytes  8-15 : padding (zeros)
+        #   bytes 16-47 : username "bblp", null-padded to 32 bytes
+        #   bytes 48-79 : access_code, null-padded to 32 bytes
+        auth = bytearray(80)
+        auth[0:4] = b'\x40\x00\x00\x00'
+        auth[4:8] = b'\x03\x00\x00\x00'
+        username = b'bblp'
+        auth[16:16 + len(username)] = username
+        code_bytes = access_code.encode()[:32]
+        auth[48:48 + len(code_bytes)] = code_bytes
+        ssl_sock.sendall(bytes(auth))
+        logger.info(f"Camera {ip}: auth sent, reading stream...")
 
-            # Read the stream until we have one complete JPEG (FF D8 … FF D9)
-            buf       = bytearray()
-            start_idx = -1
-            deadline  = time.monotonic() + timeout
+        # Read the stream until we have one complete JPEG (FF D8 … FF D9)
+        buf       = bytearray()
+        start_idx = -1
+        deadline  = time.monotonic() + timeout
 
-            while time.monotonic() < deadline:
-                try:
-                    chunk = ssl_sock.recv(8192)
-                except ssl.SSLError:
-                    break
-                if not chunk:
-                    break
-                buf.extend(chunk)
+        while time.monotonic() < deadline:
+            try:
+                chunk = ssl_sock.recv(8192)
+            except (ssl.SSLError, OSError, socket.timeout) as e:
+                logger.info(f"Camera {ip}: recv error after {len(buf)} bytes — {e}")
+                break
+            if not chunk:
+                logger.info(f"Camera {ip}: connection closed by printer after {len(buf)} bytes")
+                break
+            buf.extend(chunk)
+            logger.debug(f"Camera {ip}: {len(buf)} bytes, first 8: {bytes(buf[:8]).hex()}")
 
-                if start_idx == -1:
-                    idx = bytes(buf).find(b'\xff\xd8\xff')
-                    if idx >= 0:
-                        start_idx = idx
+            if start_idx == -1:
+                idx = bytes(buf).find(b'\xff\xd8\xff')
+                if idx >= 0:
+                    start_idx = idx
+                    logger.info(f"Camera {ip}: JPEG start found at offset {idx}")
 
-                if start_idx >= 0:
-                    end_idx = bytes(buf).find(b'\xff\xd9', start_idx + 2)
-                    if end_idx >= 0:
-                        return bytes(buf[start_idx:end_idx + 2])
+            if start_idx >= 0:
+                end_idx = bytes(buf).find(b'\xff\xd9', start_idx + 2)
+                if end_idx >= 0:
+                    frame = bytes(buf[start_idx:end_idx + 2])
+                    logger.info(f"Camera {ip}: JPEG frame complete, {len(frame)} bytes")
+                    return frame
+
+        logger.info(f"Camera {ip}: timeout — {len(buf)} bytes received, start_idx={start_idx}")
 
     except Exception as e:
-        logger.debug(f"Camera frame error for {ip}: {e}")
+        logger.warning(f"Camera {ip}: error — {type(e).__name__}: {e}")
     return None
 
 
