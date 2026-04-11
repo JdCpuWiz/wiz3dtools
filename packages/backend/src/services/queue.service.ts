@@ -52,11 +52,19 @@ export class QueueService {
   }
 
   async updateItemStatus(id: number, status: string): Promise<QueueItem> {
+    // Check current status before updating so we can detect a real transition.
+    // If the item is already completed (e.g. Bambu monitor already finished it),
+    // skip inventory deduction to prevent double-counting.
+    const existing = await QueueItemModel.findById(id);
+    const wasAlreadyCompleted = existing?.status === 'completed';
+
     const item = await this.updateItem(id, { status: status as any });
 
     // When an item is completed, deduct filament from inventory.
     // Skip for in-house prints — the Bambu monitor already deducted via filament_jobs.
-    if (status === 'completed' && !item.isInhouse) {
+    // Also skip if the item was already completed — avoids double-deduction when Bambu
+    // auto-transitioned it and the user clicks complete manually afterwards.
+    if (status === 'completed' && !item.isInhouse && !wasAlreadyCompleted) {
       try {
         const colors = await QueueItemColorModel.findByQueueItem(id);
         for (const c of colors) {

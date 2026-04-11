@@ -21,7 +21,7 @@ router.post('/inhouse-transition', async (req: Request, res: Response, _next: Ne
   const fromStatus = event === 'start' ? 'pending' : 'printing';
   const toStatus   = event === 'start' ? 'printing' : 'completed';
 
-  const item = await QueueItemModel.findInhouseForPrinter(printerName, fromStatus);
+  const item = await QueueItemModel.findForPrinter(printerName, fromStatus);
   if (!item) {
     res.json({ success: true, queueItemId: null });
     return;

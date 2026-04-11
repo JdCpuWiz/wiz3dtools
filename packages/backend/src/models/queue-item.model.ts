@@ -186,11 +186,11 @@ export class QueueItemModel {
     return { ...result.rows[0], colors };
   }
 
-  /** Find the oldest in-house queue item for a printer with the given status. */
-  static async findInhouseForPrinter(printerName: string, status: string): Promise<QueueItem | null> {
+  /** Find the oldest queue item for a printer with the given status (any item, not just in-house). */
+  static async findForPrinter(printerName: string, status: string): Promise<QueueItem | null> {
     const result = await pool.query(
       `SELECT ${SELECT_FIELDS} FROM queue_items
-       WHERE is_inhouse = true AND printer_name = $1 AND status = $2
+       WHERE printer_name = $1 AND status = $2
        ORDER BY position ASC, created_at ASC
        LIMIT 1`,
       [printerName, status],

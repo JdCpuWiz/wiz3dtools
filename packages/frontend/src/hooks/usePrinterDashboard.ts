@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { PrinterLiveStatus } from '@wizqueue/shared';
 
 export function usePrinterDashboard() {
   const [liveStatuses, setLiveStatuses] = useState<PrinterLiveStatus[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track previous gcode state per printer so we can detect transitions
+  const prevStates = useRef<Record<number, string | null>>({});
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     let active = true;
@@ -37,8 +41,31 @@ export function usePrinterDashboard() {
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
             try {
-              const parsed = JSON.parse(line.slice(6));
+              const parsed: PrinterLiveStatus[] = JSON.parse(line.slice(6));
               setLiveStatuses(parsed);
+
+              // Detect state transitions that affect queue item statuses.
+              // The backend (bambu-monitor) has already called inhouse-transition
+              // before broadcasting the SSE event, so the DB is already updated.
+              let queueInvalidated = false;
+              for (const printer of parsed) {
+                const prev = prevStates.current[printer.printerId] ?? null;
+                const curr = printer.gcodeState ?? null;
+                if (curr !== prev) {
+                  // RUNNING: pending → printing transition may have happened
+                  // FINISH/FAILED/IDLE after RUNNING: printing → completed may have happened
+                  if (
+                    curr === 'RUNNING' ||
+                    (prev === 'RUNNING' && (curr === 'FINISH' || curr === 'FAILED' || curr === 'IDLE'))
+                  ) {
+                    if (!queueInvalidated) {
+                      queryClient.invalidateQueries({ queryKey: ['queue'] });
+                      queueInvalidated = true;
+                    }
+                  }
+                  prevStates.current[printer.printerId] = curr;
+                }
+              }
             } catch {
               // ignore malformed event
             }
@@ -60,7 +87,7 @@ export function usePrinterDashboard() {
       controller.abort();
       if (retryTimer.current) clearTimeout(retryTimer.current);
     };
-  }, []);
+  }, [queryClient]);
 
   return { liveStatuses, error };
 }
