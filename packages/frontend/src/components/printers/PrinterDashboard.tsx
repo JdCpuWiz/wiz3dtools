@@ -3,7 +3,8 @@ import { usePrinterDashboard, formatTimeRemaining, getPrinterStatusStyle } from 
 import { useFilamentJobs } from '../../hooks/useFilamentJobs';
 import { usePrinters } from '../../hooks/usePrinters';
 import { useColors } from '../../hooks/useColors';
-import type { PrinterLiveStatus, FilamentJob, Printer } from '@wizqueue/shared';
+import { useQueue } from '../../hooks/useQueue';
+import type { PrinterLiveStatus, FilamentJob, Printer, QueueItem } from '@wizqueue/shared';
 
 // ── Printer Card ───────────────────────────────────────────────────────────────
 
@@ -119,6 +120,63 @@ function StatPill({ label, value }: { label: string; value: string }) {
     <div className="card-surface rounded p-2 flex flex-col items-center">
       <span className="text-xs text-iron-500">{label}</span>
       <span className="text-sm font-semibold text-iron-100 mt-0.5">{value}</span>
+    </div>
+  );
+}
+
+// ── Printer Queue Card ─────────────────────────────────────────────────────────
+
+const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
+  pending:   { label: 'Pending',   bg: '#6b7280', color: '#ffffff' },
+  printing:  { label: 'Printing',  bg: '#ff9900', color: '#0a0a0a' },
+  completed: { label: 'Done',      bg: '#15803d', color: '#ffffff' },
+  cancelled: { label: 'Cancelled', bg: '#b91c1c', color: '#ffffff' },
+};
+
+function PrinterQueueCard({ printerName, items }: { printerName: string; items: QueueItem[] }) {
+  const active = items.filter((i) => i.status !== 'completed' && i.status !== 'cancelled');
+
+  if (active.length === 0) {
+    return (
+      <div className="card-surface rounded p-3 text-center text-xs text-iron-600">
+        No items queued for {printerName}
+      </div>
+    );
+  }
+
+  return (
+    <div className="card-surface rounded" style={{ overflow: 'hidden' }}>
+      <div className="px-3 py-2 border-b border-[#2d2d2d] flex items-center justify-between">
+        <span className="text-xs font-semibold text-iron-400 uppercase tracking-wide">Queue</span>
+        <span className="text-xs text-iron-600">{active.length} item{active.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div className="divide-y divide-[#2d2d2d]">
+        {active.map((item) => {
+          const s = STATUS_STYLE[item.status] ?? STATUS_STYLE.pending;
+          return (
+            <div key={item.id} className="flex items-center gap-3 px-3 py-2">
+              <span
+                className="px-1.5 py-0.5 rounded text-xs font-semibold shrink-0"
+                style={{ background: s.bg, color: s.color }}
+              >
+                {s.label}
+              </span>
+              <span className="text-sm text-iron-100 truncate flex-1">{item.productName}</span>
+              {item.quantity > 1 && (
+                <span className="text-xs text-iron-500 shrink-0">×{item.quantity}</span>
+              )}
+              {item.isInhouse && (
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded shrink-0"
+                  style={{ background: '#1d4ed8', color: '#ffffff' }}
+                >
+                  In-house
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -253,6 +311,7 @@ function FilamentJobRow({
 export const PrinterDashboard: React.FC = () => {
   const { liveStatuses, error } = usePrinterDashboard();
   const { printers } = usePrinters();
+  const { items: queueItems } = useQueue();
 
   // Monitor is considered online if we got data back (even an empty array) with no error
   const monitorOnline = !error;
@@ -284,7 +343,7 @@ export const PrinterDashboard: React.FC = () => {
       {/* Filament jobs pending banner */}
       <FilamentJobsPanel />
 
-      {/* Printer cards */}
+      {/* Printer columns: printer card + queue card stacked */}
       {activePrinters.length === 0 ? (
         <div className="card text-center py-12 text-iron-500">
           No printers configured. Add printers in Admin → Printers.
@@ -292,12 +351,17 @@ export const PrinterDashboard: React.FC = () => {
       ) : (
         <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
           {activePrinters.map((printer) => (
-            <PrinterCard
-              key={printer.id}
-              printer={printer}
-              status={statusById[printer.id] ?? null}
-              monitorOnline={monitorOnline}
-            />
+            <div key={printer.id} className="flex flex-col gap-4">
+              <PrinterCard
+                printer={printer}
+                status={statusById[printer.id] ?? null}
+                monitorOnline={monitorOnline}
+              />
+              <PrinterQueueCard
+                printerName={printer.name}
+                items={queueItems.filter((i) => i.printerName === printer.name)}
+              />
+            </div>
           ))}
         </div>
       )}
