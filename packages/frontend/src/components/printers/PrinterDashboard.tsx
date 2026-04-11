@@ -1,71 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { usePrinterDashboard, formatTimeRemaining, getPrinterStatusStyle } from '../../hooks/usePrinterDashboard';
 import { useFilamentJobs } from '../../hooks/useFilamentJobs';
 import { usePrinters } from '../../hooks/usePrinters';
 import { useColors } from '../../hooks/useColors';
 import type { PrinterLiveStatus, FilamentJob, Printer } from '@wizqueue/shared';
-
-// ── Camera Feed ────────────────────────────────────────────────────────────────
-
-function CameraFeed({ serial }: { serial: string }) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
-  const currentUrl = useRef<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    async function fetchFrame() {
-      try {
-        const res = await fetch(`/api/bambu/camera/frame?serial=${encodeURIComponent(serial)}`, {
-          credentials: 'include',
-        });
-        if (!res.ok || !active) return;
-        const blob = await res.blob();
-        if (!active) return;
-        const url = URL.createObjectURL(blob);
-        if (currentUrl.current) URL.revokeObjectURL(currentUrl.current);
-        currentUrl.current = url;
-        setBlobUrl(url);
-        setUnavailable(false);
-      } catch {
-        if (active) setUnavailable(true);
-      }
-    }
-
-    fetchFrame();
-    const interval = setInterval(fetchFrame, 2000);
-
-    return () => {
-      active = false;
-      clearInterval(interval);
-      if (currentUrl.current) URL.revokeObjectURL(currentUrl.current);
-    };
-  }, [serial]);
-
-  if (unavailable || !blobUrl) {
-    return (
-      <div
-        className="rounded-lg flex items-center justify-center"
-        style={{ background: '#1a1a1a', border: '1px dashed #3a3a3a', aspectRatio: '16/9' }}
-      >
-        <span className="text-iron-600 text-sm">
-          {unavailable ? 'Camera unavailable' : 'Connecting…'}
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
-      <img
-        src={blobUrl}
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        alt="Camera feed"
-      />
-    </div>
-  );
-}
 
 // ── Printer Card ───────────────────────────────────────────────────────────────
 
@@ -102,18 +40,6 @@ function PrinterCard({
           {style.label}
         </span>
       </div>
-
-      {/* Camera feed */}
-      {hasBambuConfig && printer.serialNumber ? (
-        <CameraFeed serial={printer.serialNumber} />
-      ) : (
-        <div
-          className="rounded-lg flex items-center justify-center"
-          style={{ background: '#1a1a1a', border: '1px dashed #3a3a3a', aspectRatio: '16/9' }}
-        >
-          <span className="text-iron-600 text-sm">No camera config</span>
-        </div>
-      )}
 
       {/* Stats grid */}
       {status?.connected ? (

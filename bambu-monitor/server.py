@@ -11,9 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-import socket
 import ssl
-import struct
 import threading
 import time
 from dataclasses import dataclass, field
@@ -34,8 +32,6 @@ WIZ3DTOOLS_URL   = os.getenv("WIZ3DTOOLS_URL", "http://backend:3000").rstrip("/"
 SERVICE_TOKEN    = os.getenv("MCP_SERVICE_TOKEN", "")
 MONITOR_PORT     = int(os.getenv("MONITOR_PORT", "8015"))
 CONFIG_RELOAD_S  = int(os.getenv("CONFIG_RELOAD_S", "300"))  # re-fetch printer configs every 5min
-
-BAMBU_CAMERA_PORT = 6000
 
 BAMBU_MQTT_PORT  = 8883
 BAMBU_USERNAME   = "bblp"
@@ -270,74 +266,6 @@ def process_print_finish(state: PrinterState, colors: list[dict]) -> None:
                 f"[{state.printer_name}] No color match for {slot.tray_color} ({slot.tray_type}) "
                 f"— created pending filament job."
             )
-
-
-# ── Bambu camera (port 6000) ───────────────────────────────────────────────────
-
-def get_camera_jpeg(ip: str, access_code: str, timeout: float = 5.0) -> bytes | None:
-    """
-    Connect to a Bambu printer's camera service on port 6000, authenticate,
-    and return one JPEG frame.  Same protocol used by the HA Bambu integration.
-    """
-    try:
-        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        ctx.set_ciphers('ALL:@SECLEVEL=0')
-
-        raw = socket.create_connection((ip, BAMBU_CAMERA_PORT), timeout=timeout)
-        raw.settimeout(timeout)  # must be set before wrap_socket for TLS handshake timeout
-        ssl_sock = ctx.wrap_socket(raw)
-        ssl_sock.settimeout(timeout)
-
-        # 80-byte auth packet:
-        #   bytes  0-3  : 0x40 0x00 0x00 0x00
-        #   bytes  4-7  : 0x03 0x00 0x00 0x00
-        #   bytes  8-15 : padding (zeros)
-        #   bytes 16-47 : username "bblp", null-padded to 32 bytes
-        #   bytes 48-79 : access_code, null-padded to 32 bytes
-        # Auth packet format from bambu_connect / HA Bambu integration:
-        #   0x00000040 (little-endian) at bytes 0-3
-        #   0x00003000 (little-endian) at bytes 4-7  ← version field
-        #   zeros at bytes 8-15
-        #   "bblp" null-padded to 32 bytes at 16-47
-        #   access_code null-padded to 32 bytes at 48-79
-        auth = bytearray(80)
-        auth[0:4] = struct.pack("<I", 0x40)      # b'\x40\x00\x00\x00'
-        auth[4:8] = struct.pack("<I", 0x3000)    # b'\x00\x30\x00\x00'
-        auth[16:48] = b'bblp'.ljust(32, b'\x00')
-        auth[48:80] = access_code.encode('ascii', errors='ignore').ljust(32, b'\x00')[:32]
-        ssl_sock.sendall(bytes(auth))
-
-        # Read the stream until we have one complete JPEG (FF D8 … FF D9)
-        buf       = bytearray()
-        start_idx = -1
-        deadline  = time.monotonic() + timeout
-
-        while time.monotonic() < deadline:
-            try:
-                chunk = ssl_sock.recv(8192)
-            except (ssl.SSLError, OSError, socket.timeout) as e:
-                logger.debug(f"Camera {ip}: recv error — {e}")
-                break
-            if not chunk:
-                break
-            buf.extend(chunk)
-
-            if start_idx == -1:
-                idx = bytes(buf).find(b'\xff\xd8\xff')
-                if idx >= 0:
-                    start_idx = idx
-
-            if start_idx >= 0:
-                end_idx = bytes(buf).find(b'\xff\xd9', start_idx + 2)
-                if end_idx >= 0:
-                    frame = bytes(buf[start_idx:end_idx + 2])
-                    return frame
-
-    except Exception as e:
-        logger.warning(f"Camera {ip}: error — {type(e).__name__}: {e}")
-    return None
 
 
 # ── MQTT Client ────────────────────────────────────────────────────────────────
@@ -588,21 +516,6 @@ def health():
     connected = sum(1 for s in monitor.states.values() if s.connected)
     total     = len(monitor.states)
     return jsonify({"status": "ok", "connected": connected, "total": total})
-
-
-@app.route("/camera/<serial>")
-def camera_frame(serial: str):
-    """Return a single JPEG frame from the printer camera (port 6000 protocol)."""
-    state = monitor.states.get(serial)
-    if not state:
-        return jsonify({"error": "Printer not found"}), 404
-
-    jpeg = get_camera_jpeg(state.ip, state.access_code, timeout=5.0)
-    if jpeg is None:
-        return jsonify({"error": "Could not get frame"}), 502
-
-    from flask import Response
-    return Response(jpeg, mimetype="image/jpeg", headers={"Cache-Control": "no-cache, no-store"})
 
 
 @app.route("/reload", methods=["POST"])
