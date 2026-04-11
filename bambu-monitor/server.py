@@ -360,6 +360,13 @@ class BambuPrinterClient:
                 f"[{self.state.printer_name}] Connected (session_present={flags.get('session present', 0)}), "
                 f"subscribed to {topic} (result={result})"
             )
+            # Ask the printer to immediately push its full current state
+            # (AMS slots, temps, print status) rather than waiting for the next
+            # scheduled publish, which can take 10-30s.
+            client.publish(
+                f"device/{self.state.serial}/request",
+                json.dumps({"pushing": {"sequence_id": "0", "command": "pushall"}}),
+            )
             broadcast_state()
         else:
             logger.error(
@@ -404,7 +411,11 @@ class BambuPrinterClient:
             if "spd_mag"           in data: self.state.spd_mag           = data["spd_mag"]
             if new_state:                   self.state.gcode_state       = new_state
 
-            # Parse AMS data
+            # Parse AMS data.
+            # Only replace ams_slots when the message actually contains tray
+            # entries — Bambu sends AMS messages with an empty ams[] array for
+            # metadata-only updates (e.g. tray_now changes) which would wipe
+            # the slot list and make colors disappear until the next full push.
             ams_root = data.get("ams", {})
             if ams_root and "ams" in ams_root:
                 new_slots: list[AmsSlotState] = []
@@ -422,7 +433,8 @@ class BambuPrinterClient:
                             tray_sub_brands=tray.get("tray_sub_brands"),
                         )
                         new_slots.append(slot)
-                self.state.ams_slots = new_slots
+                if new_slots:  # ignore empty-array messages
+                    self.state.ams_slots = new_slots
 
             self.state.last_updated = datetime.now(timezone.utc).isoformat()
 
