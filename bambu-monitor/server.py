@@ -276,20 +276,44 @@ class BambuPrinterClient:
         self._client: mqtt.Client | None = None
         self._reconnect_thread: threading.Thread | None = None
         self._stop = False
+        self._reconnect_delay = 5  # seconds; doubles on each failure up to _RECONNECT_MAX
+
+    _RECONNECT_MAX = 120  # seconds
 
     def start(self):
         self._stop = False
+        self._reconnect_delay = 5
         self._connect()
 
     def stop(self):
         self._stop = True
-        if self._client:
-            self._client.disconnect()
+        self._cleanup_client()
 
     def refresh_colors(self, colors: list[dict]):
         self._colors = colors
 
+    def _cleanup_client(self):
+        """Stop and discard the existing MQTT client cleanly."""
+        client = self._client
+        self._client = None
+        if client:
+            try:
+                client.loop_stop()
+            except Exception:
+                pass
+            try:
+                client.disconnect()
+            except Exception:
+                pass
+
     def _connect(self):
+        if self._stop:
+            return
+
+        # Always clean up any previous client before creating a new one.
+        # Without this, stale loop_start() threads accumulate on every reconnect.
+        self._cleanup_client()
+
         client = mqtt.Client(client_id="", clean_session=True, protocol=mqtt.MQTTv311)
         client.username_pw_set(BAMBU_USERNAME, self.state.access_code)
 
@@ -303,7 +327,8 @@ class BambuPrinterClient:
         client.on_message    = self._on_message
 
         try:
-            client.connect(self.state.ip, BAMBU_MQTT_PORT, keepalive=60)
+            # keepalive=30 sends pings every 30s; detects dead connections faster than 60s
+            client.connect(self.state.ip, BAMBU_MQTT_PORT, keepalive=30)
             self._client = client
             client.loop_start()
             logger.info(f"[{self.state.printer_name}] Connecting to {self.state.ip}:{BAMBU_MQTT_PORT}")
@@ -314,16 +339,25 @@ class BambuPrinterClient:
     def _schedule_reconnect(self):
         if self._stop:
             return
+        # Don't stack reconnect threads — if one is already waiting, let it run
+        if self._reconnect_thread and self._reconnect_thread.is_alive():
+            return
+        delay = self._reconnect_delay
+        self._reconnect_delay = min(self._reconnect_delay * 2, self._RECONNECT_MAX)
+        logger.info(f"[{self.state.printer_name}] Reconnecting in {delay}s (next: {self._reconnect_delay}s)...")
+
         def _reconnect():
-            time.sleep(30)
+            time.sleep(delay)
             if not self._stop:
-                logger.info(f"[{self.state.printer_name}] Reconnecting...")
                 self._connect()
-        t = threading.Thread(target=_reconnect, daemon=True)
+
+        t = threading.Thread(target=_reconnect, daemon=True, name=f"reconnect-{self.state.serial}")
+        self._reconnect_thread = t
         t.start()
 
     def _on_connect(self, client, userdata, flags, rc):
         if rc == 0:
+            self._reconnect_delay = 5  # reset backoff on successful connect
             self.state.connected = True
             topic = f"device/{self.state.serial}/report"
             client.subscribe(topic)
@@ -334,7 +368,10 @@ class BambuPrinterClient:
 
     def _on_disconnect(self, client, userdata, rc):
         self.state.connected = False
-        logger.warning(f"[{self.state.printer_name}] Disconnected rc={rc}")
+        if rc == 0:
+            logger.info(f"[{self.state.printer_name}] Disconnected cleanly")
+        else:
+            logger.warning(f"[{self.state.printer_name}] Disconnected unexpectedly rc={rc}")
         if not self._stop:
             self._schedule_reconnect()
 
@@ -500,4 +537,5 @@ if __name__ == "__main__":
     reloader.start()
 
     logger.info(f"Starting REST API on port {MONITOR_PORT}")
-    app.run(host="0.0.0.0", port=MONITOR_PORT, debug=False)
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=MONITOR_PORT, threads=4)
