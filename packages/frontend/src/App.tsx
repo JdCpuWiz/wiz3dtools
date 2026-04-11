@@ -5,7 +5,6 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { LoginPage } from './components/auth/LoginPage';
 import { Layout } from './components/layout/Layout';
 import { QueueList } from './components/queue/QueueList';
-import { UploadZone } from './components/upload/UploadZone';
 import { CustomerList } from './components/customers/CustomerList';
 import { CustomerForm } from './components/customers/CustomerForm';
 import { ProductList } from './components/products/ProductList';
@@ -179,7 +178,6 @@ function AddItemForm({ onClose }: { onClose: () => void }) {
 }
 
 function QueueView() {
-  const [showUpload, setShowUpload] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
   const [queueFilter, setQueueFilter] = useState<QueueFilter>('all');
   const { items } = useQueue();
@@ -190,14 +188,6 @@ function QueueView() {
     completed: items.filter((i) => i.status === 'completed').reduce((s, i) => s + i.quantity, 0),
     total: items.filter((i) => i.status !== 'completed' && i.status !== 'cancelled').reduce((s, i) => s + i.quantity, 0),
   };
-
-  if (showUpload) {
-    return (
-      <Layout>
-        <UploadZone onClose={() => setShowUpload(false)} />
-      </Layout>
-    );
-  }
 
   return (
     <Layout>
@@ -229,10 +219,7 @@ function QueueView() {
           <button onClick={() => setShowAddItem((v) => !v)} className="btn-secondary btn-sm">
             {showAddItem ? 'Cancel' : '+ Add Item'}
           </button>
-          <button onClick={() => setShowUpload(true)} className="btn-secondary btn-sm">
-            Upload Invoice
-          </button>
-          <span className="text-sm" style={{ color: '#6b7280' }}>Drag and drop to reorder</span>
+<span className="text-sm" style={{ color: '#6b7280' }}>Drag and drop to reorder</span>
         </div>
 
         {showAddItem && <AddItemForm onClose={() => setShowAddItem(false)} />}

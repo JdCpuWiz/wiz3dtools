@@ -4,8 +4,6 @@ import type {
   CreateQueueItemDto,
   UpdateQueueItemDto,
   ReorderQueueDto,
-  InvoiceUploadResponse,
-  InvoiceProcessingStatus,
   ApiResponse,
   Customer,
   CreateCustomerDto,
@@ -133,37 +131,6 @@ export const queueApi = {
     const response = await api.patch<ApiResponse<QueueItem>>(`/queue/${id}/status`, { status });
     if (!response.data.data) {
       throw new Error('Failed to update status');
-    }
-    return response.data.data;
-  },
-};
-
-// Upload API
-export const uploadApi = {
-  uploadInvoice: async (file: File): Promise<InvoiceUploadResponse> => {
-    const formData = new FormData();
-    formData.append('invoice', file);
-
-    const response = await api.post<ApiResponse<InvoiceUploadResponse>>(
-      '/upload',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
-
-    if (!response.data.data) {
-      throw new Error('Failed to upload invoice');
-    }
-    return response.data.data;
-  },
-
-  getInvoiceStatus: async (id: number): Promise<InvoiceProcessingStatus> => {
-    const response = await api.get<ApiResponse<InvoiceProcessingStatus>>(`/upload/${id}`);
-    if (!response.data.data) {
-      throw new Error('Invoice not found');
     }
     return response.data.data;
   },

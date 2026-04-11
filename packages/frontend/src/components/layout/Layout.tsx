@@ -6,7 +6,6 @@ import { useAuth } from '../../context/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
-  onUploadClick?: () => void;
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
