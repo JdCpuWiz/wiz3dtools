@@ -138,7 +138,7 @@ function PrinterCard({
                         borderColor: slot.trayColor ? `#${slot.trayColor.slice(0, 6)}` : '#444',
                       }}
                     />
-                    <span className="text-xs text-iron-400">{slot.remain !== null ? `${slot.remain}%` : '—'}</span>
+                    <span className="text-xs text-iron-400">{slot.remain !== null && slot.remain >= 0 ? `${slot.remain}%` : '—'}</span>
                     <span className="text-xs text-iron-600 truncate w-full text-center">{slot.trayType || '—'}</span>
                   </div>
                 ))}
