@@ -5,5 +5,4 @@ Begin my reviewing and then interview with questions to plan on how to act on th
 Once an item is completed it can be removed from the list but the file should remain even if it is empty.
 THe items on the list are numbered just for convenience and not order of importance.
 
-1. i want to investigate pulling filament usage data from the bambu studio software after a print is sliced and sent to the printer.  what options are availble to capture the data and use it to automatically capture filament usage and insert it into the filament inventory tool in wiz3dtools?
-2. i want to be able to record a print job's filament usage without having to create an invoice, for those projects that are in house only
+1. i want to be able to record a print job's filament usage without having to create an invoice, for those projects that are in house only
