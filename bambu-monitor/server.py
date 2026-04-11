@@ -25,6 +25,10 @@ from flask import Flask, jsonify
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("bambu-monitor")
 
+# Set paho loggers to DEBUG so TLS/protocol errors appear in the log.
+# Each printer gets its own paho.<serial> logger (set in _connect).
+logging.getLogger("paho").setLevel(logging.DEBUG)
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 
 WIZ3DTOOLS_URL   = os.getenv("WIZ3DTOOLS_URL", "http://backend:3000").rstrip("/")
@@ -317,6 +321,9 @@ class BambuPrinterClient:
         tls_ctx.verify_mode = ssl.CERT_NONE
         client.tls_set_context(tls_ctx)
 
+        # Route paho's internal log to our logger so we can see TLS/protocol errors
+        client.enable_logger(logging.getLogger(f"paho.{self.state.serial}"))
+
         # Delegate all reconnect logic to paho's built-in loop_start() mechanism.
         # min_delay=5 so the first retry waits 5s; doubles each attempt up to 120s.
         # This avoids fighting with our own manual reconnect thread.
@@ -331,7 +338,7 @@ class BambuPrinterClient:
             client.connect(self.state.ip, BAMBU_MQTT_PORT, keepalive=30)
             self._client = client
             client.loop_start()
-            logger.info(f"[{self.state.printer_name}] Connecting to {self.state.ip}:{BAMBU_MQTT_PORT}")
+            logger.info(f"[{self.state.printer_name}] Connecting to {self.state.ip}:{BAMBU_MQTT_PORT} (serial={self.state.serial})")
         except Exception as e:
             # connect() itself threw (e.g. DNS failure, network unreachable).
             # loop hasn't started yet so paho can't retry — schedule manually.
@@ -342,20 +349,37 @@ class BambuPrinterClient:
                 t.start()
 
     def _on_connect(self, client, userdata, flags, rc):
+        _rc_desc = {
+            0: "accepted",
+            1: "refused — bad protocol version",
+            2: "refused — client ID rejected",
+            3: "refused — server unavailable",
+            4: "refused — bad username/password",
+            5: "refused — not authorised",
+        }
         if rc == 0:
             self.state.connected = True
             topic = f"device/{self.state.serial}/report"
-            client.subscribe(topic)
-            logger.info(f"[{self.state.printer_name}] Connected, subscribed to {topic}")
+            result, _ = client.subscribe(topic)
+            logger.info(
+                f"[{self.state.printer_name}] Connected (session_present={flags.get('session present', 0)}), "
+                f"subscribed to {topic} (result={result})"
+            )
         else:
-            logger.error(f"[{self.state.printer_name}] MQTT connect failed rc={rc} — paho will retry")
+            logger.error(
+                f"[{self.state.printer_name}] MQTT connect refused rc={rc}: "
+                f"{_rc_desc.get(rc, 'unknown')} — paho will retry"
+            )
 
     def _on_disconnect(self, client, userdata, rc):
         self.state.connected = False
         if rc == 0:
             logger.info(f"[{self.state.printer_name}] Disconnected cleanly")
         else:
-            logger.warning(f"[{self.state.printer_name}] Disconnected unexpectedly rc={rc} — paho will reconnect")
+            logger.warning(
+                f"[{self.state.printer_name}] Disconnected unexpectedly rc={rc} "
+                f"(MQTT_ERR_CONN_LOST) — paho will reconnect with backoff"
+            )
 
     def _on_message(self, client, userdata, msg):
         try:
