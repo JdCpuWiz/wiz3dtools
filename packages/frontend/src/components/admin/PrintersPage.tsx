@@ -26,7 +26,6 @@ export const PrintersPage: React.FC = () => {
   const [editName, setEditName]     = useState('');
   const [editModel, setEditModel]   = useState('');
   const [editBambu, setEditBambu]   = useState<BambuFields>(emptyBambu());
-  const [showCode, setShowCode]     = useState<Record<number, boolean>>({});
 
   const handleAdd = () => {
     if (!newName.trim()) return;

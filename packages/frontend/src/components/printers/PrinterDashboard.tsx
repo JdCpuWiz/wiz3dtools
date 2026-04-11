@@ -241,13 +241,7 @@ export const PrinterDashboard: React.FC = () => {
   const { liveStatuses, error } = usePrinterDashboard();
   const { printers } = usePrinters();
 
-  // Build a map from serial → live status
-  const statusBySerial = Object.fromEntries(
-    liveStatuses.map((s) => [s.serial, s]),
-  );
-
-  // Build per-printer display — all configured printers, matched to live status by name for display
-  // Live status has printerId; match by id
+  // Build per-printer display — match by printerId
   const statusById = Object.fromEntries(
     liveStatuses.map((s) => [s.printerId, s]),
   );

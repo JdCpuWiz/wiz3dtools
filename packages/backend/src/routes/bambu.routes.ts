@@ -6,7 +6,7 @@ const router = Router();
 const BAMBU_MONITOR_URL = process.env.BAMBU_MONITOR_URL || 'http://bambu-monitor:8015';
 
 // Proxy live printer status from bambu-monitor service
-router.get('/live', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/live', async (_req: Request, res: Response, _next: NextFunction) => {
   try {
     await new Promise<void>((resolve, reject) => {
       const req = http.get(`${BAMBU_MONITOR_URL}/status`, (proxyRes) => {
