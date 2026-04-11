@@ -41,6 +41,26 @@ export class ProductColorModel {
     return result.rows.map(parseRow);
   }
 
+  static async findByProductIds(productIds: number[]): Promise<Map<number, ProductColor[]>> {
+    if (productIds.length === 0) return new Map();
+    const result = await pool.query(
+      `SELECT ${SELECT}
+       FROM product_colors pc
+       JOIN colors c ON c.id = pc.color_id
+       WHERE pc.product_id = ANY($1)
+       ORDER BY pc.sort_order ASC, pc.id ASC`,
+      [productIds],
+    );
+    const map = new Map<number, ProductColor[]>();
+    for (const row of result.rows) {
+      const id = row.productId as number;
+      const list = map.get(id) ?? [];
+      list.push(parseRow(row));
+      map.set(id, list);
+    }
+    return map;
+  }
+
   static async setColors(productId: number, colors: ProductColorDto[]): Promise<ProductColor[]> {
     const client = await pool.connect();
     try {

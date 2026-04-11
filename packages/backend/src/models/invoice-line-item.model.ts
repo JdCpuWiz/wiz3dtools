@@ -27,6 +27,22 @@ export class InvoiceLineItemModel {
     return attachColors(result.rows);
   }
 
+  static async findByInvoices(invoiceIds: number[]): Promise<InvoiceLineItem[]> {
+    if (invoiceIds.length === 0) return [];
+    const result = await pool.query(
+      `SELECT ${SELECT_FIELDS} FROM invoice_line_items WHERE invoice_id = ANY($1) ORDER BY invoice_id ASC, id ASC`,
+      [invoiceIds],
+    );
+    if (result.rows.length === 0) return [];
+    const lineItemIds = result.rows.map((r) => r.id as number);
+    const colorMap = await LineItemColorModel.findByLineItemIds(lineItemIds);
+    return result.rows.map((row) => ({
+      ...row,
+      unitPrice: parseFloat(row.unitPrice as string),
+      colors: colorMap.get(row.id as number) ?? [],
+    })) as InvoiceLineItem[];
+  }
+
   static async findById(id: number): Promise<InvoiceLineItem | null> {
     const result = await pool.query(
       `SELECT ${SELECT_FIELDS} FROM invoice_line_items WHERE id = $1`,

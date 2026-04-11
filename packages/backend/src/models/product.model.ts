@@ -27,7 +27,18 @@ export class ProductModel {
   static async findAll(activeOnly = false): Promise<Product[]> {
     const where = activeOnly ? 'WHERE active = TRUE' : '';
     const result = await pool.query(`SELECT ${SELECT} FROM products ${where} ORDER BY name ASC`);
-    return attachColors(result.rows);
+    if (result.rows.length === 0) return [];
+    const productIds = result.rows.map((r) => r.id as number);
+    const colorMap = await ProductColorModel.findByProductIds(productIds);
+    return result.rows.map((r) => {
+      const colors = colorMap.get(r.id as number) ?? [];
+      return {
+        ...r,
+        unitPrice: parseFloat(r.unitPrice as string),
+        colors,
+        totalWeightGrams: colors.reduce((sum, c) => sum + c.weightGrams, 0),
+      } as Product;
+    });
   }
 
   static async findById(id: number): Promise<Product | null> {

@@ -9,9 +9,9 @@ const poolConfig: PoolConfig = {
   database: process.env.DATABASE_NAME || 'wizqueue',
   user: process.env.DATABASE_USER || 'wizqueue_user',
   password: process.env.DATABASE_PASSWORD,
-  max: 20,
+  max: 30,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
   ...(process.env.NODE_ENV === 'production' && {
     ssl: { rejectUnauthorized: false },
   }),
@@ -25,8 +25,7 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  console.error('❌ Unexpected database error:', err);
-  process.exit(-1);
+  console.error('❌ Unexpected database pool error:', err.message);
 });
 
 export async function testConnection(): Promise<boolean> {

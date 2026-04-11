@@ -55,6 +55,26 @@ export class LineItemColorModel {
     return result.rows.map(parseRow);
   }
 
+  static async findByLineItemIds(lineItemIds: number[]): Promise<Map<number, ItemColor[]>> {
+    if (lineItemIds.length === 0) return new Map();
+    const result = await pool.query(
+      `SELECT ic.line_item_id as "parentId", ${SELECT_FIELDS('line_item_colors')}
+       FROM line_item_colors ic ${COLOR_JOIN}
+       WHERE ic.line_item_id = ANY($1)
+       ORDER BY ic.is_primary DESC, ic.sort_order ASC`,
+      [lineItemIds],
+    );
+    const map = new Map<number, ItemColor[]>();
+    for (const row of result.rows) {
+      const parentId = row.parentId as number;
+      const { parentId: _p, ...rest } = row;
+      const list = map.get(parentId) ?? [];
+      list.push(parseRow(rest));
+      map.set(parentId, list);
+    }
+    return map;
+  }
+
   static async setColors(lineItemId: number, colors: ItemColorDto[]): Promise<ItemColor[]> {
     const client = await pool.connect();
     try {
@@ -89,6 +109,26 @@ export class QueueItemColorModel {
       [queueItemId],
     );
     return result.rows.map(parseRow);
+  }
+
+  static async findByQueueItemIds(queueItemIds: number[]): Promise<Map<number, ItemColor[]>> {
+    if (queueItemIds.length === 0) return new Map();
+    const result = await pool.query(
+      `SELECT ic.queue_item_id as "parentId", ${SELECT_FIELDS('queue_item_colors')}
+       FROM queue_item_colors ic ${COLOR_JOIN}
+       WHERE ic.queue_item_id = ANY($1)
+       ORDER BY ic.is_primary DESC, ic.sort_order ASC`,
+      [queueItemIds],
+    );
+    const map = new Map<number, ItemColor[]>();
+    for (const row of result.rows) {
+      const parentId = row.parentId as number;
+      const { parentId: _p, ...rest } = row;
+      const list = map.get(parentId) ?? [];
+      list.push(parseRow(rest));
+      map.set(parentId, list);
+    }
+    return map;
   }
 
   static async setColors(queueItemId: number, colors: ItemColorDto[]): Promise<ItemColor[]> {

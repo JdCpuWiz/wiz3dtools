@@ -73,14 +73,19 @@ export class SalesInvoiceModel {
       LEFT JOIN customers c ON si.customer_id = c.id
       ORDER BY si.created_at DESC
     `);
-
-    const invoices = await Promise.all(
-      result.rows.map(async (row) => {
-        const lineItems = await InvoiceLineItemModel.findByInvoice(row.id as number);
-        return { ...mapRow(row), lineItems };
-      }),
-    );
-    return invoices;
+    if (result.rows.length === 0) return [];
+    const invoiceIds = result.rows.map((r) => r.id as number);
+    const allLineItems = await InvoiceLineItemModel.findByInvoices(invoiceIds);
+    const lineItemsByInvoice = new Map<number, typeof allLineItems>();
+    for (const li of allLineItems) {
+      const list = lineItemsByInvoice.get(li.invoiceId) ?? [];
+      list.push(li);
+      lineItemsByInvoice.set(li.invoiceId, list);
+    }
+    return result.rows.map((row) => ({
+      ...mapRow(row),
+      lineItems: lineItemsByInvoice.get(row.id as number) ?? [],
+    }));
   }
 
   static async findById(id: number): Promise<SalesInvoice | null> {

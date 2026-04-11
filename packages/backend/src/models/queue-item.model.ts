@@ -13,12 +13,10 @@ const SELECT_FIELDS = `
 `;
 
 async function attachColors(rows: QueueItem[]): Promise<QueueItem[]> {
-  return Promise.all(
-    rows.map(async (r) => {
-      const colors = await QueueItemColorModel.findByQueueItem(r.id);
-      return { ...r, colors };
-    }),
-  );
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.id);
+  const colorMap = await QueueItemColorModel.findByQueueItemIds(ids);
+  return rows.map((r) => ({ ...r, colors: colorMap.get(r.id) ?? [] }));
 }
 
 export class QueueItemModel {
