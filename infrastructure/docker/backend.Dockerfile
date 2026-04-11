@@ -50,5 +50,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=5m --timeout=10s --start-period=30s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); });"
 
-# Start server
-CMD ["node", "packages/backend/dist/index.js"]
+# Run migrations then start server
+CMD ["sh", "-c", "node packages/backend/migrations/run-migrations.js && node packages/backend/dist/index.js"]
