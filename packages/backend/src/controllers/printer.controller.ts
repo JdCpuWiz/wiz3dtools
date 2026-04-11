@@ -10,13 +10,29 @@ export class PrinterController {
     } catch (error) { next(error); }
   }
 
+  // Returns full config including access_code — service token only
+  async getConfig(_req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const printers = await PrinterModel.findAllWithSecrets();
+      res.json({ success: true, data: printers });
+    } catch (error) { next(error); }
+  }
+
   async create(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
-      const { name, model, active, sortOrder } = req.body;
+      const { name, model, active, sortOrder, ipAddress, serialNumber, accessCode } = req.body;
       if (!name || typeof name !== 'string' || !name.trim()) {
         res.status(400).json({ success: false, error: 'Name is required' }); return;
       }
-      const printer = await PrinterModel.create({ name: name.trim(), model: model || undefined, active, sortOrder });
+      const printer = await PrinterModel.create({
+        name: name.trim(),
+        model: model || undefined,
+        active,
+        sortOrder,
+        ipAddress: ipAddress || undefined,
+        serialNumber: serialNumber || undefined,
+        accessCode: accessCode || undefined,
+      });
       res.status(201).json({ success: true, data: printer });
     } catch (error) { next(error); }
   }

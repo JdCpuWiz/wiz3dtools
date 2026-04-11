@@ -4,6 +4,9 @@ export interface Printer {
   model: string | null;
   active: boolean;
   sortOrder: number;
+  ipAddress: string | null;
+  serialNumber: string | null;
+  // accessCode is write-only — never returned in API responses
   createdAt: string;
 }
 
@@ -12,6 +15,9 @@ export interface CreatePrinterDto {
   model?: string;
   active?: boolean;
   sortOrder?: number;
+  ipAddress?: string;
+  serialNumber?: string;
+  accessCode?: string;
 }
 
 export interface UpdatePrinterDto {
@@ -19,4 +25,59 @@ export interface UpdatePrinterDto {
   model?: string;
   active?: boolean;
   sortOrder?: number;
+  ipAddress?: string;
+  serialNumber?: string;
+  accessCode?: string;
+}
+
+export interface FilamentJob {
+  id: number;
+  printerId: number | null;
+  printerName: string | null;
+  jobName: string | null;
+  amsSlotId: string | null;
+  amsColorHex: string | null;
+  amsMaterial: string | null;
+  remainStart: number | null;
+  remainEnd: number | null;
+  filamentGrams: number | null;
+  colorId: number | null;
+  colorName: string | null;
+  colorHex: string | null;
+  status: 'pending' | 'auto_resolved' | 'resolved' | 'skipped';
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export interface ResolveFilamentJobDto {
+  colorId: number;
+}
+
+// Live printer status from bambu-monitor service
+export interface PrinterLiveStatus {
+  printerId: number;
+  printerName: string;
+  serial: string;
+  connected: boolean;
+  gcodeState: string | null;       // IDLE | RUNNING | PAUSE | FINISH | FAILED
+  mcPercent: number | null;
+  mcRemainingTime: number | null;  // seconds
+  layerNum: number | null;
+  totalLayerNum: number | null;
+  subtaskName: string | null;
+  nozzleTemper: number | null;
+  bedTemper: number | null;
+  chamberTemper: number | null;
+  spdMag: number | null;           // print speed %
+  amsSlots: AmsSlot[];
+  lastUpdated: string | null;
+}
+
+export interface AmsSlot {
+  amsId: number;
+  trayId: number;
+  remain: number | null;          // % remaining
+  trayColor: string | null;       // hex RRGGBBAA from RFID
+  trayType: string | null;        // "PLA", "PETG", etc.
+  traySubBrands: string | null;   // "Bambu", etc.
 }

@@ -129,6 +129,7 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
           {sections.operations && (
             <>
               <NavItem to="/queue" label="Queue" icon={<PrinterCheck size={15} />} onClick={onClose} />
+              <NavItem to="/printers" label="Printers" icon={<Printer size={15} />} onClick={onClose} />
               <NavItem to="/customers" label="Customers" icon={<Users size={15} />} onClick={onClose} />
               <NavItem to="/products" label="Products" icon={<Package size={15} />} onClick={onClose} />
               <NavItem to="/invoices" label="Invoices" icon={<FileText size={15} />} onClick={onClose} />

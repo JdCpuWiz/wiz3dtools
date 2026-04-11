@@ -33,6 +33,8 @@ services:
       - PAYMENT_VENMO=${PAYMENT_VENMO}
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGIN=${CORS_ORIGIN:-https://tools.wiz3dprints.com}
+      - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
+      - BAMBU_MONITOR_URL=${BAMBU_MONITOR_URL:-http://bambu-monitor:8015}
     volumes:
       - ${UPLOADS_PATH:-./uploads}:/app/uploads
     networks:
@@ -68,6 +70,26 @@ services:
       - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
     networks:
       - wizqueue
+    depends_on:
+      - backend
+
+  bambu-monitor:
+    build:
+      context: ./bambu-monitor
+      dockerfile: Dockerfile
+    container_name: wizqueue-bambu-monitor
+    restart: unless-stopped
+    ports:
+      - "8015:8015"
+    environment:
+      - WIZ3DTOOLS_URL=${WIZ3DTOOLS_URL:-http://backend:3000}
+      - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
+      - MONITOR_PORT=8015
+      - CONFIG_RELOAD_S=${BAMBU_CONFIG_RELOAD_S:-300}
+    networks:
+      - wizqueue
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - backend
 

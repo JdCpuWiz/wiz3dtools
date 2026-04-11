@@ -32,6 +32,8 @@ import type {
   Printer,
   CreatePrinterDto,
   UpdatePrinterDto,
+  FilamentJob,
+  PrinterLiveStatus,
 } from '@wizqueue/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -430,6 +432,38 @@ export const userApi = {
 
   delete: async (id: number): Promise<void> => {
     await api.delete(`/users/${id}`);
+  },
+};
+
+// Bambu live status API
+export const bambuApi = {
+  getLiveStatus: async (): Promise<PrinterLiveStatus[]> => {
+    const response = await api.get<ApiResponse<PrinterLiveStatus[]>>('/bambu/live');
+    return response.data.data || [];
+  },
+};
+
+// Filament Jobs API
+export const filamentJobApi = {
+  getAll: async (status?: string): Promise<{ jobs: FilamentJob[]; pendingCount: number }> => {
+    const params = status ? `?status=${status}` : '';
+    const response = await api.get<any>(`/filament-jobs${params}`);
+    return {
+      jobs: response.data.data || [],
+      pendingCount: response.data.meta?.pendingCount ?? 0,
+    };
+  },
+
+  resolve: async (id: number, colorId: number): Promise<FilamentJob> => {
+    const response = await api.put<ApiResponse<FilamentJob>>(`/filament-jobs/${id}/resolve`, { colorId });
+    if (!response.data.data) throw new Error('Failed to resolve job');
+    return response.data.data;
+  },
+
+  skip: async (id: number): Promise<FilamentJob> => {
+    const response = await api.put<ApiResponse<FilamentJob>>(`/filament-jobs/${id}/skip`, {});
+    if (!response.data.data) throw new Error('Failed to skip job');
+    return response.data.data;
   },
 };
 

@@ -73,4 +73,8 @@ export type {
   Printer,
   CreatePrinterDto,
   UpdatePrinterDto,
+  FilamentJob,
+  ResolveFilamentJobDto,
+  PrinterLiveStatus,
+  AmsSlot,
 } from './types/printer';

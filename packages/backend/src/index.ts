@@ -21,6 +21,8 @@ import colorRoutes from './routes/color.routes.js';
 import manufacturerRoutes from './routes/manufacturer.routes.js';
 import printerRoutes from './routes/printer.routes.js';
 import reportsRoutes from './routes/reports.routes.js';
+import bambuRoutes from './routes/bambu.routes.js';
+import filamentJobRoutes from './routes/filament-job.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -111,6 +113,8 @@ app.use('/api/colors', colorRoutes);
 app.use('/api/manufacturers', manufacturerRoutes);
 app.use('/api/printers', printerRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/bambu', bambuRoutes);
+app.use('/api/filament-jobs', filamentJobRoutes);
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {

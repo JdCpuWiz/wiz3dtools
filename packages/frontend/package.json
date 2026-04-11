@@ -1,6 +1,6 @@
 {
   "name": "@wizqueue/frontend",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Frontend React application for wizqueue",
   "type": "module",
   "scripts": {
