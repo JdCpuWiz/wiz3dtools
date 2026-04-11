@@ -35,7 +35,6 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-https://tools.wiz3dprints.com}
       - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
       - BAMBU_MONITOR_URL=${BAMBU_MONITOR_URL:-http://bambu-monitor:8015}
-      - GO2RTC_URL=http://go2rtc:1984
     volumes:
       - ${UPLOADS_PATH:-./uploads}:/app/uploads
     networks:
@@ -87,21 +86,12 @@ services:
       - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
       - MONITOR_PORT=8015
       - CONFIG_RELOAD_S=${BAMBU_CONFIG_RELOAD_S:-60}
-      - GO2RTC_URL=http://go2rtc:1984
     networks:
       - wizqueue
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       - backend
-      - go2rtc
-
-  go2rtc:
-    image: alexxit/go2rtc
-    container_name: wizqueue-go2rtc
-    restart: unless-stopped
-    networks:
-      - wizqueue
 
 networks:
   wizqueue:

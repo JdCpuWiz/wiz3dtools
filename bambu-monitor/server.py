@@ -11,7 +11,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import socket
 import ssl
+import struct
 import threading
 import time
 from dataclasses import dataclass, field
@@ -32,7 +34,8 @@ WIZ3DTOOLS_URL   = os.getenv("WIZ3DTOOLS_URL", "http://backend:3000").rstrip("/"
 SERVICE_TOKEN    = os.getenv("MCP_SERVICE_TOKEN", "")
 MONITOR_PORT     = int(os.getenv("MONITOR_PORT", "8015"))
 CONFIG_RELOAD_S  = int(os.getenv("CONFIG_RELOAD_S", "300"))  # re-fetch printer configs every 5min
-GO2RTC_URL       = os.getenv("GO2RTC_URL", "http://go2rtc:1984").rstrip("/")
+
+BAMBU_CAMERA_PORT = 6000
 
 BAMBU_MQTT_PORT  = 8883
 BAMBU_USERNAME   = "bblp"
@@ -269,41 +272,64 @@ def process_print_finish(state: PrinterState, colors: list[dict]) -> None:
             )
 
 
-# ── go2rtc camera stream sync ─────────────────────────────────────────────────
+# ── Bambu camera (port 6000) ───────────────────────────────────────────────────
 
-def sync_go2rtc_streams(configs: list[dict]) -> None:
-    """Register/remove printer camera streams in go2rtc (best-effort, non-fatal)."""
+def get_camera_jpeg(ip: str, access_code: str, timeout: float = 5.0) -> bytes | None:
+    """
+    Connect to a Bambu printer's camera service on port 6000, authenticate,
+    and return one JPEG frame.  Same protocol used by the HA Bambu integration.
+    """
     try:
-        r = httpx.get(f"{GO2RTC_URL}/api/streams", timeout=5)
-        current_streams: set[str] = set(r.json().keys()) if r.is_success else set()
-    except Exception:
-        current_streams = set()
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
 
-    desired: set[str] = set()
-    for cfg in configs:
-        serial = cfg.get("serialNumber")
-        ip     = cfg.get("ipAddress")
-        code   = cfg.get("accessCode")
-        if not (serial and ip and code):
-            continue
-        desired.add(serial)
-        rtsp_url = f"babycam://bblp:{code}@{ip}"
-        try:
-            httpx.put(
-                f"{GO2RTC_URL}/api/streams",
-                params={"name": serial, "src": rtsp_url},
-                timeout=5,
-            )
-        except Exception as e:
-            logger.debug(f"go2rtc: failed to register stream for {serial}: {e}")
+        with socket.create_connection((ip, BAMBU_CAMERA_PORT), timeout=timeout) as raw:
+            ssl_sock = ctx.wrap_socket(raw)
+            ssl_sock.settimeout(timeout)
 
-    # Remove streams whose printers have been deleted
-    for serial in current_streams - desired:
-        try:
-            httpx.delete(f"{GO2RTC_URL}/api/streams", params={"name": serial}, timeout=5)
-            logger.info(f"go2rtc: removed stream for deleted printer {serial}")
-        except Exception as e:
-            logger.debug(f"go2rtc: failed to remove stream for {serial}: {e}")
+            # 80-byte auth packet:
+            #   bytes  0-3  : 0x40 0x00 0x00 0x00
+            #   bytes  4-7  : 0x03 0x00 0x00 0x00
+            #   bytes  8-15 : padding (zeros)
+            #   bytes 16-47 : username "bblp", null-padded to 32 bytes
+            #   bytes 48-79 : access_code, null-padded to 32 bytes
+            auth = bytearray(80)
+            auth[0:4] = b'\x40\x00\x00\x00'
+            auth[4:8] = b'\x03\x00\x00\x00'
+            username = b'bblp'
+            auth[16:16 + len(username)] = username
+            code_bytes = access_code.encode()[:32]
+            auth[48:48 + len(code_bytes)] = code_bytes
+            ssl_sock.sendall(bytes(auth))
+
+            # Read the stream until we have one complete JPEG (FF D8 … FF D9)
+            buf       = bytearray()
+            start_idx = -1
+            deadline  = time.monotonic() + timeout
+
+            while time.monotonic() < deadline:
+                try:
+                    chunk = ssl_sock.recv(8192)
+                except ssl.SSLError:
+                    break
+                if not chunk:
+                    break
+                buf.extend(chunk)
+
+                if start_idx == -1:
+                    idx = bytes(buf).find(b'\xff\xd8\xff')
+                    if idx >= 0:
+                        start_idx = idx
+
+                if start_idx >= 0:
+                    end_idx = bytes(buf).find(b'\xff\xd9', start_idx + 2)
+                    if end_idx >= 0:
+                        return bytes(buf[start_idx:end_idx + 2])
+
+    except Exception as e:
+        logger.debug(f"Camera frame error for {ip}: {e}")
+    return None
 
 
 # ── MQTT Client ────────────────────────────────────────────────────────────────
@@ -524,8 +550,6 @@ class BambuMonitor:
                 del self.clients[serial]
                 del self.states[serial]
 
-        # Keep go2rtc camera streams in sync with current printer config
-        sync_go2rtc_streams(configs)
 
     def get_all_status(self) -> list[dict]:
         with self._lock:
@@ -556,6 +580,21 @@ def health():
     connected = sum(1 for s in monitor.states.values() if s.connected)
     total     = len(monitor.states)
     return jsonify({"status": "ok", "connected": connected, "total": total})
+
+
+@app.route("/camera/<serial>")
+def camera_frame(serial: str):
+    """Return a single JPEG frame from the printer camera (port 6000 protocol)."""
+    state = monitor.states.get(serial)
+    if not state:
+        return jsonify({"error": "Printer not found"}), 404
+
+    jpeg = get_camera_jpeg(state.ip, state.access_code, timeout=5.0)
+    if jpeg is None:
+        return jsonify({"error": "Could not get frame"}), 502
+
+    from flask import Response
+    return Response(jpeg, mimetype="image/jpeg", headers={"Cache-Control": "no-cache, no-store"})
 
 
 @app.route("/reload", methods=["POST"])

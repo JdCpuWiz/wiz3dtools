@@ -4,15 +4,13 @@ import http from 'http';
 const router = Router();
 
 const BAMBU_MONITOR_URL = process.env.BAMBU_MONITOR_URL || 'http://bambu-monitor:8015';
-const GO2RTC_URL        = process.env.GO2RTC_URL        || 'http://go2rtc:1984';
 
 /**
  * Fire-and-forget POST to bambu-monitor /reload.
  * Called after any printer create/update/delete so the monitor picks up changes
  * immediately instead of waiting for the periodic config reload.
  */
-// Proxy a single JPEG frame from go2rtc for the given printer serial.
-// go2rtc streams are registered by bambu-monitor using the serial as the stream name.
+// Proxy a single JPEG frame from bambu-monitor's port-6000 camera implementation.
 router.get('/camera/frame', async (req: Request, res: Response) => {
   const serial = req.query.serial as string;
   if (!serial) { res.status(400).end(); return; }
@@ -20,7 +18,7 @@ router.get('/camera/frame', async (req: Request, res: Response) => {
   try {
     await new Promise<void>((resolve, reject) => {
       const request = http.get(
-        `${GO2RTC_URL}/api/frame.jpeg?src=${encodeURIComponent(serial)}`,
+        `${BAMBU_MONITOR_URL}/camera/${encodeURIComponent(serial)}`,
         (proxyRes) => {
           if (proxyRes.statusCode === 200) {
             res.status(200);
@@ -35,7 +33,7 @@ router.get('/camera/frame', async (req: Request, res: Response) => {
         },
       );
       request.on('error', reject);
-      request.setTimeout(3000, () => reject(new Error('go2rtc timeout')));
+      request.setTimeout(6000, () => reject(new Error('camera timeout')));
     });
   } catch {
     if (!res.headersSent) res.status(502).end();
