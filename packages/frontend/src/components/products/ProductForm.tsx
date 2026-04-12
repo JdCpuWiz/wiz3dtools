@@ -4,11 +4,18 @@ import { useForm } from 'react-hook-form';
 import { useProducts } from '../../hooks/useProducts';
 import { productApi } from '../../services/api';
 import { useColors } from '../../hooks/useColors';
+import { useCategories } from '../../hooks/useCategories';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Color, CreateProductDto, ProductColorDto } from '@wizqueue/shared';
+import type { Color, CreateProductDto, ProductColorDto, ProductImage } from '@wizqueue/shared';
 
 interface ProductFormFields extends CreateProductDto {
   sku?: string;
+  publishedToStore?: boolean;
+  categoryId?: number | null;
+  storeTitle?: string;
+  storeDescription?: string;
+  wholesalePrice?: number;
+  retailPrice?: number;
 }
 
 interface ColorWeightEntry {
@@ -116,6 +123,7 @@ export const ProductForm: React.FC = () => {
   });
 
   const { colors: availableColors } = useColors();
+  const { categories } = useCategories();
   const { create, update, isCreating, isUpdating } = useProducts();
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<ProductFormFields>();
 
@@ -126,6 +134,11 @@ export const ProductForm: React.FC = () => {
   // Color+weight state for product
   const [colorWeights, setColorWeights] = useState<ColorWeightEntry[]>([]);
   const [selectedColorId, setSelectedColorId] = useState<string>('');
+
+  // Image state
+  const [images, setImages] = useState<ProductImage[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const watchedName = watch('name', '');
 
@@ -138,8 +151,13 @@ export const ProductForm: React.FC = () => {
         sku: existing.sku || '',
         unitPrice: existing.unitPrice,
         active: existing.active,
+        publishedToStore: existing.publishedToStore,
+        categoryId: existing.categoryId ?? null,
+        storeTitle: existing.storeTitle || '',
+        storeDescription: existing.storeDescription || '',
+        wholesalePrice: existing.wholesalePrice ?? 0,
+        retailPrice: existing.retailPrice ?? 0,
       });
-      // Load existing product colors
       if (existing.colors && existing.colors.length > 0) {
         setColorWeights(
           existing.colors.map((pc) => ({
@@ -148,6 +166,9 @@ export const ProductForm: React.FC = () => {
             sortOrder: pc.sortOrder,
           })),
         );
+      }
+      if (existing.images) {
+        setImages(existing.images);
       }
     }
   }, [existing, reset]);
@@ -189,6 +210,30 @@ export const ProductForm: React.FC = () => {
   };
 
   const totalGrams = colorWeights.reduce((s, c) => s + (parseFloat(c.weightGrams) || 0), 0);
+
+  const handleImageUpload = async (files: FileList | null) => {
+    if (!files || !isEdit) return;
+    setUploadingImage(true);
+    try {
+      for (const file of Array.from(files)) {
+        const img = await productApi.uploadImage(productId, file);
+        setImages((prev) => [...prev, img]);
+      }
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
+
+  const handleSetPrimary = async (imageId: number) => {
+    await productApi.setPrimaryImage(productId, imageId);
+    setImages((prev) => prev.map((img) => ({ ...img, isPrimary: img.id === imageId })));
+  };
+
+  const handleDeleteImage = async (imageId: number) => {
+    await productApi.deleteImage(productId, imageId);
+    setImages((prev) => prev.filter((img) => img.id !== imageId));
+  };
 
   const onSubmit = async (data: ProductFormFields) => {
     let savedProductId = productId;
@@ -367,6 +412,168 @@ export const ProductForm: React.FC = () => {
             <p className="text-xs text-white italic">No colors assigned. Add colors to enable filament weight tracking.</p>
           )}
         </div>
+
+        {/* Store Listing */}
+        <div className="card space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold" style={{ color: '#ff9900' }}>Store Listing</h3>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                {...register('publishedToStore')}
+                className="h-4 w-4 rounded accent-primary-500"
+              />
+              <span className="text-sm font-medium" style={{ color: '#ff9900' }}>Published to store</span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelClass}>Wholesale Price ($)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                {...register('wholesalePrice', { valueAsNumber: true, min: 0 })}
+                className={fieldClass}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Retail Price ($)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                {...register('retailPrice', { valueAsNumber: true, min: 0 })}
+                className={fieldClass}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClass}>Category</label>
+            <select
+              {...register('categoryId', { setValueAs: (v) => v === '' ? null : parseInt(v) })}
+              className={fieldClass}
+              style={{ background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)', border: 'none', boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)' }}
+            >
+              <option value="">— No category —</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className={labelClass}>Store Title</label>
+            <input
+              {...register('storeTitle')}
+              className={fieldClass}
+              placeholder="Public display name (leave blank to use product name)"
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>Store Description</label>
+            <textarea
+              {...register('storeDescription')}
+              rows={4}
+              className={`${fieldClass} resize-none`}
+              placeholder="Public-facing description shown to customers…"
+            />
+          </div>
+        </div>
+
+        {/* Product Images — edit mode only */}
+        {isEdit && (
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold" style={{ color: '#ff9900' }}>Product Images</h3>
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={uploadingImage}
+                className="btn-secondary btn-sm"
+              >
+                {uploadingImage ? 'Uploading…' : '+ Upload Image'}
+              </button>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={(e) => handleImageUpload(e.target.files)}
+              />
+            </div>
+
+            {images.length === 0 ? (
+              <p className="text-xs text-iron-400 italic">No images yet. Upload JPEG, PNG, or WEBP files (max 5 MB each).</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {images
+                  .slice()
+                  .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+                  .map((img) => (
+                    <div
+                      key={img.id}
+                      className="relative rounded-lg overflow-hidden group"
+                      style={{
+                        aspectRatio: '1',
+                        background: '#2d2d2d',
+                        border: img.isPrimary ? '2px solid #ff9900' : '2px solid transparent',
+                      }}
+                    >
+                      <img
+                        src={img.url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                      {img.isPrimary && (
+                        <span
+                          className="absolute top-1 left-1 text-xs font-bold px-1.5 py-0.5 rounded"
+                          style={{ background: '#ff9900', color: '#0a0a0a' }}
+                        >
+                          Primary
+                        </span>
+                      )}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                        {!img.isPrimary && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetPrimary(img.id)}
+                            className="btn-secondary btn-sm w-full text-xs"
+                          >
+                            Set Primary
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteImage(img.id)}
+                          className="btn-danger btn-sm w-full text-xs"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+            {!isEdit && (
+              <p className="text-xs text-iron-400 italic">Save the product first, then upload images.</p>
+            )}
+          </div>
+        )}
+
+        {!isEdit && (
+          <div className="card" style={{ background: 'linear-gradient(to bottom, #2d2d2d, #3a3a3a)', borderColor: '#3a3a3a' }}>
+            <p className="text-xs text-iron-400 italic text-center py-2">
+              Image upload available after saving the product.
+            </p>
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-2">
           <button

@@ -16,8 +16,12 @@ import type {
   Product,
   ProductColor,
   ProductColorDto,
+  ProductImage,
   CreateProductDto,
   UpdateProductDto,
+  Category,
+  CreateCategoryDto,
+  UpdateCategoryDto,
   User,
   Manufacturer,
   CreateManufacturerDto,
@@ -283,6 +287,52 @@ export const productApi = {
     const response = await api.post<ApiResponse<Product>>(`/products/${id}/copy`);
     if (!response.data.data) throw new Error('Failed to copy product');
     return response.data.data;
+  },
+
+  uploadImage: async (id: number, file: File): Promise<ProductImage> => {
+    const form = new FormData();
+    form.append('image', file);
+    const response = await api.post<ApiResponse<ProductImage>>(`/products/${id}/images`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    if (!response.data.data) throw new Error('Failed to upload image');
+    return response.data.data;
+  },
+
+  reorderImages: async (id: number, order: number[]): Promise<void> => {
+    await api.patch(`/products/${id}/images/reorder`, { order });
+  },
+
+  setPrimaryImage: async (id: number, imageId: number): Promise<void> => {
+    await api.patch(`/products/${id}/images/${imageId}/primary`, {});
+  },
+
+  deleteImage: async (id: number, imageId: number): Promise<void> => {
+    await api.delete(`/products/${id}/images/${imageId}`);
+  },
+};
+
+// Category API
+export const categoryApi = {
+  getAll: async (): Promise<Category[]> => {
+    const response = await api.get<ApiResponse<Category[]>>('/categories');
+    return response.data.data || [];
+  },
+
+  create: async (data: CreateCategoryDto): Promise<Category> => {
+    const response = await api.post<ApiResponse<Category>>('/categories', data);
+    if (!response.data.data) throw new Error('Failed to create category');
+    return response.data.data;
+  },
+
+  update: async (id: number, data: UpdateCategoryDto): Promise<Category> => {
+    const response = await api.put<ApiResponse<Category>>(`/categories/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update category');
+    return response.data.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/categories/${id}`);
   },
 };
 
