@@ -5,6 +5,6 @@ export const PageIcon: React.FC<{ src: string; alt?: string }> = ({ src, alt = '
     src={src}
     alt={alt}
     className="object-contain mix-blend-screen shrink-0"
-    style={{ width: 52, height: 52 }}
+    style={{ width: 80, height: 80 }}
   />
 );

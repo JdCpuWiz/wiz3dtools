@@ -1,60 +1,38 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { ChevronDown, X, BarChart2 } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 type Props = { open: boolean; onClose: () => void };
 
-function NavIcon({ src, alt }: { src: string; alt: string }) {
-  return (
-    <span className="w-14 h-[42px] shrink-0 flex items-center justify-center">
-      <img src={src} alt={alt} className="w-full h-full object-contain mix-blend-screen" />
-    </span>
-  );
-}
-
 function NavItem({
   to,
   label,
-  iconSrc,
   exact,
   onClick,
-  fallbackIcon,
 }: {
   to: string;
   label: string;
-  iconSrc?: string;
   exact?: boolean;
   onClick?: () => void;
-  fallbackIcon?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center">
-      {iconSrc ? (
-        <NavIcon src={iconSrc} alt={label} />
-      ) : (
-        <span className="w-14 h-[42px] shrink-0 flex items-center justify-center" style={{ color: '#6b7280' }}>
-          {fallbackIcon}
-        </span>
-      )}
-      <NavLink
-        to={to}
-        end={exact}
-        onClick={onClick}
-        className={({ isActive }) =>
-          `flex-1 py-1.5 pr-3 text-xs rounded-md transition-colors ${isActive ? '' : ''}`
-        }
-        style={({ isActive }) => ({
-          color: '#ffffff',
-          backgroundColor: isActive ? '#ff9900' : 'transparent',
-          fontWeight: isActive ? 600 : 400,
-          paddingLeft: '0.5rem',
-          borderLeft: isActive ? '2px solid #e68a00' : '2px solid transparent',
-        })}
-      >
-        {label}
-      </NavLink>
-    </div>
+    <NavLink
+      to={to}
+      end={exact}
+      onClick={onClick}
+      className={({ isActive }) =>
+        `block py-1.5 px-4 mx-2 text-sm rounded-md transition-colors ${isActive ? '' : ''}`
+      }
+      style={({ isActive }) => ({
+        color: '#ffffff',
+        backgroundColor: isActive ? '#ff9900' : 'transparent',
+        fontWeight: isActive ? 600 : 400,
+        borderLeft: isActive ? '2px solid #e68a00' : '2px solid transparent',
+      })}
+    >
+      {label}
+    </NavLink>
   );
 }
 
@@ -110,7 +88,6 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
 
   return (
     <>
-      {/* Sidebar */}
       <aside
         className={[
           'fixed inset-y-0 left-0 z-40 flex flex-col w-64 shrink-0',
@@ -145,31 +122,26 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3">
-          <NavItem to="/" label="Dashboard" iconSrc="/icons/dashboard.png" exact onClick={onClose} />
+          <NavItem to="/" label="Dashboard" exact onClick={onClose} />
 
           <SectionHeader label="Operations" sectionKey="operations" open={sections.operations} onToggle={toggleSection} />
           {sections.operations && (
             <>
-              <NavItem to="/queue" label="Queue" iconSrc="/icons/queue.png" onClick={onClose} />
-              <NavItem to="/printers" label="Printers" iconSrc="/icons/printers.png" onClick={onClose} />
-              <NavItem to="/customers" label="Customers" iconSrc="/icons/customers.png" onClick={onClose} />
-              <NavItem to="/products" label="Products" iconSrc="/icons/products.png" onClick={onClose} />
-              <NavItem to="/invoices" label="Invoices" iconSrc="/icons/invoices.png" onClick={onClose} />
-              <NavItem
-                to="/reports/sales"
-                label="Sales Report"
-                fallbackIcon={<BarChart2 size={15} />}
-                onClick={onClose}
-              />
+              <NavItem to="/queue" label="Queue" onClick={onClose} />
+              <NavItem to="/printers" label="Printers" onClick={onClose} />
+              <NavItem to="/customers" label="Customers" onClick={onClose} />
+              <NavItem to="/products" label="Products" onClick={onClose} />
+              <NavItem to="/invoices" label="Invoices" onClick={onClose} />
+              <NavItem to="/reports/sales" label="Sales Report" onClick={onClose} />
             </>
           )}
 
           <SectionHeader label="Filament" sectionKey="filament" open={sections.filament} onToggle={toggleSection} />
           {sections.filament && (
             <>
-              <NavItem to="/filament" label="Inventory" iconSrc="/icons/filament-inventory.png" onClick={onClose} />
+              <NavItem to="/filament" label="Inventory" onClick={onClose} />
               {isAdmin && (
-                <NavItem to="/admin/manufacturers" label="Manufacturers" iconSrc="/icons/filament-manufacturers.png" onClick={onClose} />
+                <NavItem to="/admin/manufacturers" label="Manufacturers" onClick={onClose} />
               )}
             </>
           )}
@@ -179,9 +151,9 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
               <SectionHeader label="Admin" sectionKey="admin" open={sections.admin} onToggle={toggleSection} />
               {sections.admin && (
                 <>
-                  <NavItem to="/admin/users" label="Users" iconSrc="/icons/user-administration.png" onClick={onClose} />
-                  <NavItem to="/admin/colors" label="Colors" iconSrc="/icons/filament-color-administration.png" onClick={onClose} />
-                  <NavItem to="/admin/printers" label="Printers" iconSrc="/icons/printer-administration.png" onClick={onClose} />
+                  <NavItem to="/admin/users" label="Users" onClick={onClose} />
+                  <NavItem to="/admin/colors" label="Colors" onClick={onClose} />
+                  <NavItem to="/admin/printers" label="Printers" onClick={onClose} />
                 </>
               )}
             </>
@@ -189,27 +161,20 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
         </nav>
 
         {/* Footer — user info + sign out */}
-        <div className="shrink-0 py-3" style={{ borderTop: '1px solid #2d2d2d' }}>
+        <div className="shrink-0 px-2 py-3" style={{ borderTop: '1px solid #2d2d2d' }}>
           {user && (
-            <div className="px-4 py-1 flex items-center justify-between mb-1">
+            <div className="px-2 py-1 flex items-center justify-between mb-1">
               <span className="text-xs" style={{ color: '#6b7280' }}>{user.username}</span>
               <span className="text-xs font-medium" style={{ color: '#ff9900' }}>v{__APP_VERSION__}</span>
             </div>
           )}
-          <div className="flex items-center">
-            <NavIcon src="/icons/sign-out.png" alt="Sign Out" />
-            <button
-              onClick={handleLogout}
-              className="flex-1 py-1.5 pr-3 text-sm rounded-md transition-colors text-left"
-              style={{
-                color: '#ffffff',
-                paddingLeft: '0.5rem',
-                borderLeft: '2px solid transparent',
-              }}
-            >
-              Sign Out
-            </button>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full text-left py-1.5 px-2 text-sm rounded-md transition-colors"
+            style={{ color: '#ffffff', borderLeft: '2px solid transparent' }}
+          >
+            Sign Out
+          </button>
         </div>
       </aside>
     </>
