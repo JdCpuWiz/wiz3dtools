@@ -50,6 +50,7 @@ export const ProductList: React.FC = () => {
                 <th>Units Sold</th>
                 <th className="hidden md:table-cell">Revenue</th>
                 <th>Status</th>
+                <th className="hidden md:table-cell">Webstore</th>
                 <th />
               </tr>
             </thead>
@@ -82,6 +83,18 @@ export const ProductList: React.FC = () => {
                       }
                     >
                       {product.active ? 'Active' : 'Inactive'}
+                    </button>
+                  </td>
+                  <td className="hidden md:table-cell">
+                    <button
+                      onClick={() => update(product.id, { publishedToStore: !product.publishedToStore })}
+                      className="px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors"
+                      style={product.publishedToStore
+                        ? { background: '#1d4ed8', color: '#ffffff' }
+                        : { background: '#4b5563', color: '#ffffff' }
+                      }
+                    >
+                      {product.publishedToStore ? 'Live' : 'Off'}
                     </button>
                   </td>
                   <td>
