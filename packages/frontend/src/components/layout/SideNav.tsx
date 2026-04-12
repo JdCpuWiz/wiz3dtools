@@ -7,7 +7,7 @@ type Props = { open: boolean; onClose: () => void };
 
 function NavIcon({ src, alt }: { src: string; alt: string }) {
   return (
-    <span className="w-12 h-[34px] shrink-0 flex items-center justify-center">
+    <span className="w-14 h-[42px] shrink-0 flex items-center justify-center">
       <img src={src} alt={alt} className="w-full h-full object-contain mix-blend-screen" />
     </span>
   );
@@ -33,7 +33,7 @@ function NavItem({
       {iconSrc ? (
         <NavIcon src={iconSrc} alt={label} />
       ) : (
-        <span className="w-12 h-[34px] shrink-0 flex items-center justify-center" style={{ color: '#6b7280' }}>
+        <span className="w-14 h-[42px] shrink-0 flex items-center justify-center" style={{ color: '#6b7280' }}>
           {fallbackIcon}
         </span>
       )}
@@ -42,7 +42,7 @@ function NavItem({
         end={exact}
         onClick={onClick}
         className={({ isActive }) =>
-          `flex-1 py-1.5 pr-3 text-sm rounded-md transition-colors ${isActive ? '' : ''}`
+          `flex-1 py-1.5 pr-3 text-xs rounded-md transition-colors ${isActive ? '' : ''}`
         }
         style={({ isActive }) => ({
           color: '#ffffff',
