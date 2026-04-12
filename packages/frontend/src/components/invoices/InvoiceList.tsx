@@ -67,7 +67,10 @@ export const InvoiceList: React.FC = () => {
           <PageIcon src="/icons/invoices.png" alt="Invoices" />
           <h2 className="text-xl font-semibold text-iron-50">Invoices</h2>
         </div>
-        <button onClick={() => navigate('/invoices/new')} className="btn-primary btn-sm">+ New Invoice</button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate('/reports/sales')} className="btn-secondary btn-sm">Sales Report</button>
+          <button onClick={() => navigate('/invoices/new')} className="btn-primary btn-sm">+ New Invoice</button>
+        </div>
       </div>
 
       <div className="inline-flex p-1 rounded-xl" style={{ background: 'rgba(10,10,10,0.6)' }}>

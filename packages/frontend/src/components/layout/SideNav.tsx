@@ -132,7 +132,6 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
               <NavItem to="/customers" label="Customers" onClick={onClose} />
               <NavItem to="/products" label="Products" onClick={onClose} />
               <NavItem to="/invoices" label="Invoices" onClick={onClose} />
-              <NavItem to="/reports/sales" label="Sales Report" onClick={onClose} />
             </>
           )}
 
