@@ -79,13 +79,25 @@ function makeNoiseOverlay(size: number): Buffer {
  * Returns the path of the processed file (saved alongside the original).
  * Throws on failure — caller should fall back to original if this errors.
  */
+const MIME_BY_EXT: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+};
+
 export async function processProductImage(inputPath: string): Promise<string> {
   // Dynamic import because @imgly/background-removal-node is ESM-only
   const { removeBackground } = await import('@imgly/background-removal-node');
 
-  // 1. Remove background → transparent PNG in memory
+  // 1. Remove background → transparent PNG in memory.
+  // The library needs a Blob with an explicit MIME type so its image decoder
+  // knows the format — passing a raw Buffer causes "Unsupported format" errors.
+  const ext = path.extname(inputPath).toLowerCase();
+  const mimeType = MIME_BY_EXT[ext] ?? 'image/jpeg';
   const inputBuffer = await fsPromises.readFile(inputPath);
-  const resultBlob = await removeBackground(inputBuffer);
+  const inputBlob = new Blob([inputBuffer], { type: mimeType });
+  const resultBlob = await removeBackground(inputBlob);
   const transparentBuffer = Buffer.from(await resultBlob.arrayBuffer());
 
   // 2. Scan raw pixels to find tight bounding box of the subject
@@ -123,7 +135,6 @@ export async function processProductImage(inputPath: string): Promise<string> {
     .toBuffer();
 
   // 6. Write processed file alongside original
-  const ext = path.extname(inputPath);
   const outputPath = `${inputPath.slice(0, -ext.length)}-processed.webp`;
   await fsPromises.writeFile(outputPath, outputBuffer);
 
