@@ -144,11 +144,12 @@ export const ProductForm: React.FC = () => {
 
   useEffect(() => {
     if (existing) {
-      skuManuallyEdited.current = !!existing.sku;
+      const isCopy = existing.name.startsWith('Copy of ');
+      skuManuallyEdited.current = !!existing.sku && !isCopy;
       reset({
         name: existing.name,
         description: existing.description || '',
-        sku: existing.sku || '',
+        sku: isCopy ? '' : (existing.sku || ''),
         unitPrice: existing.unitPrice,
         active: existing.active,
         publishedToStore: existing.publishedToStore,
@@ -176,6 +177,7 @@ export const ProductForm: React.FC = () => {
   // Debounced SKU suggestion on name change
   useEffect(() => {
     if (!watchedName || skuManuallyEdited.current) return;
+    if (watchedName.startsWith('Copy of ')) return; // wait until user renames it
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSkuLoading(true);
