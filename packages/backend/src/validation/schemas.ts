@@ -74,6 +74,13 @@ export const createProductSchema = z.object({
   sku: nullish(z.string().max(50)),
   unitPrice: z.number().min(0, 'Unit price must be non-negative'),
   active: z.boolean().optional(),
+  // Store / wholesale fields
+  publishedToStore: z.boolean().optional(),
+  categoryId: nullish(z.number().int()),
+  storeTitle: nullish(z.string().max(255)),
+  storeDescription: nullish(z.string().max(2000)),
+  wholesalePrice: z.number().min(0).optional(),
+  retailPrice: z.number().min(0).optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();
