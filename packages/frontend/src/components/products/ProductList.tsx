@@ -32,7 +32,7 @@ export const ProductList: React.FC = () => {
   };
 
   const sortIcon = (key: SortKey) => {
-    if (sortKey !== key) return <span style={{ color: '#4b5563' }}> ↕</span>;
+    if (sortKey !== key) return <span style={{ color: '#ff9900' }}> ↕</span>;
     return <span style={{ color: '#ff9900' }}>{sortDir === 'asc' ? ' ↑' : ' ↓'}</span>;
   };
 
@@ -124,30 +124,30 @@ export const ProductList: React.FC = () => {
           <table className="wiz-table">
             <thead>
               <tr>
-                <th>
-                  <button onClick={() => handleSort('name')} className="hover:text-white transition-colors">
+                <th className="whitespace-nowrap">
+                  <button onClick={() => handleSort('name')} className="hover:text-white transition-colors whitespace-nowrap">
                     Name{sortIcon('name')}
                   </button>
                 </th>
-                <th className="hidden sm:table-cell">SKU</th>
-                <th className="hidden sm:table-cell">Description</th>
-                <th>
-                  <button onClick={() => handleSort('unitPrice')} className="hover:text-white transition-colors">
+                <th className="hidden sm:table-cell whitespace-nowrap">SKU</th>
+                <th className="hidden sm:table-cell whitespace-nowrap">Description</th>
+                <th className="whitespace-nowrap">
+                  <button onClick={() => handleSort('unitPrice')} className="hover:text-white transition-colors whitespace-nowrap">
                     Unit Price{sortIcon('unitPrice')}
                   </button>
                 </th>
-                <th>
-                  <button onClick={() => handleSort('unitsSold')} className="hover:text-white transition-colors">
+                <th className="whitespace-nowrap">
+                  <button onClick={() => handleSort('unitsSold')} className="hover:text-white transition-colors whitespace-nowrap">
                     Units Sold{sortIcon('unitsSold')}
                   </button>
                 </th>
-                <th className="hidden md:table-cell">
-                  <button onClick={() => handleSort('revenue')} className="hover:text-white transition-colors">
+                <th className="hidden md:table-cell whitespace-nowrap">
+                  <button onClick={() => handleSort('revenue')} className="hover:text-white transition-colors whitespace-nowrap">
                     Revenue{sortIcon('revenue')}
                   </button>
                 </th>
-                <th>Status</th>
-                <th className="hidden md:table-cell">Webstore</th>
+                <th className="whitespace-nowrap">Status</th>
+                <th className="hidden md:table-cell whitespace-nowrap">Webstore</th>
                 <th />
               </tr>
             </thead>
