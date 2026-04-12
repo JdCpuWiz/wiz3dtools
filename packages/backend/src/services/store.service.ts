@@ -21,6 +21,7 @@ export interface StoreOrderLineItem {
   quantity: number;
   unitPrice: number; // wholesalePrice at time of order
   productName?: string;
+  notes?: string;
 }
 
 export interface CreateStoreOrderDto {
@@ -124,6 +125,7 @@ export class StoreService {
         productId: item.productId,
         productName: item.productName || (product?.name as string),
         sku: (product?.sku as string | null) ?? undefined,
+        details: item.notes || undefined,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
       });
