@@ -14,8 +14,8 @@ function FilamentSummary({ jobs }: { jobs: FilamentJob[] }) {
   const totalGrams = jobs.reduce((s, j) => s + (j.filamentGrams ?? 0), 0);
   return (
     <div className="border-t pt-3 mt-1" style={{ borderColor: '#2d2d2d' }}>
-      <p className="text-xs font-semibold text-iron-400 uppercase tracking-wide mb-2">Last Print</p>
-      {jobName && <p className="text-xs text-iron-300 truncate mb-2">{jobName}</p>}
+      <p className="text-xs font-semibold text-white uppercase tracking-wide mb-2">Last Print</p>
+      {jobName && <p className="text-xs text-white truncate mb-2">{jobName}</p>}
       <div className="space-y-1">
         {jobs.map((j) => (
           <div key={j.id} className="flex items-center gap-2 text-xs">
@@ -26,19 +26,19 @@ function FilamentSummary({ jobs }: { jobs: FilamentJob[] }) {
                 border: `1px solid ${j.colorHex ? `#${j.colorHex}` : '#4b5563'}`,
               }}
             />
-            <span className="text-iron-300 flex-1 truncate">
+            <span className="text-white flex-1 truncate">
               {j.colorName ?? (j.amsColorHex ? `#${j.amsColorHex.slice(0, 6).toUpperCase()}` : 'Unknown')}
-              {j.amsMaterial && <span className="text-iron-500 ml-1">({j.amsMaterial})</span>}
+              {j.amsMaterial && <span className="text-white ml-1">({j.amsMaterial})</span>}
             </span>
             {j.filamentGrams !== null && j.filamentGrams > 0 && (
-              <span className="text-iron-400 shrink-0 font-medium">{j.filamentGrams.toFixed(1)}g</span>
+              <span className="text-white shrink-0 font-medium">{j.filamentGrams.toFixed(1)}g</span>
             )}
           </div>
         ))}
       </div>
       {totalGrams > 0 && (
         <div className="flex justify-between mt-2 pt-1 border-t" style={{ borderColor: '#3a3a3a' }}>
-          <span className="text-xs text-iron-500">Total</span>
+          <span className="text-xs text-white">Total</span>
           <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>{totalGrams.toFixed(1)}g</span>
         </div>
       )}
@@ -91,7 +91,7 @@ function PrinterCard({
         <div className="grid grid-cols-2 gap-3">
           {/* Progress */}
           <div className="card-surface rounded p-3 col-span-2">
-            <div className="flex justify-between text-xs text-iron-400 mb-1">
+            <div className="flex justify-between text-xs text-white mb-1">
               <span>{status.subtaskName || 'No job'}</span>
               <span>{status.mcPercent !== null ? `${status.mcPercent}%` : '—'}</span>
             </div>
@@ -104,7 +104,7 @@ function PrinterCard({
                 }}
               />
             </div>
-            <div className="flex justify-between text-xs text-iron-500 mt-1">
+            <div className="flex justify-between text-xs text-white mt-1">
               <span>
                 {status.layerNum !== null && status.totalLayerNum !== null
                   ? `Layer ${status.layerNum} / ${status.totalLayerNum}`
@@ -123,7 +123,7 @@ function PrinterCard({
           {/* AMS slots */}
           {status.amsSlots.length > 0 && (
             <div className="col-span-2">
-              <p className="text-xs text-iron-400 mb-2">AMS Filament</p>
+              <p className="text-xs text-white mb-2">AMS Filament</p>
               <div className="grid grid-cols-4 gap-1">
                 {status.amsSlots.map((slot) => (
                   <div
@@ -138,8 +138,8 @@ function PrinterCard({
                         borderColor: slot.trayColor ? `#${slot.trayColor.slice(0, 6)}` : '#444',
                       }}
                     />
-                    <span className="text-xs text-iron-400">{slot.remain !== null && slot.remain >= 0 ? `${slot.remain}%` : '—'}</span>
-                    <span className="text-xs text-iron-600 truncate w-full text-center">{slot.trayType || '—'}</span>
+                    <span className="text-xs text-white">{slot.remain !== null && slot.remain >= 0 ? `${slot.remain}%` : '—'}</span>
+                    <span className="text-xs text-white truncate w-full text-center">{slot.trayType || '—'}</span>
                   </div>
                 ))}
               </div>
@@ -147,7 +147,7 @@ function PrinterCard({
           )}
         </div>
       ) : (
-        <p className="text-iron-600 text-sm text-center py-4">
+        <p className="text-white text-sm text-center py-4">
           {!hasBambuConfig
             ? 'Set IP, serial, and access code in Admin → Printers to enable monitoring.'
             : !monitorOnline
@@ -158,7 +158,7 @@ function PrinterCard({
 
       {/* Print failed notice — connected but last job errored */}
       {status?.connected && status.gcodeState === 'FAILED' && (
-        <p className="text-xs text-center" style={{ color: '#ffffff' }}>
+        <p className="text-xs text-center text-white">
           Last print job failed.{status.subtaskName ? ` (${status.subtaskName})` : ''} Start a new print to clear.
         </p>
       )}
@@ -171,8 +171,8 @@ function PrinterCard({
 function StatPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="card-surface rounded p-2 flex flex-col items-center">
-      <span className="text-xs text-iron-500">{label}</span>
-      <span className="text-sm font-semibold text-iron-100 mt-0.5">{value}</span>
+      <span className="text-xs text-white">{label}</span>
+      <span className="text-sm font-semibold text-white mt-0.5">{value}</span>
     </div>
   );
 }
@@ -191,7 +191,7 @@ function PrinterQueueCard({ printerName, items }: { printerName: string; items: 
 
   if (active.length === 0) {
     return (
-      <div className="card-surface rounded p-3 text-center text-xs text-iron-600">
+      <div className="card-surface rounded p-3 text-center text-xs text-white">
         No items queued for {printerName}
       </div>
     );
@@ -200,8 +200,8 @@ function PrinterQueueCard({ printerName, items }: { printerName: string; items: 
   return (
     <div className="card-surface rounded" style={{ overflow: 'hidden' }}>
       <div className="px-3 py-2 border-b border-[#2d2d2d] flex items-center justify-between">
-        <span className="text-xs font-semibold text-iron-400 uppercase tracking-wide">Queue</span>
-        <span className="text-xs text-iron-600">{active.length} item{active.length !== 1 ? 's' : ''}</span>
+        <span className="text-xs font-semibold text-white uppercase tracking-wide">Queue</span>
+        <span className="text-xs text-white">{active.length} item{active.length !== 1 ? 's' : ''}</span>
       </div>
       <div className="divide-y divide-[#2d2d2d]">
         {active.map((item) => {
@@ -214,9 +214,9 @@ function PrinterQueueCard({ printerName, items }: { printerName: string; items: 
               >
                 {s.label}
               </span>
-              <span className="text-sm text-iron-100 truncate flex-1">{item.productName}</span>
+              <span className="text-sm text-white truncate flex-1">{item.productName}</span>
               {item.quantity > 1 && (
-                <span className="text-xs text-iron-500 shrink-0">×{item.quantity}</span>
+                <span className="text-xs text-white shrink-0">×{item.quantity}</span>
               )}
               {item.isInhouse && (
                 <span
@@ -252,9 +252,9 @@ function FilamentJobsPanel() {
         >
           {pendingCount} PENDING
         </span>
-        <h3 className="text-base font-bold text-iron-50">Filament Attribution Needed</h3>
+        <h3 className="text-base font-bold text-white">Filament Attribution Needed</h3>
       </div>
-      <p className="text-iron-400 text-sm mb-4">
+      <p className="text-white text-sm mb-4">
         These print jobs used filament that couldn't be automatically matched to your inventory.
         Select a color to deduct from stock.
       </p>
@@ -314,14 +314,14 @@ function FilamentJobRow({
             />
           )}
           <div>
-            <p className="text-sm font-medium text-iron-100">
+            <p className="text-sm font-medium text-white">
               {job.amsColorHex ? `#${job.amsColorHex.slice(0, 6).toUpperCase()}` : 'Unknown color'}{' '}
-              <span className="text-iron-400">({job.amsMaterial || 'Unknown material'})</span>
+              <span className="text-white">({job.amsMaterial || 'Unknown material'})</span>
             </p>
-            <p className="text-xs text-iron-500">
+            <p className="text-xs text-white">
               {job.printerName} · {job.jobName || 'Unknown job'} · AMS slot {job.amsSlotId}
             </p>
-            <p className="text-xs text-iron-500">
+            <p className="text-xs text-white">
               {remainDelta.toFixed(1)}% used · {new Date(job.createdAt).toLocaleDateString()}
             </p>
           </div>
@@ -380,8 +380,8 @@ export const PrinterDashboard: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-iron-50">Printer Dashboard</h2>
-          <p className="text-iron-400 text-sm mt-1">Real-time status for all printers.</p>
+          <h2 className="text-2xl font-bold text-white">Printer Dashboard</h2>
+          <p className="text-white text-sm mt-1">Real-time status for all printers.</p>
         </div>
         {error && (
           <span
@@ -398,7 +398,7 @@ export const PrinterDashboard: React.FC = () => {
 
       {/* Printer columns: printer card + queue card stacked */}
       {activePrinters.length === 0 ? (
-        <div className="card text-center py-12 text-iron-500">
+        <div className="card text-center py-12 text-white">
           No printers configured. Add printers in Admin → Printers.
         </div>
       ) : (

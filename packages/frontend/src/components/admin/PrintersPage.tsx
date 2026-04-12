@@ -88,8 +88,8 @@ export const PrintersPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-iron-50">Printers</h2>
-        <p className="text-iron-400 text-sm mt-1">
+        <h2 className="text-2xl font-bold text-white">Printers</h2>
+        <p className="text-white text-sm mt-1">
           Manage printers for queue assignment. Bambu fields enable live monitoring.
         </p>
       </div>
@@ -97,24 +97,24 @@ export const PrintersPage: React.FC = () => {
       {/* Add form — admin only */}
       {isAdmin && (
         <div className="card space-y-4">
-          <p className="text-sm font-medium text-iron-200">Add Printer</p>
+          <p className="text-sm font-medium text-white">Add Printer</p>
           <div className="flex items-end gap-3 flex-wrap">
             <div>
-              <label className="block text-xs font-medium text-iron-300 mb-1">Name *</label>
+              <label className="block text-xs font-medium text-white mb-1">Name *</label>
               <input className="input" style={{ width: 160 }} value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                 placeholder="e.g. Jarvis" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-iron-300 mb-1">Model</label>
+              <label className="block text-xs font-medium text-white mb-1">Model</label>
               <input className="input" style={{ width: 140 }} value={newModel}
                 onChange={(e) => setNewModel(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                 placeholder="e.g. Bambu P1S" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-iron-300 mb-1">Badge Color</label>
+              <label className="block text-xs font-medium text-white mb-1">Badge Color</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -133,22 +133,22 @@ export const PrintersPage: React.FC = () => {
             </div>
           </div>
           <div className="border-t pt-3" style={{ borderColor: '#3a3a3a' }}>
-            <p className="text-xs text-iron-400 mb-2">Bambu Configuration (optional — enables live monitoring)</p>
+            <p className="text-xs text-white mb-2">Bambu Configuration (optional — enables live monitoring)</p>
             <div className="flex items-end gap-3 flex-wrap">
               <div>
-                <label className="block text-xs font-medium text-iron-300 mb-1">IP Address</label>
+                <label className="block text-xs font-medium text-white mb-1">IP Address</label>
                 <input className="input" style={{ width: 160 }} value={newBambu.ipAddress}
                   onChange={(e) => setNewBambu({ ...newBambu, ipAddress: e.target.value })}
                   placeholder="192.168.x.x" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-iron-300 mb-1">Serial Number</label>
+                <label className="block text-xs font-medium text-white mb-1">Serial Number</label>
                 <input className="input" style={{ width: 160 }} value={newBambu.serialNumber}
                   onChange={(e) => setNewBambu({ ...newBambu, serialNumber: e.target.value })}
                   placeholder="01P09C..." />
               </div>
               <div>
-                <label className="block text-xs font-medium text-iron-300 mb-1">Access Code</label>
+                <label className="block text-xs font-medium text-white mb-1">Access Code</label>
                 <input className="input" style={{ width: 130 }} type="password"
                   value={newBambu.accessCode}
                   onChange={(e) => setNewBambu({ ...newBambu, accessCode: e.target.value })}
@@ -165,7 +165,7 @@ export const PrintersPage: React.FC = () => {
       {/* Printers list */}
       <div className="space-y-3">
         {printers.length === 0 && (
-          <div className="card text-center text-iron-500 py-8">No printers configured yet.</div>
+          <div className="card text-center text-white py-8">No printers configured yet.</div>
         )}
         {printers.map((p, idx) => (
           <div
@@ -178,20 +178,20 @@ export const PrintersPage: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-end gap-3 flex-wrap">
                   <div>
-                    <label className="block text-xs font-medium text-iron-300 mb-1">Name *</label>
+                    <label className="block text-xs font-medium text-white mb-1">Name *</label>
                     <input className="input" style={{ width: 160 }} value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null); }}
                       autoFocus />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-iron-300 mb-1">Model</label>
+                    <label className="block text-xs font-medium text-white mb-1">Model</label>
                     <input className="input" style={{ width: 140 }} value={editModel}
                       onChange={(e) => setEditModel(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null); }} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-iron-300 mb-1">Badge Color</label>
+                    <label className="block text-xs font-medium text-white mb-1">Badge Color</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -210,24 +210,24 @@ export const PrintersPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="border-t pt-3" style={{ borderColor: '#3a3a3a' }}>
-                  <p className="text-xs text-iron-400 mb-2">Bambu Configuration</p>
+                  <p className="text-xs text-white mb-2">Bambu Configuration</p>
                   <div className="flex items-end gap-3 flex-wrap">
                     <div>
-                      <label className="block text-xs font-medium text-iron-300 mb-1">IP Address</label>
+                      <label className="block text-xs font-medium text-white mb-1">IP Address</label>
                       <input className="input" style={{ width: 160 }} value={editBambu.ipAddress}
                         onChange={(e) => setEditBambu({ ...editBambu, ipAddress: e.target.value })}
                         placeholder="192.168.x.x" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-iron-300 mb-1">Serial Number</label>
+                      <label className="block text-xs font-medium text-white mb-1">Serial Number</label>
                       <input className="input" style={{ width: 160 }} value={editBambu.serialNumber}
                         onChange={(e) => setEditBambu({ ...editBambu, serialNumber: e.target.value })}
                         placeholder="01P09C..." />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-iron-300 mb-1">
+                      <label className="block text-xs font-medium text-white mb-1">
                         Access Code{' '}
-                        <span className="text-iron-600">(leave blank to keep existing)</span>
+                        <span className="text-white">(leave blank to keep existing)</span>
                       </label>
                       <input className="input" style={{ width: 130 }} type="password"
                         value={editBambu.accessCode}
@@ -252,7 +252,7 @@ export const PrintersPage: React.FC = () => {
                     >
                       {p.name}
                     </span>
-                    {p.model && <span className="text-iron-500 text-sm">{p.model}</span>}
+                    {p.model && <span className="text-white text-sm">{p.model}</span>}
                   </div>
                   {/* Bambu config badge */}
                   {hasBambuConfig(p) ? (
@@ -271,7 +271,7 @@ export const PrintersPage: React.FC = () => {
                     </span>
                   )}
                   {p.ipAddress && (
-                    <span className="text-iron-500 text-xs">{p.ipAddress}</span>
+                    <span className="text-white text-xs">{p.ipAddress}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -308,7 +308,7 @@ export const PrintersPage: React.FC = () => {
         ))}
       </div>
 
-      <p className="text-iron-600 text-xs">
+      <p className="text-white text-xs">
         After adding or changing Bambu config, restart the bambu-monitor service for changes to take effect.
       </p>
     </div>
