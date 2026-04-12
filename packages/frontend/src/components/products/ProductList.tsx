@@ -167,7 +167,7 @@ export const ProductList: React.FC = () => {
                     ${product.unitPrice.toFixed(2)}
                   </td>
                   <td className="text-white">{product.unitsSold}</td>
-                  <td className="hidden md:table-cell font-medium" style={{ color: '#86efac' }}>
+                  <td className="hidden md:table-cell font-medium" style={{ color: '#ff9900' }}>
                     {product.unitsSold > 0 ? `$${(product.unitsSold * product.unitPrice).toFixed(2)}` : '—'}
                   </td>
                   <td>
