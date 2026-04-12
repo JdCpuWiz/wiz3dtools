@@ -1,38 +1,60 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard, PrinterCheck, Users, Package, FileText,
-  Layers, Factory, Palette, ShieldCheck, ChevronDown,
-  LogOut, X, Printer, BarChart2,
-} from 'lucide-react';
+import { ChevronDown, X, BarChart2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 type Props = { open: boolean; onClose: () => void };
 
+function NavIcon({ src, alt }: { src: string; alt: string }) {
+  return (
+    <span className="w-12 h-[34px] shrink-0 flex items-center justify-center">
+      <img src={src} alt={alt} className="w-full h-full object-contain mix-blend-screen" />
+    </span>
+  );
+}
+
 function NavItem({
-  to, label, icon, exact, onClick,
+  to,
+  label,
+  iconSrc,
+  exact,
+  onClick,
+  fallbackIcon,
 }: {
-  to: string; label: string; icon: React.ReactNode; exact?: boolean; onClick?: () => void;
+  to: string;
+  label: string;
+  iconSrc?: string;
+  exact?: boolean;
+  onClick?: () => void;
+  fallbackIcon?: React.ReactNode;
 }) {
   return (
-    <NavLink
-      to={to}
-      end={exact}
-      onClick={onClick}
-      className={({ isActive }) =>
-        `flex items-center gap-2.5 py-1.5 text-sm rounded-md mx-2 pl-4 pr-3 transition-colors ${
-          isActive ? '' : ''
-        }`
-      }
-      style={({ isActive }) => ({
-        color: isActive ? '#ffffff' : '#ffffff',
-        backgroundColor: isActive ? '#ff9900' : 'transparent',
-        borderLeft: isActive ? '2px solid #e68a00' : '2px solid transparent',
-      })}
-    >
-      {icon}
-      <span>{label}</span>
-    </NavLink>
+    <div className="flex items-center">
+      {iconSrc ? (
+        <NavIcon src={iconSrc} alt={label} />
+      ) : (
+        <span className="w-12 h-[34px] shrink-0 flex items-center justify-center" style={{ color: '#6b7280' }}>
+          {fallbackIcon}
+        </span>
+      )}
+      <NavLink
+        to={to}
+        end={exact}
+        onClick={onClick}
+        className={({ isActive }) =>
+          `flex-1 py-1.5 pr-3 text-sm rounded-md transition-colors ${isActive ? '' : ''}`
+        }
+        style={({ isActive }) => ({
+          color: '#ffffff',
+          backgroundColor: isActive ? '#ff9900' : 'transparent',
+          fontWeight: isActive ? 600 : 400,
+          paddingLeft: '0.5rem',
+          borderLeft: isActive ? '2px solid #e68a00' : '2px solid transparent',
+        })}
+      >
+        {label}
+      </NavLink>
+    </div>
   );
 }
 
@@ -98,51 +120,56 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
         ].join(' ')}
         style={{ backgroundColor: '#111111', borderRight: '1px solid #2d2d2d' }}
       >
-        {/* Brand + mobile close */}
+        {/* Header — full-width logo + text below */}
         <div
-          className="relative flex items-center justify-center px-4 py-4 shrink-0 gap-3"
+          className="relative px-3 pt-4 pb-3 shrink-0"
           style={{ borderBottom: '1px solid #2d2d2d' }}
         >
-          <img
-            src="/wiz3d_prints_logo.png"
-            alt="Wiz3D Prints"
-            style={{ width: 40, height: 40, objectFit: 'contain' }}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold text-iron-50 leading-tight">Wiz3d Tools</div>
-            <div className="text-xs text-iron-400 leading-tight">3D Printing Suite</div>
-          </div>
           <button
-            className="md:hidden text-iron-400 hover:text-iron-200 p-1"
+            className="md:hidden absolute top-3 right-2 text-iron-400 hover:text-iron-200 p-1"
             onClick={onClose}
             aria-label="Close menu"
           >
             <X size={16} />
           </button>
+          <img
+            src="/wiz3d_prints_logo.png"
+            alt="Wiz3D Prints"
+            className="w-full h-auto object-contain mix-blend-screen"
+          />
+          <div className="text-center mt-2">
+            <div className="text-sm font-bold leading-tight" style={{ color: '#ffffff' }}>Wiz3d Tools</div>
+            <div className="text-xs leading-tight" style={{ color: '#6b7280' }}>3D Printing Suite</div>
+          </div>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3">
-          <NavItem to="/" label="Dashboard" icon={<LayoutDashboard size={15} />} exact onClick={onClose} />
+          <NavItem to="/" label="Dashboard" iconSrc="/icons/dashboard.png" exact onClick={onClose} />
 
           <SectionHeader label="Operations" sectionKey="operations" open={sections.operations} onToggle={toggleSection} />
           {sections.operations && (
             <>
-              <NavItem to="/queue" label="Queue" icon={<PrinterCheck size={15} />} onClick={onClose} />
-              <NavItem to="/printers" label="Printers" icon={<Printer size={15} />} onClick={onClose} />
-              <NavItem to="/customers" label="Customers" icon={<Users size={15} />} onClick={onClose} />
-              <NavItem to="/products" label="Products" icon={<Package size={15} />} onClick={onClose} />
-              <NavItem to="/invoices" label="Invoices" icon={<FileText size={15} />} onClick={onClose} />
-              <NavItem to="/reports/sales" label="Sales Report" icon={<BarChart2 size={15} />} onClick={onClose} />
+              <NavItem to="/queue" label="Queue" iconSrc="/icons/queue.png" onClick={onClose} />
+              <NavItem to="/printers" label="Printers" iconSrc="/icons/printers.png" onClick={onClose} />
+              <NavItem to="/customers" label="Customers" iconSrc="/icons/customers.png" onClick={onClose} />
+              <NavItem to="/products" label="Products" iconSrc="/icons/products.png" onClick={onClose} />
+              <NavItem to="/invoices" label="Invoices" iconSrc="/icons/invoices.png" onClick={onClose} />
+              <NavItem
+                to="/reports/sales"
+                label="Sales Report"
+                fallbackIcon={<BarChart2 size={15} />}
+                onClick={onClose}
+              />
             </>
           )}
 
           <SectionHeader label="Filament" sectionKey="filament" open={sections.filament} onToggle={toggleSection} />
           {sections.filament && (
             <>
-              <NavItem to="/filament" label="Inventory" icon={<Layers size={15} />} onClick={onClose} />
+              <NavItem to="/filament" label="Inventory" iconSrc="/icons/filament-inventory.png" onClick={onClose} />
               {isAdmin && (
-                <NavItem to="/admin/manufacturers" label="Manufacturers" icon={<Factory size={15} />} onClick={onClose} />
+                <NavItem to="/admin/manufacturers" label="Manufacturers" iconSrc="/icons/filament-manufacturers.png" onClick={onClose} />
               )}
             </>
           )}
@@ -152,31 +179,37 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
               <SectionHeader label="Admin" sectionKey="admin" open={sections.admin} onToggle={toggleSection} />
               {sections.admin && (
                 <>
-                  <NavItem to="/admin/users" label="Users" icon={<ShieldCheck size={15} />} onClick={onClose} />
-                  <NavItem to="/admin/colors" label="Colors" icon={<Palette size={15} />} onClick={onClose} />
-                  <NavItem to="/admin/printers" label="Printers" icon={<Printer size={15} />} onClick={onClose} />
+                  <NavItem to="/admin/users" label="Users" iconSrc="/icons/user-administration.png" onClick={onClose} />
+                  <NavItem to="/admin/colors" label="Colors" iconSrc="/icons/filament-color-administration.png" onClick={onClose} />
+                  <NavItem to="/admin/printers" label="Printers" iconSrc="/icons/printer-administration.png" onClick={onClose} />
                 </>
               )}
             </>
           )}
         </nav>
 
-        {/* Bottom: user info + sign out */}
-        <div className="shrink-0 px-2 py-3 flex flex-col gap-1" style={{ borderTop: '1px solid #2d2d2d' }}>
+        {/* Footer — user info + sign out */}
+        <div className="shrink-0 py-3" style={{ borderTop: '1px solid #2d2d2d' }}>
           {user && (
-            <div className="px-4 py-1 flex items-center justify-between">
-              <span className="text-xs text-iron-400">{user.username}</span>
+            <div className="px-4 py-1 flex items-center justify-between mb-1">
+              <span className="text-xs" style={{ color: '#6b7280' }}>{user.username}</span>
               <span className="text-xs font-medium" style={{ color: '#ff9900' }}>v{__APP_VERSION__}</span>
             </div>
           )}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2.5 py-1.5 text-sm rounded-md mx-0 pl-4 pr-3 transition-colors w-full text-left"
-            style={{ color: '#ffffff', borderLeft: '2px solid transparent' }}
-          >
-            <LogOut size={15} />
-            <span>Sign Out</span>
-          </button>
+          <div className="flex items-center">
+            <NavIcon src="/icons/sign-out.png" alt="Sign Out" />
+            <button
+              onClick={handleLogout}
+              className="flex-1 py-1.5 pr-3 text-sm rounded-md transition-colors text-left"
+              style={{
+                color: '#ffffff',
+                paddingLeft: '0.5rem',
+                borderLeft: '2px solid transparent',
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </aside>
     </>
