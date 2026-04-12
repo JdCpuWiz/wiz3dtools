@@ -99,4 +99,25 @@ export class StoreController {
       res.json({ success: true, data: orders });
     } catch (error) { next(error); }
   }
+
+  async getOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (!id || isNaN(id)) {
+        res.status(400).json({ success: false, error: 'Invalid order id' });
+        return;
+      }
+      const customerId = parseInt(req.query.customerId as string);
+      if (!customerId || isNaN(customerId)) {
+        res.status(400).json({ success: false, error: 'customerId query param is required' });
+        return;
+      }
+      const order = await service.getOrderById(id, customerId);
+      if (!order) {
+        res.status(404).json({ success: false, error: 'Order not found' });
+        return;
+      }
+      res.json({ success: true, data: order });
+    } catch (error) { next(error); }
+  }
 }

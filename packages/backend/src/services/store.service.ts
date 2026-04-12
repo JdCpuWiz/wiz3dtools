@@ -137,6 +137,13 @@ export class StoreService {
     return full;
   }
 
+  async getOrderById(id: number, customerId: number): Promise<SalesInvoice | null> {
+    const invoice = await SalesInvoiceModel.findById(id);
+    // Ensure the invoice belongs to this customer
+    if (!invoice || invoice.customerId !== customerId) return null;
+    return invoice;
+  }
+
   async getOrdersByCustomer(customerId: number): Promise<StoreOrderSummary[]> {
     const result = await pool.query(
       `SELECT
