@@ -501,10 +501,13 @@ class BambuPrinterClient:
     def _handle_state_transition(self, prev: str | None, new: str):
         logger.info(f"[{self.state.printer_name}] State: {prev} → {new}")
 
-        if new == "RUNNING" and prev in (None, "IDLE", "FINISH", "FAILED"):
-            # Print started — snapshot AMS remain + advance any in-house queue item
+        if new == "RUNNING" and prev not in ("RUNNING", "PAUSE"):
+            # Print started (or resumed from any pre-running state like PREPARE).
+            # PAUSE → RUNNING is a resume, not a new print start, so we exclude it.
+            # All other → RUNNING transitions (IDLE, FINISH, FAILED, PREPARE, None)
+            # are treated as a new print starting.
             self.state.take_ams_snapshot()
-            logger.info(f"[{self.state.printer_name}] Print started, AMS snapshot taken.")
+            logger.info(f"[{self.state.printer_name}] Print started ({prev} → RUNNING), AMS snapshot taken.")
             inhouse_transition(self.state.printer_name, "start")
 
         elif new == "FINISH":
