@@ -114,7 +114,7 @@ export function getPrinterStatusStyle(state: PrinterLiveStatus): {
     case 'RUNNING': return { label: 'Printing',  bg: '#15803d', text: '#ffffff' };
     case 'PAUSE':   return { label: 'Paused',    bg: '#eab308', text: '#000000' };
     case 'FINISH':  return { label: 'Finished',  bg: '#1d4ed8', text: '#ffffff' };
-    case 'FAILED':  return { label: 'Failed',    bg: '#b91c1c', text: '#ffffff' };
+    case 'FAILED':  return { label: 'Print Failed', bg: '#b91c1c', text: '#ffffff' };
     case 'IDLE':
     default:        return { label: 'Idle',      bg: '#4b5563', text: '#ffffff' };
   }

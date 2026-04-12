@@ -156,6 +156,13 @@ function PrinterCard({
         </p>
       )}
 
+      {/* Print failed notice — connected but last job errored */}
+      {status?.connected && status.gcodeState === 'FAILED' && (
+        <p className="text-xs text-center" style={{ color: '#f87171' }}>
+          Last print job failed.{status.subtaskName ? ` (${status.subtaskName})` : ''} Start a new print to clear.
+        </p>
+      )}
+
       <FilamentSummary jobs={lastJob} />
     </div>
   );
