@@ -75,7 +75,7 @@ function SectionHeader({
       className="w-full flex items-center gap-2 mt-5 mb-1 pr-4 hover:opacity-80 transition-opacity"
       style={{ paddingLeft: '0.75rem' }}
     >
-      <span className="text-xs font-bold uppercase tracking-wider shrink-0" style={{ color: '#ffffff' }}>
+      <span className="text-xs font-bold uppercase tracking-wider shrink-0" style={{ color: '#ff9900' }}>
         {label}
       </span>
       <div className="flex-1 h-px" style={{ backgroundColor: '#2d2d2d' }} />
@@ -113,7 +113,7 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
       {/* Sidebar */}
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-40 flex flex-col w-56 shrink-0',
+          'fixed inset-y-0 left-0 z-40 flex flex-col w-64 shrink-0',
           'md:static md:z-auto md:translate-x-0 md:h-screen md:sticky md:top-0',
           'transition-transform duration-200 ease-in-out',
           open ? 'translate-x-0' : '-translate-x-full',
