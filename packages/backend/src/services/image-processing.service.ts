@@ -82,14 +82,13 @@ function makeNoiseOverlay(size: number): Buffer {
 export async function processProductImage(inputPath: string): Promise<string> {
   const ext = path.extname(inputPath).toLowerCase();
 
-  // 1. Remove background via rembg sidecar (POST raw image, receive transparent PNG).
+  // 1. Remove background via rembg sidecar.
+  // rembg expects multipart/form-data with a field named "file".
   const rembgUrl = `${process.env.REMBG_URL ?? 'http://rembg:7000'}/api/remove`;
   const inputBuffer = await fsPromises.readFile(inputPath);
-  const rembgResponse = await fetch(rembgUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'image/png' }, // rembg accepts any image; PNG header is fine
-    body: inputBuffer,
-  });
+  const form = new FormData();
+  form.append('file', new Blob([inputBuffer]), `image${ext}`);
+  const rembgResponse = await fetch(rembgUrl, { method: 'POST', body: form });
   if (!rembgResponse.ok) {
     throw new Error(`rembg API returned ${rembgResponse.status}: ${await rembgResponse.text()}`);
   }
