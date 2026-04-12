@@ -4,6 +4,7 @@ import fsPromises from 'fs/promises';
 import { ProductService } from '../services/product.service.js';
 import { ProductColorModel } from '../models/product-color.model.js';
 import { ProductImageModel } from '../models/product-image.model.js';
+import { processProductImage } from '../services/image-processing.service.js';
 import { parseBody, createProductSchema, updateProductSchema, setProductColorsSchema } from '../validation/schemas.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
@@ -92,7 +93,20 @@ export class ProductController {
       if (!req.file) { res.status(400).json({ success: false, error: 'No image file provided' }); return; }
 
       const baseUrl = process.env.STORE_IMAGE_PUBLIC_BASE || '/uploads/store';
-      const url = `${baseUrl}/${req.file.filename}`;
+
+      // Process image: remove background, crop, resize, composite onto dark heathered background.
+      // Falls back to original if processing fails so uploads never get silently blocked.
+      let finalFilename = req.file.filename;
+      try {
+        const processedPath = await processProductImage(req.file.path);
+        finalFilename = path.basename(processedPath);
+        // Remove original now that we have the processed version
+        await fsPromises.unlink(req.file.path).catch(() => {});
+      } catch (err) {
+        console.error('[image-processing] failed, using original:', err);
+      }
+
+      const url = `${baseUrl}/${finalFilename}`;
       const image = await ProductImageModel.create(id, url);
       res.status(201).json({ success: true, data: image });
     } catch (error) { next(error); }
