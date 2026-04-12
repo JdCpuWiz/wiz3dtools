@@ -32,7 +32,7 @@ export const ProductList: React.FC = () => {
           style={{ background: 'linear-gradient(to bottom, #3a3a3a, #2d2d2d)' }}
         >
           <p className="text-lg font-medium text-iron-50">No products yet</p>
-          <p className="text-sm mt-1 text-iron-400">Create your first product to get started</p>
+          <p className="text-sm mt-1 text-white">Create your first product to get started</p>
         </div>
       ) : (
         <div className="card-surface">
@@ -52,9 +52,9 @@ export const ProductList: React.FC = () => {
             <tbody>
               {products.map((product) => (
                 <tr key={product.id}>
-                  <td className="font-medium text-iron-50">{product.name}</td>
-                  <td className="text-iron-400 hidden sm:table-cell font-mono text-xs">{product.sku || '—'}</td>
-                  <td className="text-iron-400 hidden sm:table-cell">
+                  <td className="font-medium text-white">{product.name}</td>
+                  <td className="text-white hidden sm:table-cell font-mono text-xs">{product.sku || '—'}</td>
+                  <td className="text-white hidden sm:table-cell">
                     {product.description
                       ? product.description.length > 60
                         ? product.description.slice(0, 60) + '…'
@@ -64,7 +64,7 @@ export const ProductList: React.FC = () => {
                   <td className="font-medium" style={{ color: '#ff9900' }}>
                     ${product.unitPrice.toFixed(2)}
                   </td>
-                  <td className="text-iron-100">{product.unitsSold}</td>
+                  <td className="text-white">{product.unitsSold}</td>
                   <td className="hidden md:table-cell font-medium" style={{ color: '#86efac' }}>
                     {product.unitsSold > 0 ? `$${(product.unitsSold * product.unitPrice).toFixed(2)}` : '—'}
                   </td>

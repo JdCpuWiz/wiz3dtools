@@ -6,11 +6,11 @@ import { useSalesInvoices } from '../../hooks/useSalesInvoices';
 import type { CreateCustomerDto, SalesInvoice } from '@wizqueue/shared';
 
 const statusColors: Record<string, { color: string; bg: string }> = {
-  draft:     { color: '#d1d5db', bg: '#2d2d2d' },
-  sent:      { color: '#93c5fd', bg: '#1e3a5f' },
-  paid:      { color: '#86efac', bg: '#14532d' },
-  shipped:   { color: '#2dd4bf', bg: '#0d3330' },
-  cancelled: { color: '#fca5a5', bg: '#450a0a' },
+  draft:     { color: '#ffffff', bg: '#6b7280' },
+  sent:      { color: '#ffffff', bg: '#1d4ed8' },
+  paid:      { color: '#ffffff', bg: '#15803d' },
+  shipped:   { color: '#ffffff', bg: '#6d28d9' },
+  cancelled: { color: '#ffffff', bg: '#b91c1c' },
 };
 
 function calcTotal(inv: SalesInvoice): number {
@@ -62,7 +62,7 @@ export const CustomerForm: React.FC = () => {
     navigate('/customers');
   };
 
-  const labelClass = 'block text-sm font-medium text-iron-100 mb-1';
+  const labelClass = 'block text-sm font-medium mb-1 text-primary-400';
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -138,13 +138,13 @@ export const CustomerForm: React.FC = () => {
       {isEdit && (
         <div className="card-surface">
           <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-[#2d2d2d]">
-            <h3 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-widest">
+            <h3 className="text-sm font-semibold uppercase tracking-widest" style={{ color: '#ff9900' }}>
               Invoice History
             </h3>
             <Link to={`/invoices/new`} className="btn-primary btn-sm text-xs">+ New Invoice</Link>
           </div>
           {customerInvoices.length === 0 ? (
-            <p className="text-sm text-[#6b7280] px-4 py-6">No invoices for this customer yet.</p>
+            <p className="text-sm text-white px-4 py-6">No invoices for this customer yet.</p>
           ) : (
             <table className="wiz-table">
               <thead>
@@ -166,13 +166,13 @@ export const CustomerForm: React.FC = () => {
                           {inv.invoiceNumber}
                         </Link>
                       </td>
-                      <td className="text-[#9ca3af] text-sm">{fmtDate(inv.createdAt)}</td>
+                      <td className="text-white text-sm">{fmtDate(inv.createdAt)}</td>
                       <td>
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ color: sc.color, background: sc.bg }}>
                           {displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)}
                         </span>
                       </td>
-                      <td className="text-right font-medium text-[#e5e5e5]">
+                      <td className="text-right font-medium text-white">
                         ${calcTotal(inv).toFixed(2)}
                       </td>
                     </tr>

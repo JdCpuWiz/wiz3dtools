@@ -114,7 +114,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                     }}
                   >
                     <ColorSwatch hex={c.hex} name={c.name} size={16} />
-                    <span style={{ fontSize: 11, color: sel ? '#ff9900' : '#d1d5db', fontWeight: sel ? 600 : 400 }}>
+                    <span style={{ fontSize: 11, color: sel ? '#ff9900' : '#ffffff', fontWeight: sel ? 600 : 400 }}>
                       {c.name}
                     </span>
                   </button>
@@ -149,7 +149,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                 }}
               >
                 <ColorSwatch hex={color.hex} name={color.name} size={18} />
-                <span style={{ fontSize: 12, color: '#e5e5e5', minWidth: 70 }}>{color.name}</span>
+                <span style={{ fontSize: 12, color: '#ffffff', minWidth: 70 }}>{color.name}</span>
                 <button
                   type="button"
                   onClick={() => setPrimary(s.colorId)}
@@ -182,7 +182,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                     border: 'none',
                     background: 'rgba(10,10,10,0.5)',
                     boxShadow: 'inset 0 1px 3px rgb(0 0 0 / 0.4)',
-                    color: '#e5e5e5',
+                    color: '#ffffff',
                     fontSize: 12,
                     outline: 'none',
                   }}

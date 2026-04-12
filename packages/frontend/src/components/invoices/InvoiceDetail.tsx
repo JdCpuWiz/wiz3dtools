@@ -225,12 +225,12 @@ export const InvoiceDetail: React.FC = () => {
             </select>
           ) : invoice.customer ? (
             <div className="text-sm space-y-0.5">
-              {invoice.customer.businessName && <p className="font-medium text-iron-50">{invoice.customer.businessName}</p>}
-              <p className="text-iron-100">{invoice.customer.contactName}</p>
-              {invoice.customer.email && <p className="text-iron-400">{invoice.customer.email}</p>}
-              {invoice.customer.phone && <p className="text-iron-400">{invoice.customer.phone}</p>}
+              {invoice.customer.businessName && <p className="font-medium text-white">{invoice.customer.businessName}</p>}
+              <p className="text-white">{invoice.customer.contactName}</p>
+              {invoice.customer.email && <p className="text-white">{invoice.customer.email}</p>}
+              {invoice.customer.phone && <p className="text-white">{invoice.customer.phone}</p>}
             </div>
-          ) : <p className="text-sm text-iron-500">No customer assigned</p>}
+          ) : <p className="text-sm text-white">No customer assigned</p>}
         </div>
 
         <div className="card">
@@ -250,7 +250,7 @@ export const InvoiceDetail: React.FC = () => {
           ) : (
             <div>
               <StatusBadge status={isShipped ? 'shipped' : invoice.status} />
-              {invoice.sentAt && <p className="text-xs text-iron-400 mt-1">Sent {new Date(invoice.sentAt).toLocaleDateString('en-US')}</p>}
+              {invoice.sentAt && <p className="text-xs text-white mt-1">Sent {new Date(invoice.sentAt).toLocaleDateString('en-US')}</p>}
               {invoice.shippedAt && <p className="text-xs mt-1" style={{ color: '#2dd4bf' }}>Shipped {new Date(invoice.shippedAt).toLocaleDateString('en-US')}</p>}
             </div>
           )}
@@ -312,10 +312,10 @@ export const InvoiceDetail: React.FC = () => {
                 </div>
               </div>
             ) : invoice.carrier === 'Customer Pickup' ? (
-              <p className="text-sm text-iron-300">Customer Pickup</p>
+              <p className="text-sm text-white">Customer Pickup</p>
             ) : invoice.trackingNumber ? (
               <div className="space-y-0.5">
-                {invoice.carrier && <p className="text-xs text-iron-400">{invoice.carrier}</p>}
+                {invoice.carrier && <p className="text-xs font-semibold" style={{ color: '#ff9900' }}>{invoice.carrier}</p>}
                 {(() => {
                   const trackingUrl = (() => {
                     const t = encodeURIComponent(invoice.trackingNumber!);
@@ -337,12 +337,12 @@ export const InvoiceDetail: React.FC = () => {
                 })()}
               </div>
             ) : (
-              <p className="text-xs text-iron-600">{isShipped ? '—' : 'No tracking info'}</p>
+              <p className="text-xs text-white">{isShipped ? '—' : 'No tracking info'}</p>
             )}
           </div>
-          <div className="mt-3 pt-3 text-xs text-iron-400 space-y-0.5" style={{ borderTop: '1px solid #2d2d2d' }}>
+          <div className="mt-3 pt-3 text-xs space-y-0.5" style={{ borderTop: '1px solid #2d2d2d' }}>
             <div className="flex justify-between items-center">
-              <span>Tax:</span>
+              <span style={{ color: '#ff9900' }}>Tax:</span>
               <div className="flex items-center gap-2">
                 <span>{invoice.taxExempt ? 'Exempt' : `${(invoice.taxRate * 100).toFixed(0)}%`}</span>
                 <button
@@ -367,7 +367,7 @@ export const InvoiceDetail: React.FC = () => {
       {/* Line Items Table */}
       <div className="card-surface">
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #2d2d2d' }}>
-          <h3 className="font-semibold text-iron-50">Line Items</h3>
+          <h3 className="font-semibold" style={{ color: '#ff9900' }}>Line Items</h3>
           <button onClick={() => { if (confirmIfPaid()) setShowAddRow(true); }} className="btn-secondary btn-sm text-xs">+ Add Item</button>
         </div>
 
@@ -375,11 +375,11 @@ export const InvoiceDetail: React.FC = () => {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ background: 'linear-gradient(to bottom, #4a4a4a, #3a3a3a)' }}>
-                <th className="text-left px-3 py-2 font-semibold text-iron-100">Product</th>
-                <th className="text-left px-3 py-2 font-semibold text-iron-100">Details</th>
-                <th className="text-left px-3 py-2 font-semibold text-iron-100 w-16">Qty</th>
-                <th className="text-left px-3 py-2 font-semibold text-iron-100 w-24">Unit Price</th>
-                <th className="text-right px-3 py-2 font-semibold text-iron-100 w-24">Subtotal</th>
+                <th className="text-left px-3 py-2 font-semibold" style={{ color: '#ff9900' }}>Product</th>
+                <th className="text-left px-3 py-2 font-semibold" style={{ color: '#ff9900' }}>Details</th>
+                <th className="text-left px-3 py-2 font-semibold w-16" style={{ color: '#ff9900' }}>Qty</th>
+                <th className="text-left px-3 py-2 font-semibold w-24" style={{ color: '#ff9900' }}>Unit Price</th>
+                <th className="text-right px-3 py-2 font-semibold w-24" style={{ color: '#ff9900' }}>Subtotal</th>
                 <th className="px-3 py-2 w-36" />
               </tr>
             </thead>
@@ -492,11 +492,11 @@ export const InvoiceDetail: React.FC = () => {
         <div className="px-6 py-4 text-sm" style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(10,10,10,0.4)' }}>
           <div className="flex flex-col items-end gap-1.5">
             <div className="flex justify-between w-64">
-              <span className="text-iron-400">Subtotal</span>
-              <span className="font-medium text-iron-50">${subtotal.toFixed(2)}</span>
+              <span style={{ color: '#ff9900' }}>Subtotal</span>
+              <span className="font-medium text-white">${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center w-64">
-              <span className="text-iron-400">Shipping</span>
+              <span style={{ color: '#ff9900' }}>Shipping</span>
               <ShippingEdit
                 value={invoice.shippingCost || 0}
                 onSave={(v) => { if (confirmIfPaid()) update(invoiceId, { shippingCost: v }); }}
@@ -505,18 +505,18 @@ export const InvoiceDetail: React.FC = () => {
             </div>
             {totalWeightOz > 0 && (
               <div className="flex justify-between w-64">
-                <span className="text-iron-400">Est. Weight</span>
-                <span className="text-sm font-medium" style={{ color: '#9ca3af' }}>
+                <span style={{ color: '#ff9900' }}>Est. Weight</span>
+                <span className="text-sm font-medium text-white">
                   {totalWeightOz.toFixed(2)} oz ({totalWeightGrams.toFixed(0)}g)
                 </span>
               </div>
             )}
             <div className="flex justify-between w-64">
-              <span className="text-iron-400">{invoice.taxExempt ? 'Tax (exempt)' : `IA Sales Tax (${(invoice.taxRate * 100).toFixed(0)}%)`}</span>
-              <span className="font-medium text-iron-50">${taxAmount.toFixed(2)}</span>
+              <span style={{ color: '#ff9900' }}>{invoice.taxExempt ? 'Tax (exempt)' : `IA Sales Tax (${(invoice.taxRate * 100).toFixed(0)}%)`}</span>
+              <span className="font-medium text-white">${taxAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between w-64 pt-2" style={{ borderTop: '1px solid #3a3a3a' }}>
-              <span className="font-bold text-iron-50">Total</span>
+              <span className="font-bold" style={{ color: '#ff9900' }}>Total</span>
               <span className="font-bold text-lg" style={{ color: '#ff9900' }}>${total.toFixed(2)}</span>
             </div>
           </div>

@@ -16,7 +16,7 @@ function NumberInput({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-iron-300 mb-1">{label}</label>
+      <label className="block text-xs font-medium mb-1" style={{ color: '#ff9900' }}>{label}</label>
       <div className="flex items-center gap-1">
         <input
           type="number"
@@ -27,7 +27,7 @@ function NumberInput({
           className="w-28 px-3 py-2 rounded-lg text-iron-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           style={inputSt}
         />
-        <span className="text-xs text-iron-400">{unit}</span>
+        <span className="text-xs text-white">{unit}</span>
       </div>
     </div>
   );
@@ -56,10 +56,10 @@ function AddForm({ onDone }: { onDone: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="card space-y-4">
-      <h3 className="font-semibold text-iron-50">Add Manufacturer</h3>
+      <h3 className="font-semibold" style={{ color: '#ff9900' }}>Add Manufacturer</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="sm:col-span-2 lg:col-span-1">
-          <label className="block text-xs font-medium text-iron-300 mb-1">Name</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: '#ff9900' }}>Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -133,8 +133,8 @@ function ColorEditRow({ color }: { color: Color }) {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <span className="text-sm text-iron-100">{color.name}</span>
-              <span className="text-xs text-iron-500 font-mono">{color.hex}</span>
+              <span className="text-sm text-white">{color.name}</span>
+              <span className="text-xs text-white font-mono">{color.hex}</span>
               {!color.active && (
                 <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#374151', color: '#9ca3af' }}>Disabled</span>
               )}
@@ -207,9 +207,9 @@ function ManufacturerRow({ mfg, colors, index }: { mfg: Manufacturer; colors: Co
         </tr>
       ) : (
         <tr style={{ borderTop: '1px solid #2d2d2d', background: index % 2 === 0 ? '#181818' : '#232323' }} className="hover:bg-iron-800/20 transition-colors">
-          <td className="px-4 py-3 text-sm font-medium text-iron-50">{mfg.name}</td>
-          <td className="px-4 py-3 text-sm text-iron-300">{mfg.emptySpoolWeightG}g</td>
-          <td className="px-4 py-3 text-sm text-iron-300">{mfg.fullSpoolNetWeightG}g</td>
+          <td className="px-4 py-3 text-sm font-medium text-white">{mfg.name}</td>
+          <td className="px-4 py-3 text-sm text-white">{mfg.emptySpoolWeightG}g</td>
+          <td className="px-4 py-3 text-sm text-white">{mfg.fullSpoolNetWeightG}g</td>
           <td className="px-4 py-3">
             <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#eab308', color: '#000000' }}>
               {mfg.lowThresholdG}g
@@ -270,7 +270,7 @@ export const ManufacturersPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-iron-50">Filament Manufacturers</h2>
-          <p className="text-sm text-iron-400 mt-0.5">Manage spool weights and stock thresholds per manufacturer</p>
+          <p className="text-sm text-white mt-0.5">Manage spool weights and stock thresholds per manufacturer</p>
         </div>
         {!showAdd && (
           <button onClick={() => setShowAdd(true)} className="btn-primary btn-sm">+ Add Manufacturer</button>
@@ -283,18 +283,18 @@ export const ManufacturersPage: React.FC = () => {
         <table className="w-full text-sm">
           <thead>
             <tr style={{ background: 'linear-gradient(to bottom, #4a4a4a, #3a3a3a)' }}>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Name</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Empty Spool</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Net Filament</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Low Threshold</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Critical Threshold</th>
+              <th className="text-left px-4 py-2.5 font-semibold" style={{ color: '#ff9900' }}>Name</th>
+              <th className="text-left px-4 py-2.5 font-semibold" style={{ color: '#ff9900' }}>Empty Spool</th>
+              <th className="text-left px-4 py-2.5 font-semibold" style={{ color: '#ff9900' }}>Net Filament</th>
+              <th className="text-left px-4 py-2.5 font-semibold" style={{ color: '#ff9900' }}>Low Threshold</th>
+              <th className="text-left px-4 py-2.5 font-semibold" style={{ color: '#ff9900' }}>Critical Threshold</th>
               <th className="px-4 py-2.5 w-48" />
             </tr>
           </thead>
           <tbody>
             {manufacturers.map((m, i) => <ManufacturerRow key={m.id} mfg={m} colors={colors} index={i} />)}
             {manufacturers.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-iron-500 text-sm">No manufacturers yet</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-white text-sm">No manufacturers yet</td></tr>
             )}
           </tbody>
         </table>

@@ -106,7 +106,7 @@ export const QueueList: React.FC<QueueListProps> = ({ filter }) => {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <p className="text-base text-gray-600 dark:text-gray-400">Loading queue...</p>
+          <p className="text-base text-white">Loading queue...</p>
         </div>
       </div>
     );
@@ -120,7 +120,7 @@ export const QueueList: React.FC<QueueListProps> = ({ filter }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-base font-medium">Failed to load queue</p>
-          <p className="text-base text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-base text-white mt-1">
             {error instanceof Error ? error.message : 'Unknown error'}
           </p>
         </div>
@@ -137,7 +137,7 @@ export const QueueList: React.FC<QueueListProps> = ({ filter }) => {
         <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
           {filter === 'all' ? 'Queue is empty' : `No ${filter} items`}
         </h3>
-        <p className="text-base text-gray-600 dark:text-gray-400">
+        <p className="text-base text-white">
           {filter === 'all'
             ? 'Upload an invoice to get started, or add items manually.'
             : `There are no items with status "${filter}".`}
@@ -152,7 +152,7 @@ export const QueueList: React.FC<QueueListProps> = ({ filter }) => {
     <div className="space-y-3">
       {/* Select-all row + bulk action bar */}
       <div className="flex items-center gap-3 flex-wrap">
-        <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-[#9ca3af] hover:text-[#d1d5db]">
+        <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-white hover:text-white">
           <input
             type="checkbox"
             checked={allSelected && filteredItems.length > 0}
@@ -166,7 +166,7 @@ export const QueueList: React.FC<QueueListProps> = ({ filter }) => {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-[#ff9900] font-medium">{selectedIds.size} selected</span>
             <span className="text-[#4a4a4a]">|</span>
-            <span className="text-xs text-[#9ca3af]">Set to:</span>
+            <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>Set to:</span>
             {(['pending', 'printing', 'completed'] as const).map((s) => (
               <button
                 key={s}

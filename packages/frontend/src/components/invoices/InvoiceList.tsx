@@ -81,7 +81,7 @@ export const InvoiceList: React.FC = () => {
       {filtered.length === 0 ? (
         <div className="text-center py-16 card">
           <p className="text-lg font-medium text-iron-50">{filter === 'all' ? 'No invoices yet' : `No ${filter} invoices`}</p>
-          <p className="text-sm mt-1 text-iron-400">{filter === 'all' ? 'Create your first invoice to get started' : 'Try a different filter'}</p>
+          <p className="text-sm mt-1 text-white">{filter === 'all' ? 'Create your first invoice to get started' : 'Try a different filter'}</p>
         </div>
       ) : (
         <div className="card-surface">
@@ -122,17 +122,17 @@ export const InvoiceList: React.FC = () => {
                   onClick={() => navigate(`/invoices/${invoice.id}`)}
                 >
                   <td className="font-medium" style={{ color: '#ff9900' }}>{invoice.invoiceNumber}</td>
-                  <td className="text-iron-300 hidden sm:table-cell">
+                  <td className="text-white hidden sm:table-cell">
                     {invoice.customer
                       ? invoice.customer.businessName || invoice.customer.contactName
-                      : <span className="text-iron-600">—</span>}
+                      : <span className="text-white">—</span>}
                   </td>
                   <td><StatusBadge status={invoice.shippedAt ? 'shipped' : invoice.status} /></td>
-                  <td className="text-right font-semibold text-iron-50">${calcTotal(invoice).toFixed(2)}</td>
-                  <td className="text-right text-iron-400 hidden lg:table-cell">
-                    {(() => { const oz = calcWeightOz(invoice); return oz > 0 ? `${oz.toFixed(2)} oz` : <span className="text-iron-600">—</span>; })()}
+                  <td className="text-right font-semibold text-white">${calcTotal(invoice).toFixed(2)}</td>
+                  <td className="text-right text-white hidden lg:table-cell">
+                    {(() => { const oz = calcWeightOz(invoice); return oz > 0 ? `${oz.toFixed(2)} oz` : <span className="text-white">—</span>; })()}
                   </td>
-                  <td className="text-iron-400 hidden md:table-cell">
+                  <td className="text-white hidden md:table-cell">
                     {new Date(invoice.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                   </td>
                   <td onClick={(e) => e.stopPropagation()}>

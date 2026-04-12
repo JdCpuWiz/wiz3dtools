@@ -76,12 +76,12 @@ function ColorInventoryRow({ color, isAdmin, index }: { color: Color; isAdmin: b
             }}
           />
           <div>
-            <div className="text-sm font-medium text-iron-50">{color.name}</div>
-            <div className="text-xs text-iron-500 font-mono">{color.hex}</div>
+            <div className="text-sm font-medium text-white">{color.name}</div>
+            <div className="text-xs text-white font-mono">{color.hex}</div>
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 text-xs text-iron-400">
+      <td className="px-4 py-3 text-xs text-white">
         {color.manufacturer?.name ?? '—'}
       </td>
       <td className="px-4 py-3">
@@ -98,19 +98,19 @@ function ColorInventoryRow({ color, isAdmin, index }: { color: Color; isAdmin: b
               className="w-24 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
               style={inputSt}
             />
-            <span className="text-xs text-iron-400">g</span>
+            <span className="text-xs text-white">g</span>
             <button onClick={handleSaveManual} className="btn-primary btn-sm text-xs">Save</button>
             <button onClick={() => { setEditing(false); setManualGrams(String(color.inventoryGrams.toFixed(0))); }} className="btn-secondary btn-sm text-xs">Cancel</button>
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold" style={{ color: disabled ? '#6b7280' : status === 'ok' ? '#e5e5e5' : style.color }}>
+            <span className="text-sm font-semibold" style={{ color: disabled ? '#6b7280' : status === 'ok' ? '#ffffff' : style.color }}>
               {Math.max(0, netGrams).toFixed(0)}g
             </span>
             {isAdmin && !disabled && (
               <button
                 onClick={() => { setManualGrams(String(color.inventoryGrams.toFixed(1))); setEditing(true); }}
-                className="text-iron-500 hover:text-iron-300 transition-colors"
+                className="text-white hover:text-white transition-colors"
                 title="Set inventory amount"
                 style={{ fontSize: 12, lineHeight: 1 }}
               >
@@ -159,7 +159,7 @@ function ColorInventoryRow({ color, isAdmin, index }: { color: Color; isAdmin: b
                     style={inputSt}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleAddSpool(); if (e.key === 'Escape') setAddingGrams(false); }}
                   />
-                  <span className="text-xs text-iron-400">g</span>
+                  <span className="text-xs text-white">g</span>
                   <button onClick={handleAddSpool} className="btn-primary btn-sm text-xs">Add</button>
                   <button onClick={() => setAddingGrams(false)} className="btn-secondary btn-sm text-xs">✕</button>
                 </div>
@@ -232,10 +232,10 @@ function AddColorForm({ existingColors, onDone }: { existingColors: Color[]; onD
 
   return (
     <form onSubmit={handleSubmit} className="card space-y-4">
-      <h3 className="font-semibold text-iron-50">Add New Color</h3>
+      <h3 className="font-semibold" style={{ color: '#ff9900' }}>Add New Color</h3>
       <div className="flex items-end gap-3 flex-wrap">
         <div className="flex-1 min-w-40">
-          <label className="block text-xs font-medium text-iron-300 mb-1">Color Name</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: '#ff9900' }}>Color Name</label>
           <input
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
@@ -246,7 +246,7 @@ function AddColorForm({ existingColors, onDone }: { existingColors: Color[]; onD
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-iron-300 mb-1">Hex Color</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: '#ff9900' }}>Hex Color</label>
           <div className="flex items-center gap-2">
             <input
               type="color"
@@ -264,7 +264,7 @@ function AddColorForm({ existingColors, onDone }: { existingColors: Color[]; onD
           </div>
         </div>
         <div>
-          <label className="block text-xs font-medium text-iron-300 mb-1">Manufacturer</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: '#ff9900' }}>Manufacturer</label>
           <select
             value={manufacturerId}
             onChange={(e) => handleMfgChange(e.target.value)}
@@ -278,7 +278,7 @@ function AddColorForm({ existingColors, onDone }: { existingColors: Color[]; onD
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-iron-300 mb-1">Initial Inventory (g)</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: '#ff9900' }}>Initial Inventory (g)</label>
           <input
             type="number"
             min="0"
@@ -336,7 +336,7 @@ export const FilamentPage: React.FC = () => {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-iron-50">Filament Inventory</h1>
-          <p className="text-sm text-iron-400 mt-0.5">
+          <p className="text-sm text-white mt-0.5">
             {totalGrams.toFixed(0)}g total · {activeColors.length} active{disabledCount > 0 ? `, ${disabledCount} disabled` : ''}
           </p>
         </div>
@@ -354,7 +354,7 @@ export const FilamentPage: React.FC = () => {
         <button
           onClick={() => setFilter('all')}
           className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-          style={filter === 'all' ? { background: '#ff9900', color: '#0a0a0a' } : { background: '#2d2d2d', color: '#9ca3af' }}
+          style={filter === 'all' ? { background: '#ff9900', color: '#0a0a0a' } : { background: '#2d2d2d', color: '#ffffff' }}
         >
           All ({colors.length})
         </button>
@@ -362,7 +362,7 @@ export const FilamentPage: React.FC = () => {
           <button
             onClick={() => setFilter('low')}
             className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-            style={filter === 'low' ? { background: '#eab308', color: '#000000' } : { background: '#2d2d2d', color: '#9ca3af' }}
+            style={filter === 'low' ? { background: '#eab308', color: '#000000' } : { background: '#2d2d2d', color: '#ffffff' }}
           >
             Low ({lowCount})
           </button>
@@ -371,7 +371,7 @@ export const FilamentPage: React.FC = () => {
           <button
             onClick={() => setFilter('critical')}
             className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-            style={filter === 'critical' ? { background: '#b91c1c', color: '#ffffff' } : { background: '#2d2d2d', color: '#9ca3af' }}
+            style={filter === 'critical' ? { background: '#b91c1c', color: '#ffffff' } : { background: '#2d2d2d', color: '#ffffff' }}
           >
             Critical ({criticalCount})
           </button>
@@ -382,10 +382,10 @@ export const FilamentPage: React.FC = () => {
         <table className="w-full text-sm">
           <thead>
             <tr style={{ background: 'linear-gradient(to bottom, #4a4a4a, #3a3a3a)' }}>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Color</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-36">Manufacturer</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-52">Inventory</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-28">Status</th>
+              <th className="text-left px-4 py-2.5 font-semibold" style={{ color: '#ff9900' }}>Color</th>
+              <th className="text-left px-4 py-2.5 font-semibold w-36" style={{ color: '#ff9900' }}>Manufacturer</th>
+              <th className="text-left px-4 py-2.5 font-semibold w-52" style={{ color: '#ff9900' }}>Inventory</th>
+              <th className="text-left px-4 py-2.5 font-semibold w-28" style={{ color: '#ff9900' }}>Status</th>
               {isAdmin && <th className="px-4 py-2.5 w-48" />}
             </tr>
           </thead>
@@ -395,7 +395,7 @@ export const FilamentPage: React.FC = () => {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-iron-500 text-sm">
+                <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-white text-sm">
                   {filter === 'all' ? 'No colors yet' : 'No colors in this category'}
                 </td>
               </tr>

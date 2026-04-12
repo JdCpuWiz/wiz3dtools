@@ -24,12 +24,12 @@ function AddUserForm({ onClose }: { onClose: () => void }) {
   return (
     <div className="card mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-iron-50">Add User</h2>
+        <h2 className="font-semibold" style={{ color: '#ff9900' }}>Add User</h2>
         <button onClick={onClose} className="text-iron-500 hover:text-iron-300 text-lg leading-none">×</button>
       </div>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-iron-100 mb-1">Username *</label>
+          <label className="block text-sm font-medium mb-1" style={{ color: '#ff9900' }}>Username *</label>
           <input
             className="input w-full"
             value={username}
@@ -40,7 +40,7 @@ function AddUserForm({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-iron-100 mb-1">Password *</label>
+          <label className="block text-sm font-medium mb-1" style={{ color: '#ff9900' }}>Password *</label>
           <input
             type="password"
             className="input w-full"
@@ -51,7 +51,7 @@ function AddUserForm({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-iron-100 mb-1">Email</label>
+          <label className="block text-sm font-medium mb-1" style={{ color: '#ff9900' }}>Email</label>
           <input
             type="email"
             className="input w-full"
@@ -61,7 +61,7 @@ function AddUserForm({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-iron-100 mb-1">Role</label>
+          <label className="block text-sm font-medium mb-1" style={{ color: '#ff9900' }}>Role</label>
           <select
             className="input w-full"
             value={role}
@@ -172,7 +172,7 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
   return (
     <>
       <tr>
-        <td className="px-4 py-3 font-medium text-iron-50">{user.username}</td>
+        <td className="px-4 py-3 font-medium text-white">{user.username}</td>
         <td className="px-4 py-3">
           {editingEmail ? (
             <input
@@ -189,10 +189,10 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
           ) : (
             <button
               onClick={() => setEditingEmail(true)}
-              className="text-iron-300 hover:text-iron-50 text-left group flex items-center gap-1"
+              className="text-white hover:text-white text-left group flex items-center gap-1"
             >
-              <span>{user.email || <span className="text-iron-500 italic">—</span>}</span>
-              <svg className="w-3.5 h-3.5 text-iron-500 group-hover:text-iron-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span>{user.email || <span className="text-white italic">—</span>}</span>
+              <svg className="w-3.5 h-3.5 text-white group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.536-6.536a2 2 0 112.829 2.829L11.828 15.828A2 2 0 0110 16.414V17h.586a2 2 0 001.414-.586l.536-.535" />
               </svg>
             </button>
@@ -210,7 +210,7 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
             <option value="admin">admin</option>
           </select>
         </td>
-        <td className="px-4 py-3 text-iron-400 text-sm">{createdDate}</td>
+        <td className="px-4 py-3 text-white text-sm">{createdDate}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
             <button
@@ -245,8 +245,8 @@ export function UsersPage() {
   if (user?.role !== 'admin') {
     return (
       <div className="card text-center py-12">
-        <p className="text-iron-300 text-lg font-medium">Access denied</p>
-        <p className="text-iron-500 text-sm mt-1">Admin access required.</p>
+        <p className="text-white text-lg font-medium">Access denied</p>
+        <p className="text-white text-sm mt-1">Admin access required.</p>
       </div>
     );
   }
@@ -266,7 +266,7 @@ export function UsersPage() {
       {showAdd && <AddUserForm onClose={() => setShowAdd(false)} />}
 
       {isLoading ? (
-        <div className="card text-center py-8 text-iron-400">Loading…</div>
+        <div className="card text-center py-8 text-white">Loading…</div>
       ) : (
         <div className="card p-0 overflow-hidden">
           <table className="wiz-table">
@@ -282,7 +282,7 @@ export function UsersPage() {
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-iron-500">No users found.</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-white">No users found.</td>
                 </tr>
               ) : (
                 users.map((u) => (

@@ -62,12 +62,12 @@ function ColorDropdown({ colors, value, onChange, onAdd }: {
           {selected ? (
             <>
               <span style={{ width: 16, height: 16, borderRadius: '50%', background: selected.hex, border: `2px solid ${selected.hex}`, flexShrink: 0, display: 'inline-block' }} />
-              <span className="text-iron-50">{selected.name}</span>
+              <span className="text-white">{selected.name}</span>
             </>
           ) : (
-            <span className="text-iron-500">— Add a color —</span>
+            <span className="text-white">— Add a color —</span>
           )}
-          <span className="ml-auto text-iron-500 text-xs">▼</span>
+          <span className="ml-auto text-white text-xs">▼</span>
         </button>
 
         {open && (
@@ -86,7 +86,7 @@ function ColorDropdown({ colors, value, onChange, onAdd }: {
                     type="button"
                     onClick={() => { onChange(String(c.id)); setOpen(false); }}
                     className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-iron-700/40 transition-colors"
-                    style={{ color: '#e5e5e5' }}
+                    style={{ color: '#ffffff' }}
                   >
                     <span style={{ width: 16, height: 16, borderRadius: '50%', background: c.hex, border: `2px solid ${c.hex}`, flexShrink: 0, display: 'inline-block' }} />
                     {c.name}
@@ -212,7 +212,7 @@ export const ProductForm: React.FC = () => {
   };
 
   const fieldClass = 'input';
-  const labelClass = 'block text-sm font-medium text-iron-100 mb-1';
+  const labelClass = 'block text-sm font-medium mb-1 text-primary-400';
 
   const usedColorIds = new Set(colorWeights.map((c) => c.colorId));
   const remainingColors = availableColors.filter((c) => c.active && !usedColorIds.has(c.id));
@@ -246,7 +246,7 @@ export const ProductForm: React.FC = () => {
           <div>
             <label className={labelClass}>
               SKU
-              {skuLoading && <span className="ml-2 text-xs text-iron-500">generating…</span>}
+              {skuLoading && <span className="ml-2 text-xs text-white">generating…</span>}
             </label>
             <input
               {...register('sku')}
@@ -257,7 +257,7 @@ export const ProductForm: React.FC = () => {
                 register('sku').onChange(e);
               }}
             />
-            <p className="text-xs text-iron-500 mt-1">Auto-generated from name. Edit to override.</p>
+            <p className="text-xs text-white mt-1">Auto-generated from name. Edit to override.</p>
           </div>
 
           <div>
@@ -291,7 +291,7 @@ export const ProductForm: React.FC = () => {
               {...register('active')}
               className="h-4 w-4 rounded accent-primary-500"
             />
-            <label htmlFor="active" className="text-sm font-medium text-iron-100">
+            <label htmlFor="active" className="text-sm font-medium text-primary-400">
               Active (available for use in invoices)
             </label>
           </div>
@@ -300,8 +300,8 @@ export const ProductForm: React.FC = () => {
         {/* Filament Colors + Weights */}
         <div className="card space-y-4">
           <div>
-            <h3 className="text-sm font-semibold text-iron-50">Filament Colors &amp; Weights</h3>
-            <p className="text-xs text-iron-400 mt-0.5">
+            <h3 className="text-sm font-semibold" style={{ color: '#ff9900' }}>Filament Colors &amp; Weights</h3>
+            <p className="text-xs text-white mt-0.5">
               Enter per-color filament usage from your slicer (in grams per print).
               {totalGrams > 0 && (
                 <span className="ml-2 font-semibold" style={{ color: '#ff9900' }}>
@@ -328,7 +328,7 @@ export const ProductForm: React.FC = () => {
                     display: 'inline-block',
                   }}
                 />
-                <span className="text-sm text-iron-100 flex-1 min-w-0 truncate">{color.name}</span>
+                <span className="text-sm text-white flex-1 min-w-0 truncate">{color.name}</span>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <input
                     type="number"
@@ -339,11 +339,11 @@ export const ProductForm: React.FC = () => {
                     className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-right"
                     style={inputSt}
                   />
-                  <span className="text-xs text-iron-400">g</span>
+                  <span className="text-xs text-white">g</span>
                   <button
                     type="button"
                     onClick={() => removeColor(entry.colorId)}
-                    className="text-iron-500 hover:text-red-400 transition-colors ml-1 text-sm leading-none"
+                    className="text-white hover:text-red-400 transition-colors ml-1 text-sm leading-none"
                     title="Remove"
                   >
                     ×
@@ -364,7 +364,7 @@ export const ProductForm: React.FC = () => {
           )}
 
           {colorWeights.length === 0 && (
-            <p className="text-xs text-iron-500 italic">No colors assigned. Add colors to enable filament weight tracking.</p>
+            <p className="text-xs text-white italic">No colors assigned. Add colors to enable filament weight tracking.</p>
           )}
         </div>
 

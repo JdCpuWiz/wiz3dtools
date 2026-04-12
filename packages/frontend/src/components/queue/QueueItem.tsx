@@ -64,19 +64,19 @@ function FilamentImpactModal({ item, qty, colorInventory, onConfirm, onCancel }:
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-iron-50">Complete: {item.productName}</h3>
-          <p className="text-sm text-iron-400 mt-0.5">
-            Qty: <span className="text-iron-200 font-medium">{qty}</span>
-            {qty < item.quantity && <span className="ml-2 text-iron-500">(of {item.quantity} — remainder stays in queue)</span>}
+          <h3 className="text-lg font-semibold text-white">Complete: {item.productName}</h3>
+          <p className="text-sm text-white mt-0.5">
+            <span style={{ color: '#ff9900' }}>Qty:</span> <span className="font-medium">{qty}</span>
+            {qty < item.quantity && <span className="ml-2 text-white">(of {item.quantity} — remainder stays in queue)</span>}
           </p>
         </div>
 
         {colorsWithWeight.length === 0 ? (
-          <p className="text-sm text-iron-400 mb-4">No filament weights recorded for this item — no inventory will be deducted.</p>
+          <p className="text-sm text-white mb-4">No filament weights recorded for this item — no inventory will be deducted.</p>
         ) : (
           <div className="space-y-0 mb-4 rounded-lg overflow-hidden" style={{ border: '1px solid #2d2d2d' }}>
             {/* Header */}
-            <div className="grid text-xs font-semibold text-iron-400 px-3 py-2" style={{ gridTemplateColumns: '1fr 80px 80px 90px', background: '#1a1a1a' }}>
+            <div className="grid text-xs font-semibold text-white px-3 py-2" style={{ gridTemplateColumns: '1fr 80px 80px 90px', background: '#1a1a1a' }}>
               <span>Color</span>
               <span className="text-right">Current</span>
               <span className="text-right">Usage</span>
@@ -90,9 +90,9 @@ function FilamentImpactModal({ item, qty, colorInventory, onConfirm, onCancel }:
               >
                 <div className="flex items-center gap-2">
                   <ColorSwatch hex={c.color?.hex || '#888'} name={c.color?.name || ''} size={14} />
-                  <span className="text-iron-100 truncate">{c.color?.name ?? `Color #${c.colorId}`}</span>
+                  <span className="text-white truncate">{c.color?.name ?? `Color #${c.colorId}`}</span>
                 </div>
-                <span className="text-right text-iron-300">{current.toFixed(0)}g</span>
+                <span className="text-right text-white">{current.toFixed(0)}g</span>
                 <span className="text-right" style={{ color: '#fb923c' }}>−{usage.toFixed(1)}g</span>
                 <div className="flex justify-end">
                   <span
@@ -273,18 +273,18 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <h3 className="text-xl font-semibold text-[#e5e5e5]">
+                <h3 className="text-xl font-semibold text-white">
                   {item.productName}
                 </h3>
                 {item.sku && (
-                  <span className="inline-block mt-1 font-mono text-xs px-1.5 py-0.5 rounded" style={{ background: '#2d2d2d', color: '#9ca3af' }}>{item.sku}</span>
+                  <span className="inline-block mt-1 font-mono text-xs px-1.5 py-0.5 rounded" style={{ background: '#2d2d2d', color: '#ffffff' }}>{item.sku}</span>
                 )}
                 {item.details && (
-                  <p className="text-base text-[#d1d5db] mt-2">{item.details}</p>
+                  <p className="text-base text-white mt-2">{item.details}</p>
                 )}
                 {item.notes && (
-                  <p className="text-base text-[#9ca3af] mt-2 italic">
-                    Note: {item.notes}
+                  <p className="text-base text-white mt-2 italic">
+                    <span style={{ color: '#ff9900' }}>Note:</span> {item.notes}
                   </p>
                 )}
 
@@ -303,7 +303,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                             style={
                               c.isPrimary
                                 ? { background: '#3a1f00', border: '1px solid #b45309', color: '#ff9900' }
-                                : { background: '#2d2d2d', border: '1px solid #3a3a3a', color: '#9ca3af' }
+                                : { background: '#2d2d2d', border: '1px solid #3a3a3a', color: '#ffffff' }
                             }
                           >
                             <ColorSwatch hex={c.color?.hex || '#888'} name={c.color?.name || ''} size={12} />
@@ -322,8 +322,8 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                         0,
                       );
                       return totalG > 0 ? (
-                        <p className="text-xs mt-1" style={{ color: '#9ca3af' }}>
-                          Total filament: <span style={{ color: '#d1d5db', fontWeight: 500 }}>{totalG.toFixed(1)}g</span>
+                        <p className="text-xs mt-1">
+                          <span style={{ color: '#ff9900' }}>Total filament:</span> <span style={{ color: '#ffffff', fontWeight: 500 }}>{totalG.toFixed(1)}g</span>
                         </p>
                       ) : null;
                     })()}
@@ -338,8 +338,8 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                 return (
                   <div className="mt-3 rounded-lg p-3 space-y-2" style={{ background: '#1a1a1a', border: '1px solid #2d2d2d' }}>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#6b7280' }}>Filament Used</span>
-                      {jobName && <span className="text-xs truncate ml-2 max-w-[60%] text-right" style={{ color: '#9ca3af' }}>{jobName}</span>}
+                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#ff9900' }}>Filament Used</span>
+                      {jobName && <span className="text-xs truncate ml-2 max-w-[60%] text-right" style={{ color: '#ffffff' }}>{jobName}</span>}
                     </div>
                     <div className="space-y-1">
                       {filamentJobs.map((j) => (
@@ -351,19 +351,19 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                               border: `1px solid ${j.colorHex ? `#${j.colorHex}` : '#4b5563'}`,
                             }}
                           />
-                          <span className="flex-1 truncate" style={{ color: '#d1d5db' }}>
+                          <span className="flex-1 truncate" style={{ color: '#ffffff' }}>
                             {j.colorName ?? (j.amsColorHex ? `#${j.amsColorHex.slice(0, 6).toUpperCase()}` : 'Unknown')}
-                            {j.amsMaterial && <span className="ml-1" style={{ color: '#6b7280' }}>({j.amsMaterial})</span>}
+                            {j.amsMaterial && <span className="ml-1" style={{ color: '#ff9900' }}>({j.amsMaterial})</span>}
                           </span>
                           {j.filamentGrams !== null && j.filamentGrams > 0 && (
-                            <span className="shrink-0 font-medium" style={{ color: '#9ca3af' }}>{j.filamentGrams.toFixed(1)}g</span>
+                            <span className="shrink-0 font-medium" style={{ color: '#ffffff' }}>{j.filamentGrams.toFixed(1)}g</span>
                           )}
                         </div>
                       ))}
                     </div>
                     {totalGrams > 0 && (
                       <div className="flex justify-between pt-1 border-t" style={{ borderColor: '#2d2d2d' }}>
-                        <span className="text-xs" style={{ color: '#6b7280' }}>Total</span>
+                        <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>Total</span>
                         <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>{totalGrams.toFixed(1)}g</span>
                       </div>
                     )}
@@ -375,7 +375,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
               <div className="flex-shrink-0">
                 {editingQty ? (
                   <div className="inline-flex items-center gap-1">
-                    <span className="text-sm text-[#9ca3af]">Qty:</span>
+                    <span className="text-sm font-semibold" style={{ color: '#ff9900' }}>Qty:</span>
                     <input
                       type="number"
                       min={1}
@@ -402,7 +402,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
             {/* Partial complete UI */}
             {partialQty !== null && (
               <div className="mt-3 p-3 rounded-lg bg-[#1a1a1a] border border-[#3a3a3a] flex items-center gap-3 flex-wrap">
-                <span className="text-sm text-[#d1d5db]">Complete how many?</span>
+                <span className="text-sm font-semibold" style={{ color: '#ff9900' }}>Complete how many?</span>
                 <input
                   type="number"
                   min={1}
@@ -412,7 +412,7 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
                   autoFocus
                   className="w-16 px-2 py-1 rounded text-sm font-medium bg-[#2d2d2d] text-[#ff9900] border border-[#e68a00] text-center focus:outline-none"
                 />
-                <span className="text-sm text-[#9ca3af]">of {item.quantity}</span>
+                <span className="text-sm text-white">of {item.quantity}</span>
                 <button onClick={handlePartialComplete} className="btn-primary btn-sm">
                   {partialQty >= item.quantity ? 'Complete All' : 'Next →'}
                 </button>
@@ -425,11 +425,11 @@ export const QueueItem: React.FC<QueueItemProps> = ({ item, isSelected, onSelect
             {/* Printer picker when switching to Printing */}
             {pickingPrinter && (
               <div className="mt-3 p-3 rounded-lg bg-[#1a1a1a] border border-[#3a3a3a] flex items-center gap-3 flex-wrap">
-                <span className="text-sm text-[#d1d5db]">Assign printer:</span>
+                <span className="text-sm font-semibold" style={{ color: '#ff9900' }}>Assign printer:</span>
                 <select
                   value={pendingPrinterName}
                   onChange={(e) => setPendingPrinterName(e.target.value)}
-                  className="px-3 py-1.5 rounded-lg text-sm bg-[#2d2d2d] text-iron-100 border border-[#3a3a3a] focus:outline-none focus:border-[#ff9900]"
+                  className="px-3 py-1.5 rounded-lg text-sm bg-[#2d2d2d] text-white border border-[#3a3a3a] focus:outline-none focus:border-[#ff9900]"
                 >
                   <option value="">— no printer —</option>
                   {printers.filter((p) => p.active).map((p) => (

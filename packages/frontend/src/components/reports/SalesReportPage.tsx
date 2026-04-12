@@ -115,10 +115,10 @@ export function SalesReportPage() {
 
       {/* Date range picker */}
       <div className="card space-y-4">
-        <h2 className="font-semibold text-iron-100">Date Range</h2>
+        <h2 className="font-semibold" style={{ color: '#ff9900' }}>Date Range</h2>
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <label className="block text-sm font-medium text-iron-300 mb-1">Start Date</label>
+            <label className="block text-sm font-medium mb-1" style={{ color: '#ff9900' }}>Start Date</label>
             <input
               type="date"
               value={startDate}
@@ -128,7 +128,7 @@ export function SalesReportPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-iron-300 mb-1">End Date</label>
+            <label className="block text-sm font-medium mb-1" style={{ color: '#ff9900' }}>End Date</label>
             <input
               type="date"
               value={endDate}
@@ -171,8 +171,8 @@ export function SalesReportPage() {
               { label: 'Grand Total', value: fmt(report.grandTotal), accent: true },
             ].map((c) => (
               <div key={c.label} className="card py-3 px-4 flex flex-col gap-1">
-                <span className="text-xs uppercase tracking-wide font-medium" style={{ color: '#9ca3af' }}>{c.label}</span>
-                <span className="text-xl font-bold" style={{ color: c.accent ? '#ff9900' : '#e5e5e5' }}>
+                <span className="text-xs uppercase tracking-wide font-medium" style={{ color: '#ff9900' }}>{c.label}</span>
+                <span className="text-xl font-bold" style={{ color: c.accent ? '#ff9900' : '#ffffff' }}>
                   {c.value}
                 </span>
               </div>
@@ -181,20 +181,20 @@ export function SalesReportPage() {
 
           {/* Taxable / Tax-Exempt breakdown */}
           <div className="card py-3 px-4 space-y-1">
-            <span className="text-xs uppercase tracking-wide font-medium" style={{ color: '#9ca3af' }}>Sales Breakdown</span>
+            <span className="text-xs uppercase tracking-wide font-medium" style={{ color: '#ff9900' }}>Sales Breakdown</span>
             <div className="flex flex-wrap gap-6 mt-1">
               <div>
-                <span className="text-xs" style={{ color: '#9ca3af' }}>Taxable Sales</span>
-                <div className="text-base font-semibold text-iron-100 font-mono">{fmt(report.taxableSubtotal)}</div>
+                <span className="text-xs" style={{ color: '#ff9900' }}>Taxable Sales</span>
+                <div className="text-base font-semibold text-white font-mono">{fmt(report.taxableSubtotal)}</div>
               </div>
               <div>
-                <span className="text-xs" style={{ color: '#9ca3af' }}>Tax-Exempt Sales</span>
-                <div className="text-base font-semibold text-iron-100 font-mono">{fmt(report.taxExemptSubtotal)}</div>
+                <span className="text-xs" style={{ color: '#ff9900' }}>Tax-Exempt Sales</span>
+                <div className="text-base font-semibold text-white font-mono">{fmt(report.taxExemptSubtotal)}</div>
               </div>
               {report.totalShipping > 0 && (
                 <div>
-                  <span className="text-xs" style={{ color: '#9ca3af' }}>Shipping Collected</span>
-                  <div className="text-base font-semibold text-iron-100 font-mono">{fmt(report.totalShipping)}</div>
+                  <span className="text-xs" style={{ color: '#ff9900' }}>Shipping Collected</span>
+                  <div className="text-base font-semibold text-white font-mono">{fmt(report.totalShipping)}</div>
                 </div>
               )}
             </div>
@@ -202,7 +202,7 @@ export function SalesReportPage() {
 
           {/* Invoice table */}
           {report.invoiceCount === 0 ? (
-            <div className="card text-center py-10 text-iron-400">
+            <div className="card text-center py-10 text-white">
               No sent, paid, or shipped invoices found in this date range.
             </div>
           ) : (
@@ -224,9 +224,9 @@ export function SalesReportPage() {
                   <tbody>
                     {report.rows.map((row) => (
                       <tr key={row.id}>
-                        <td className="font-mono text-sm text-iron-200">{row.invoiceNumber}</td>
-                        <td className="text-sm text-iron-300 whitespace-nowrap">{fmtDate(row.issuedDate)}</td>
-                        <td className="text-sm text-iron-200">{row.customerName}</td>
+                        <td className="font-mono text-sm text-white">{row.invoiceNumber}</td>
+                        <td className="text-sm text-white whitespace-nowrap">{fmtDate(row.issuedDate)}</td>
+                        <td className="text-sm text-white">{row.customerName}</td>
                         <td className="text-center">
                           <div className="flex items-center justify-center gap-1">
                             <StatusPill status={row.status} />
@@ -235,14 +235,14 @@ export function SalesReportPage() {
                             )}
                           </div>
                         </td>
-                        <td className="text-right text-sm text-iron-200 font-mono">{fmt(row.subtotal)}</td>
-                        <td className="text-right text-sm text-iron-300 font-mono hidden sm:table-cell">
+                        <td className="text-right text-sm text-white font-mono">{fmt(row.subtotal)}</td>
+                        <td className="text-right text-sm text-white font-mono hidden sm:table-cell">
                           {row.shippingCost > 0 ? fmt(row.shippingCost) : '—'}
                         </td>
-                        <td className="text-right text-sm text-iron-300 font-mono hidden sm:table-cell">
+                        <td className="text-right text-sm text-white font-mono hidden sm:table-cell">
                           {row.taxAmount > 0 ? fmt(row.taxAmount) : '—'}
                         </td>
-                        <td className="text-right text-sm font-bold font-mono" style={{ color: '#e5e5e5' }}>
+                        <td className="text-right text-sm font-bold font-mono text-white">
                           {fmt(row.total)}
                         </td>
                       </tr>
@@ -250,15 +250,15 @@ export function SalesReportPage() {
                   </tbody>
                   <tfoot>
                     <tr style={{ borderTop: '2px solid #4a4a4a', background: 'linear-gradient(to bottom, #3a3a3a, #2d2d2d)' }}>
-                      <td colSpan={3} className="text-sm font-bold text-iron-200">
+                      <td colSpan={3} className="text-sm font-bold text-white">
                         {report.invoiceCount} invoice{report.invoiceCount !== 1 ? 's' : ''}
                       </td>
                       <td />
-                      <td className="text-right text-sm font-bold font-mono" style={{ color: '#e5e5e5' }}>{fmt(report.totalSubtotal)}</td>
-                      <td className="text-right text-sm font-bold font-mono text-iron-300 hidden sm:table-cell">
+                      <td className="text-right text-sm font-bold font-mono text-white">{fmt(report.totalSubtotal)}</td>
+                      <td className="text-right text-sm font-bold font-mono text-white hidden sm:table-cell">
                         {report.totalShipping > 0 ? fmt(report.totalShipping) : '—'}
                       </td>
-                      <td className="text-right text-sm font-bold font-mono text-iron-300 hidden sm:table-cell">
+                      <td className="text-right text-sm font-bold font-mono text-white hidden sm:table-cell">
                         {report.totalTax > 0 ? fmt(report.totalTax) : '—'}
                       </td>
                       <td className="text-right text-sm font-bold font-mono" style={{ color: '#ff9900' }}>{fmt(report.grandTotal)}</td>

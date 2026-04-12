@@ -53,7 +53,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         >
           <button
             onClick={() => setSidebarOpen(true)}
-            className="text-iron-400 hover:text-iron-200 p-1"
+            className="text-white hover:text-white p-1"
             aria-label="Open menu"
           >
             <Menu size={20} />
@@ -63,7 +63,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             alt="Wiz3D Prints"
             style={{ width: 32, height: 32, objectFit: 'contain' }}
           />
-          <span className="text-sm font-bold text-iron-50">Wiz3d Tools</span>
+          <span className="text-sm font-bold text-white">Wiz3d Tools</span>
         </header>
 
         <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
@@ -71,7 +71,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </main>
 
         <footer
-          className="py-3 border-t text-center text-xs text-iron-500"
+          className="py-3 border-t text-center text-xs text-white"
           style={{ backgroundColor: '#111111', borderColor: '#2d2d2d' }}
         >
           Wiz3d Tools — 3D Printing Business Suite
@@ -86,8 +86,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         >
           <div className="card p-8 max-w-sm w-full mx-4 text-center" style={{ border: '1px solid #e68a00' }}>
             <div className="text-4xl mb-3">⏱</div>
-            <h2 className="text-lg font-semibold text-iron-50 mb-2">Session Expiring</h2>
-            <p className="text-iron-400 text-sm mb-6">
+            <h2 className="text-lg font-semibold text-white mb-2">Session Expiring</h2>
+            <p className="text-white text-sm mb-6">
               You've been idle. You'll be signed out in{' '}
               <span className="text-[#ff9900] font-bold">{countdown}s</span>.
             </p>

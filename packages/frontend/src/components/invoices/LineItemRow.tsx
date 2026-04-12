@@ -92,7 +92,7 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
               </select>
             )}
             <input value={productName} onChange={(e) => setProductName(e.target.value)} className={cellInputClass} style={inputSt} placeholder="Product name" />
-            {sku && <span className="block font-mono text-xs text-iron-500">{sku}</span>}
+            {sku && <span className="block font-mono text-xs text-white">{sku}</span>}
           </td>
           <td className="px-3 py-2"><textarea value={details} onChange={(e) => setDetails(e.target.value)} className={cellInputClass} style={inputSt} rows={3} /></td>
           <td className="px-3 py-2"><input type="number" min={1} value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value) || 1)} className={`${cellInputClass} w-14`} style={inputSt} /></td>
@@ -129,9 +129,9 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
 
   return (
     <tr style={{ borderTop: '1px solid #2d2d2d' }} className="transition-colors hover:bg-iron-800/20">
-      <td className="px-3 py-2.5 text-sm font-medium text-iron-50">
+      <td className="px-3 py-2.5 text-sm font-medium text-white">
         {item.productName}
-        {item.sku && <span className="block font-mono text-xs text-iron-500 mt-0.5">{item.sku}</span>}
+        {item.sku && <span className="block font-mono text-xs text-white mt-0.5">{item.sku}</span>}
         {/* Color swatches */}
         {colors.length > 0 && (
           <div className="flex flex-wrap items-center gap-1 mt-1.5">
@@ -149,7 +149,7 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
               <span
                 key={c.id}
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs"
-                style={{ background: '#2d2d2d', color: '#9ca3af', border: '1px solid #3a3a3a' }}
+                style={{ background: '#2d2d2d', color: '#ffffff', border: '1px solid #3a3a3a' }}
                 title={`${c.color?.name}${c.note ? ` — ${c.note}` : ''}`}
               >
                 <ColorSwatch hex={c.color?.hex || '#888'} name={c.color?.name || ''} size={10} />
@@ -159,9 +159,9 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
           </div>
         )}
       </td>
-      <td className="px-3 py-2.5 text-sm text-iron-400">{item.details || '—'}</td>
-      <td className="px-3 py-2.5 text-sm text-iron-200">{item.quantity}</td>
-      <td className="px-3 py-2.5 text-sm text-iron-200">${item.unitPrice.toFixed(2)}</td>
+      <td className="px-3 py-2.5 text-sm text-white">{item.details || '—'}</td>
+      <td className="px-3 py-2.5 text-sm text-white">{item.quantity}</td>
+      <td className="px-3 py-2.5 text-sm text-white">${item.unitPrice.toFixed(2)}</td>
       <td className="px-3 py-2.5 text-sm font-medium text-right" style={{ color: '#ff9900' }}>
         ${(item.quantity * item.unitPrice).toFixed(2)}
       </td>

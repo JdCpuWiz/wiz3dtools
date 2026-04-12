@@ -32,10 +32,10 @@ function AddColorForm({ onDone }: { onDone: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="card space-y-4">
-      <h3 className="font-semibold text-iron-50">Add Color</h3>
+      <h3 className="font-semibold" style={{ color: '#ff9900' }}>Add Color</h3>
       <div className="flex items-end gap-3 flex-wrap">
         <div className="flex-1 min-w-40">
-          <label className="block text-xs font-medium text-iron-300 mb-1">Color Name</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: '#ff9900' }}>Color Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -46,7 +46,7 @@ function AddColorForm({ onDone }: { onDone: () => void }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-iron-300 mb-1">Hex Color</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: '#ff9900' }}>Hex Color</label>
           <div className="flex items-center gap-2">
             <input
               type="color"
@@ -65,7 +65,7 @@ function AddColorForm({ onDone }: { onDone: () => void }) {
         </div>
         {manufacturers.length > 0 && (
           <div>
-            <label className="block text-xs font-medium text-iron-300 mb-1">Manufacturer</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: '#ff9900' }}>Manufacturer</label>
             <select
               value={manufacturerId}
               onChange={(e) => setManufacturerId(e.target.value)}
@@ -165,10 +165,10 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
               className="w-20 px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-right"
               style={inputSt}
             />
-            <span className="text-xs text-iron-400">g</span>
+            <span className="text-xs text-white">g</span>
           </div>
         </td>
-        <td className="px-4 py-2 text-sm text-iron-400">{color.active ? 'Active' : 'Inactive'}</td>
+        <td className="px-4 py-2 text-sm text-white">{color.active ? 'Active' : 'Inactive'}</td>
         <td className="px-4 py-2">
           <div className="flex gap-1.5">
             <button onClick={save} className="btn-primary btn-sm text-xs">Save</button>
@@ -196,14 +196,14 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
               flexShrink: 0,
             }}
           />
-          <span className="font-mono text-xs text-iron-400">{color.hex}</span>
+          <span className="font-mono text-xs text-white">{color.hex}</span>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm font-medium text-iron-50">{color.name}</td>
-      <td className="px-4 py-3 text-xs text-iron-50">{color.manufacturer?.name ?? '—'}</td>
+      <td className="px-4 py-3 text-sm font-medium text-white">{color.name}</td>
+      <td className="px-4 py-3 text-xs text-white">{color.manufacturer?.name ?? '—'}</td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-4 flex-wrap">
-          <span className="text-sm text-iron-50 text-right">{color.inventoryGrams.toFixed(0)}g</span>
+          <span className="text-sm text-white text-right">{color.inventoryGrams.toFixed(0)}g</span>
           {addingGrams ? (
             <div className="flex items-center gap-1">
               <input
@@ -217,7 +217,7 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
                 style={inputSt}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleAddSpool(); if (e.key === 'Escape') setAddingGrams(false); }}
               />
-              <span className="text-xs text-iron-400">g</span>
+              <span className="text-xs text-white">g</span>
               <button onClick={handleAddSpool} className="btn-primary btn-sm text-xs">Add</button>
               <button onClick={() => setAddingGrams(false)} className="btn-secondary btn-sm text-xs">✕</button>
             </div>
@@ -269,7 +269,7 @@ export const ColorsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-iron-50">Color Catalog</h2>
-          <p className="text-sm text-iron-400 mt-0.5">Manage print colors, manufacturers, and inventory</p>
+          <p className="text-sm text-white mt-0.5">Manage print colors, manufacturers, and inventory</p>
         </div>
         {!showAdd && (
           <button onClick={() => setShowAdd(true)} className="btn-primary btn-sm">+ Add Color</button>
@@ -282,18 +282,18 @@ export const ColorsPage: React.FC = () => {
         <table className="w-full text-sm">
           <thead>
             <tr style={{ background: 'linear-gradient(to bottom, #4a4a4a, #3a3a3a)' }}>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-40">Swatch</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100">Name</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-32">Manufacturer</th>
-              <th className="text-right px-4 py-2.5 font-semibold text-iron-100 w-40">Inventory</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-iron-100 w-24">Status</th>
+              <th className="text-left px-4 py-2.5 font-semibold w-40" style={{ color: '#ff9900' }}>Swatch</th>
+              <th className="text-left px-4 py-2.5 font-semibold" style={{ color: '#ff9900' }}>Name</th>
+              <th className="text-left px-4 py-2.5 font-semibold w-32" style={{ color: '#ff9900' }}>Manufacturer</th>
+              <th className="text-right px-4 py-2.5 font-semibold w-40" style={{ color: '#ff9900' }}>Inventory</th>
+              <th className="text-left px-4 py-2.5 font-semibold w-24" style={{ color: '#ff9900' }}>Status</th>
               <th className="px-4 py-2.5 w-32" />
             </tr>
           </thead>
           <tbody>
             {colors.map((c, i) => <ColorRow key={c.id} color={c} index={i} />)}
             {colors.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-iron-500 text-sm">No colors yet</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-white text-sm">No colors yet</td></tr>
             )}
           </tbody>
         </table>

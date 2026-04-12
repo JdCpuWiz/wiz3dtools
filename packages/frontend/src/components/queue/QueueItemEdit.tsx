@@ -81,7 +81,7 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
             In-house / Personal Print
           </button>
           {isInhouse && (
-            <p className="text-xs text-iron-500 mt-1">
+            <p className="text-xs text-white mt-1">
               Filament tracked automatically via Bambu monitor when the job finishes.
             </p>
           )}
@@ -95,13 +95,13 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
 
         {item.sku && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SKU</label>
-            <p className="font-mono text-sm text-iron-400">{item.sku}</p>
+            <label className="block text-sm font-medium mb-1" style={{ color: '#ff9900' }}>SKU</label>
+            <p className="font-mono text-sm text-white">{item.sku}</p>
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: '#ff9900' }}>
             Details
           </label>
           <textarea
@@ -135,7 +135,7 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
         />
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: '#ff9900' }}>
             Notes
           </label>
           <textarea
@@ -148,7 +148,7 @@ export const QueueItemEdit: React.FC<QueueItemEditProps> = ({
 
         {/* Printer assignment */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: '#ff9900' }}>
             Printer
           </label>
           <select
