@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { PageIcon } from '../common/PageIcon';
 import { useQueue } from '../../hooks/useQueue';
 import { useSalesInvoices } from '../../hooks/useSalesInvoices';
 import { useProducts } from '../../hooks/useProducts';
@@ -20,15 +21,15 @@ const StatCard: React.FC<StatCardProps> = ({ title, to, children }) => (
     className="card block hover:shadow-lg transition-shadow hover:border-[#e68a00] border border-transparent"
     style={{ textDecoration: 'none' }}
   >
-    <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-widest mb-4">{title}</h2>
+    <h2 className="text-sm font-semibold uppercase tracking-widest mb-4" style={{ color: '#ff9900' }}>{title}</h2>
     {children}
-    <p className="text-xs text-[#6b7280] mt-4">View →</p>
+    <p className="text-xs text-white mt-4">View →</p>
   </Link>
 );
 
 const Pill: React.FC<{ label: string; count: number; color: string; bg: string }> = ({ label, count, color, bg }) => (
   <div className="flex items-center justify-between py-1.5">
-    <span className="text-sm text-[#d1d5db]">{label}</span>
+    <span className="text-sm text-white">{label}</span>
     <span
       className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-sm font-bold"
       style={{ color, background: bg }}
@@ -45,7 +46,6 @@ function netFilamentGrams(c: Color): number {
 function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColorIds: Set<number> }) {
   const withInventory = colors.filter((c) => c.active);
 
-  // Low stock detection — only flag colors that are actually needed in active queue items
   const critical = withInventory.filter((c) => {
     if (!neededColorIds.has(c.id)) return false;
     const net = netFilamentGrams(c);
@@ -60,9 +60,7 @@ function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColor
     return net > criticalT && net <= lowT;
   });
 
-  // Top colors by net filament (most stock on hand)
   const sorted = [...withInventory].sort((a, b) => netFilamentGrams(b) - netFilamentGrams(a)).slice(0, 3);
-
   const totalGrams = withInventory.reduce((s, c) => s + Math.max(0, netFilamentGrams(c)), 0);
 
   return (
@@ -71,15 +69,13 @@ function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColor
       className="card block hover:shadow-lg transition-shadow hover:border-[#e68a00] border border-transparent"
       style={{ textDecoration: 'none' }}
     >
-      <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-widest mb-4">Filament</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-widest mb-4" style={{ color: '#ff9900' }}>Filament</h2>
 
-      {/* Total inventory */}
       <div className="flex items-end gap-2 mb-3">
-        <span className="text-3xl font-bold text-[#ff9900]">{(totalGrams / 1000).toFixed(2)}</span>
-        <span className="text-sm text-[#9ca3af] mb-1">kg on hand</span>
+        <span className="text-3xl font-bold" style={{ color: '#ff9900' }}>{(totalGrams / 1000).toFixed(2)}</span>
+        <span className="text-sm text-white mb-1">kg on hand</span>
       </div>
 
-      {/* Stock alerts — only shown when those colors are needed for active work */}
       {critical.length > 0 && (
         <div
           className="flex items-center justify-between py-1 px-2 rounded mb-1 text-xs font-semibold"
@@ -99,7 +95,6 @@ function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColor
         </div>
       )}
 
-      {/* Top colors */}
       {sorted.length > 0 && (
         <div className="mt-2 space-y-1">
           {sorted.map((c) => (
@@ -107,18 +102,18 @@ function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColor
               <span
                 style={{ width: 10, height: 10, borderRadius: '50%', background: c.hex, flexShrink: 0, display: 'inline-block', border: `1px solid ${c.hex}` }}
               />
-              <span className="text-[#d1d5db] truncate flex-1">{c.name}</span>
-              <span className="text-[#9ca3af] shrink-0">{Math.max(0, netFilamentGrams(c)).toFixed(0)}g</span>
+              <span className="text-white truncate flex-1">{c.name}</span>
+              <span className="text-white shrink-0">{Math.max(0, netFilamentGrams(c)).toFixed(0)}g</span>
             </div>
           ))}
         </div>
       )}
 
       {withInventory.length === 0 && (
-        <p className="text-sm text-[#6b7280]">No inventory tracked yet</p>
+        <p className="text-sm text-white">No inventory tracked yet</p>
       )}
 
-      <p className="text-xs text-[#6b7280] mt-4">View Inventory →</p>
+      <p className="text-xs text-white mt-4">View Inventory →</p>
     </Link>
   );
 }
@@ -136,7 +131,6 @@ function PrinterSummaryCard({ printer, status }: { printer: Printer; status: Pri
 
   return (
     <div className="card flex flex-col gap-2" style={{ minWidth: 0 }}>
-      {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <span
           className="px-2 py-0.5 rounded text-xs font-semibold truncate"
@@ -152,11 +146,10 @@ function PrinterSummaryCard({ printer, status }: { printer: Printer; status: Pri
         </span>
       </div>
 
-      {/* Job progress */}
       {status?.connected && (isRunning || isPaused) ? (
         <>
           {status.subtaskName && (
-            <p className="text-xs text-iron-400 truncate">{status.subtaskName}</p>
+            <p className="text-xs text-white truncate">{status.subtaskName}</p>
           )}
           <div className="w-full rounded-full h-1.5" style={{ background: '#2d2d2d' }}>
             <div
@@ -167,12 +160,11 @@ function PrinterSummaryCard({ printer, status }: { printer: Printer; status: Pri
               }}
             />
           </div>
-          <div className="flex justify-between text-xs text-iron-500">
+          <div className="flex justify-between text-xs text-white">
             <span>{status.mcPercent !== null ? `${status.mcPercent}%` : '—'}</span>
             <span>⏱ {formatTimeRemaining(status.mcRemainingTime)}</span>
           </div>
-          {/* Temps */}
-          <div className="flex gap-3 text-xs text-iron-400 pt-0.5">
+          <div className="flex gap-3 text-xs text-white pt-0.5">
             {status.nozzleTemper !== null && (
               <span>🔥 {status.nozzleTemper.toFixed(0)}°C</span>
             )}
@@ -182,11 +174,11 @@ function PrinterSummaryCard({ printer, status }: { printer: Printer; status: Pri
           </div>
         </>
       ) : status?.connected ? (
-        <p className="text-xs text-iron-600">
+        <p className="text-xs text-white">
           {status.nozzleTemper !== null ? `Nozzle ${status.nozzleTemper.toFixed(0)}°C` : 'Idle'}
         </p>
       ) : (
-        <p className="text-xs text-iron-600">
+        <p className="text-xs text-white">
           {!hasBambuConfig ? 'Configure in Admin → Printers' : 'Waiting for MQTT…'}
         </p>
       )}
@@ -244,7 +236,6 @@ export const Dashboard: React.FC = () => {
 
   const fmt = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-  // Colors needed by pending/printing queue items — drives filament stock alerts
   const neededColorIds = new Set(
     queueItems
       .filter((i) => i.status === 'pending' || i.status === 'printing')
@@ -261,16 +252,19 @@ export const Dashboard: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <span className="text-[#9ca3af]">Loading dashboard…</span>
+        <span className="text-white">Loading dashboard…</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-[#e5e5e5]">Dashboard</h1>
-        <p className="text-sm text-[#9ca3af] mt-1">Business overview</p>
+      <div className="flex items-center gap-3">
+        <PageIcon src="/icons/dashboard.png" alt="Dashboard" />
+        <div>
+          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <p className="text-sm text-white mt-1">Business overview</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -291,7 +285,7 @@ export const Dashboard: React.FC = () => {
             />
           </div>
           {queueItems.length === 0 && (
-            <p className="text-sm text-[#6b7280] mt-2">Queue is empty</p>
+            <p className="text-sm text-white mt-2">Queue is empty</p>
           )}
         </StatCard>
 
@@ -307,25 +301,25 @@ export const Dashboard: React.FC = () => {
             )}
           </div>
           {invoices.length === 0 && (
-            <p className="text-sm text-[#6b7280] mt-2">No invoices yet</p>
+            <p className="text-sm text-white mt-2">No invoices yet</p>
           )}
           {(paidRevenue > 0 || outstanding > 0 || thisMonthRevenue > 0) && (
             <div className="mt-3 pt-3 border-t border-[#2d2d2d] space-y-1">
               {thisMonthRevenue > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#9ca3af]">This Month</span>
+                  <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>This Month</span>
                   <span className="text-sm font-semibold" style={{ color: '#ff9900' }}>{fmt(thisMonthRevenue)}</span>
                 </div>
               )}
               {paidRevenue > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#9ca3af]">Total Paid</span>
+                  <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>Total Paid</span>
                   <span className="text-sm font-semibold" style={{ color: '#86efac' }}>{fmt(paidRevenue)}</span>
                 </div>
               )}
               {outstanding > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#9ca3af]">Outstanding</span>
+                  <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>Outstanding</span>
                   <span className="text-sm font-semibold" style={{ color: '#93c5fd' }}>{fmt(outstanding)}</span>
                 </div>
               )}
@@ -333,17 +327,17 @@ export const Dashboard: React.FC = () => {
           )}
         </StatCard>
 
-        {/* Filament (replaces Customers) */}
+        {/* Filament */}
         <FilamentCard colors={colors} neededColorIds={neededColorIds} />
 
         {/* Products */}
         <StatCard title="Products" to="/products">
           <div className="flex items-end gap-2 mt-2">
-            <span className="text-5xl font-bold text-[#ff9900]">{activeProducts}</span>
-            <span className="text-sm text-[#9ca3af] mb-2">active</span>
+            <span className="text-5xl font-bold" style={{ color: '#ff9900' }}>{activeProducts}</span>
+            <span className="text-sm text-white mb-2">active</span>
           </div>
           {products.length > activeProducts && (
-            <p className="text-xs text-[#6b7280] mt-1">{products.length - activeProducts} inactive</p>
+            <p className="text-xs text-white mt-1">{products.length - activeProducts} inactive</p>
           )}
         </StatCard>
       </div>
@@ -352,8 +346,8 @@ export const Dashboard: React.FC = () => {
       {activePrinters.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-widest">Printers</h2>
-            <Link to="/printers" className="text-xs text-[#ff9900] hover:text-[#e68a00]">View all →</Link>
+            <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: '#ff9900' }}>Printers</h2>
+            <Link to="/printers" className="text-xs" style={{ color: '#ff9900' }}>View all →</Link>
           </div>
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
             {activePrinters.map((printer) => (
@@ -371,8 +365,8 @@ export const Dashboard: React.FC = () => {
       {recentInvoices.length > 0 && (
         <div className="card-surface">
           <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-[#2d2d2d]">
-            <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-widest">Recent Invoices</h2>
-            <Link to="/invoices" className="text-xs text-[#ff9900] hover:text-[#e68a00]">View all →</Link>
+            <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: '#ff9900' }}>Recent Invoices</h2>
+            <Link to="/invoices" className="text-xs" style={{ color: '#ff9900' }}>View all →</Link>
           </div>
           <table className="wiz-table">
             <thead>
@@ -390,20 +384,20 @@ export const Dashboard: React.FC = () => {
                 return (
                   <tr key={inv.id}>
                     <td>
-                      <Link to={`/invoices/${inv.id}`} className="font-mono text-sm text-[#ff9900] hover:text-[#e68a00]">
+                      <Link to={`/invoices/${inv.id}`} className="font-mono text-sm hover:underline" style={{ color: '#ff9900' }}>
                         {inv.invoiceNumber}
                       </Link>
                     </td>
-                    <td className="text-[#d1d5db]">
+                    <td className="text-white">
                       {inv.customer ? (inv.customer.businessName || inv.customer.contactName) : '—'}
                     </td>
-                    <td className="text-[#9ca3af] text-sm">{fmtDate(inv.createdAt)}</td>
+                    <td className="text-white text-sm">{fmtDate(inv.createdAt)}</td>
                     <td>
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ color: sc.color, background: sc.bg }}>
                         {sc.label}
                       </span>
                     </td>
-                    <td className="text-right font-medium text-[#e5e5e5]">{fmt(calcTotal(inv))}</td>
+                    <td className="text-right font-medium text-white">{fmt(calcTotal(inv))}</td>
                   </tr>
                 );
               })}

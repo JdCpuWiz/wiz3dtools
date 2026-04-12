@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSalesInvoices } from '../../hooks/useSalesInvoices';
 import { StatusBadge } from '../common/StatusBadge';
+import { PageIcon } from '../common/PageIcon';
 import type { SalesInvoice, SalesInvoiceStatus } from '@wizqueue/shared';
 
 type InvoiceFilter = 'all' | SalesInvoiceStatus | 'shipped';
@@ -62,7 +63,10 @@ export const InvoiceList: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-iron-50">Invoices</h2>
+        <div className="flex items-center gap-3">
+          <PageIcon src="/icons/invoices.png" alt="Invoices" />
+          <h2 className="text-xl font-semibold text-iron-50">Invoices</h2>
+        </div>
         <button onClick={() => navigate('/invoices/new')} className="btn-primary btn-sm">+ New Invoice</button>
       </div>
 

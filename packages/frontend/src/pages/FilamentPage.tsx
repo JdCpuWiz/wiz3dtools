@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useColors } from '../hooks/useColors';
 import { useManufacturers } from '../hooks/useManufacturers';
 import { useAuth } from '../context/AuthContext';
+import { PageIcon } from '../components/common/PageIcon';
 import type { Color, Manufacturer } from '@wizqueue/shared';
 
 function filamentGrams(color: Color): number {
@@ -334,11 +335,14 @@ export const FilamentPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-iron-50">Filament Inventory</h1>
-          <p className="text-sm text-white mt-0.5">
-            {totalGrams.toFixed(0)}g total · {activeColors.length} active{disabledCount > 0 ? `, ${disabledCount} disabled` : ''}
-          </p>
+        <div className="flex items-center gap-3">
+          <PageIcon src="/icons/filament-inventory.png" alt="Filament Inventory" />
+          <div>
+            <h1 className="text-2xl font-bold text-iron-50">Filament Inventory</h1>
+            <p className="text-sm text-white mt-0.5">
+              {totalGrams.toFixed(0)}g total · {activeColors.length} active{disabledCount > 0 ? `, ${disabledCount} disabled` : ''}
+            </p>
+          </div>
         </div>
         {isAdmin && !showAddColor && (
           <button onClick={() => setShowAddColor(true)} className="btn-primary btn-sm">+ New Color</button>

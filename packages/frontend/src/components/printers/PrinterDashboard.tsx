@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { usePrinterDashboard, formatTimeRemaining, getPrinterStatusStyle } from '../../hooks/usePrinterDashboard';
+import { PageIcon } from '../common/PageIcon';
 import { useFilamentJobs, useLastPrinterJob } from '../../hooks/useFilamentJobs';
 import { usePrinters } from '../../hooks/usePrinters';
 import { useColors } from '../../hooks/useColors';
@@ -379,9 +380,12 @@ export const PrinterDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Printer Dashboard</h2>
-          <p className="text-white text-sm mt-1">Real-time status for all printers.</p>
+        <div className="flex items-center gap-3">
+          <PageIcon src="/icons/printers.png" alt="Printers" />
+          <div>
+            <h2 className="text-2xl font-bold text-white">Printer Dashboard</h2>
+            <p className="text-white text-sm mt-1">Real-time status for all printers.</p>
+          </div>
         </div>
         {error && (
           <span

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomers } from '../../hooks/useCustomers';
+import { PageIcon } from '../common/PageIcon';
 
 export const CustomerList: React.FC = () => {
   const navigate = useNavigate();
@@ -13,7 +14,10 @@ export const CustomerList: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-iron-50">Customers</h2>
+        <div className="flex items-center gap-3">
+          <PageIcon src="/icons/customers.png" alt="Customers" />
+          <h2 className="text-xl font-semibold text-iron-50">Customers</h2>
+        </div>
         <button onClick={() => navigate('/customers/new')} className="btn-primary btn-sm">+ New Customer</button>
       </div>
 

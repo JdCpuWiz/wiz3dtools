@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { LoginPage } from './components/auth/LoginPage';
 import { Layout } from './components/layout/Layout';
 import { QueueList } from './components/queue/QueueList';
+import { PageIcon } from './components/common/PageIcon';
 import { CustomerList } from './components/customers/CustomerList';
 import { CustomerForm } from './components/customers/CustomerForm';
 import { ProductList } from './components/products/ProductList';
@@ -192,6 +193,12 @@ function QueueView() {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* Page title */}
+        <div className="flex items-center gap-3">
+          <PageIcon src="/icons/queue.png" alt="Queue" />
+          <h1 className="text-2xl font-bold text-white">Queue</h1>
+        </div>
+
         {/* Counter/filter boxes + Add Item button + Upload button */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="card py-0 px-0 flex items-stretch overflow-hidden" style={{ background: 'linear-gradient(to bottom, #3a3a3a, #2d2d2d)' }}>

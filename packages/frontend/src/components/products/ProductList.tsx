@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProducts } from '../../hooks/useProducts';
+import { PageIcon } from '../common/PageIcon';
 
 export const ProductList: React.FC = () => {
   const navigate = useNavigate();
@@ -17,7 +18,10 @@ export const ProductList: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-iron-50">Products</h2>
+        <div className="flex items-center gap-3">
+          <PageIcon src="/icons/products.png" alt="Products" />
+          <h2 className="text-xl font-semibold text-iron-50">Products</h2>
+        </div>
         <button
           onClick={() => navigate('/products/new')}
           className="btn-primary btn-sm"

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { reportsApi } from '../../services/api';
+import { BarChart2 } from 'lucide-react';
 
 interface ReportRow {
   id: number;
@@ -110,7 +111,10 @@ export function SalesReportPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-iron-50">Sales Report</h1>
+        <div className="flex items-center gap-3">
+          <BarChart2 size={40} style={{ color: '#ff9900', flexShrink: 0 }} />
+          <h1 className="text-xl font-bold text-iron-50">Sales Report</h1>
+        </div>
       </div>
 
       {/* Date range picker */}

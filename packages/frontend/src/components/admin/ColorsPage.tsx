@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useColors } from '../../hooks/useColors';
 import { useManufacturers } from '../../hooks/useManufacturers';
+import { PageIcon } from '../common/PageIcon';
 import type { Color } from '@wizqueue/shared';
 
 const inputSt: React.CSSProperties = {
@@ -268,8 +269,13 @@ export const ColorsPage: React.FC = () => {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-iron-50">Color Catalog</h2>
-          <p className="text-sm text-white mt-0.5">Manage print colors, manufacturers, and inventory</p>
+          <div className="flex items-center gap-3">
+            <PageIcon src="/icons/filament-color-administration.png" alt="Colors" />
+            <div>
+              <h2 className="text-xl font-semibold text-iron-50">Color Catalog</h2>
+              <p className="text-sm text-white mt-0.5">Manage print colors, manufacturers, and inventory</p>
+            </div>
+          </div>
         </div>
         {!showAdd && (
           <button onClick={() => setShowAdd(true)} className="btn-primary btn-sm">+ Add Color</button>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useUsers } from '../../hooks/useUsers';
+import { PageIcon } from '../common/PageIcon';
 import type { User } from '@wizqueue/shared';
 
 function AddUserForm({ onClose }: { onClose: () => void }) {
@@ -254,7 +255,10 @@ export function UsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-iron-50">Users</h1>
+        <div className="flex items-center gap-3">
+          <PageIcon src="/icons/user-administration.png" alt="Users" />
+          <h1 className="text-2xl font-bold text-iron-50">Users</h1>
+        </div>
         <button
           onClick={() => setShowAdd((v) => !v)}
           className="btn-primary btn-sm"

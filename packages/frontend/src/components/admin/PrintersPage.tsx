@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { usePrinters } from '../../hooks/usePrinters';
 import { useAuth } from '../../context/AuthContext';
+import { PageIcon } from '../common/PageIcon';
 import type { Printer } from '@wizqueue/shared';
 
 interface BambuFields {
@@ -87,11 +88,14 @@ export const PrintersPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white">Printers</h2>
-        <p className="text-white text-sm mt-1">
-          Manage printers for queue assignment. Bambu fields enable live monitoring.
-        </p>
+      <div className="flex items-center gap-3">
+        <PageIcon src="/icons/printer-administration.png" alt="Printers" />
+        <div>
+          <h2 className="text-2xl font-bold text-white">Printers</h2>
+          <p className="text-white text-sm mt-1">
+            Manage printers for queue assignment. Bambu fields enable live monitoring.
+          </p>
+        </div>
       </div>
 
       {/* Add form — admin only */}

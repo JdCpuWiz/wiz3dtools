@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useManufacturers } from '../../hooks/useManufacturers';
 import { useColors } from '../../hooks/useColors';
+import { PageIcon } from '../common/PageIcon';
 import type { Manufacturer, Color } from '@wizqueue/shared';
 
 const inputSt: React.CSSProperties = {
@@ -269,8 +270,13 @@ export const ManufacturersPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-iron-50">Filament Manufacturers</h2>
-          <p className="text-sm text-white mt-0.5">Manage spool weights and stock thresholds per manufacturer</p>
+          <div className="flex items-center gap-3">
+            <PageIcon src="/icons/filament-manufacturers.png" alt="Manufacturers" />
+            <div>
+              <h2 className="text-xl font-semibold text-iron-50">Filament Manufacturers</h2>
+              <p className="text-sm text-white mt-0.5">Manage spool weights and stock thresholds per manufacturer</p>
+            </div>
+          </div>
         </div>
         {!showAdd && (
           <button onClick={() => setShowAdd(true)} className="btn-primary btn-sm">+ Add Manufacturer</button>
