@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
+import path from 'path';
+import fsPromises from 'fs/promises';
 import { ProductService } from '../services/product.service.js';
 import { ProductColorModel } from '../models/product-color.model.js';
+import { ProductImageModel } from '../models/product-image.model.js';
 import { parseBody, createProductSchema, updateProductSchema, setProductColorsSchema } from '../validation/schemas.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
@@ -79,6 +82,59 @@ export class ProductController {
       if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
       const product = await service.copy(id);
       res.status(201).json({ success: true, data: product, message: 'Product copied' });
+    } catch (error) { next(error); }
+  }
+
+  async uploadImage(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      if (!req.file) { res.status(400).json({ success: false, error: 'No image file provided' }); return; }
+
+      const baseUrl = process.env.STORE_IMAGE_PUBLIC_BASE || '/uploads/store';
+      const url = `${baseUrl}/${req.file.filename}`;
+      const image = await ProductImageModel.create(id, url);
+      res.status(201).json({ success: true, data: image });
+    } catch (error) { next(error); }
+  }
+
+  async reorderImages(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      const { order } = req.body as { order: number[] };
+      if (!Array.isArray(order)) { res.status(400).json({ success: false, error: 'order must be an array of image IDs' }); return; }
+      await ProductImageModel.reorder(id, order);
+      res.json({ success: true });
+    } catch (error) { next(error); }
+  }
+
+  async setPrimaryImage(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      const imageId = parseInt(req.params.imageId);
+      if (isNaN(id) || isNaN(imageId)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      const ok = await ProductImageModel.setPrimary(id, imageId);
+      if (!ok) { res.status(404).json({ success: false, error: 'Image not found' }); return; }
+      res.json({ success: true });
+    } catch (error) { next(error); }
+  }
+
+  async deleteImage(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      const imageId = parseInt(req.params.imageId);
+      if (isNaN(id) || isNaN(imageId)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      const deleted = await ProductImageModel.delete(id, imageId);
+      if (!deleted) { res.status(404).json({ success: false, error: 'Image not found' }); return; }
+
+      // Remove file from disk
+      const uploadDir = process.env.UPLOAD_DIR || './uploads';
+      const filename = path.basename(deleted.url);
+      const filePath = path.resolve(uploadDir, 'store', filename);
+      await fsPromises.unlink(filePath).catch(() => { /* ignore if already gone */ });
+
+      res.json({ success: true });
     } catch (error) { next(error); }
   }
 

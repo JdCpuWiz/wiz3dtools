@@ -35,6 +35,9 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-https://tools.wiz3dprints.com}
       - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
       - BAMBU_MONITOR_URL=${BAMBU_MONITOR_URL:-http://bambu-monitor:8015}
+      - STORE_API_KEY=${STORE_API_KEY}
+      - STORE_IMAGE_PUBLIC_BASE=${STORE_IMAGE_PUBLIC_BASE:-https://tools.wiz3dprints.com/uploads/store}
+      - MAX_IMAGE_SIZE=${MAX_IMAGE_SIZE:-5242880}
     volumes:
       - ${UPLOADS_PATH:-./uploads}:/app/uploads
     networks:
@@ -52,6 +55,8 @@ services:
     restart: unless-stopped
     ports:
       - "8080:80"
+    volumes:
+      - ${UPLOADS_PATH:-./uploads}/store:/uploads/store:ro
     networks:
       - wiz3dtools
     depends_on:

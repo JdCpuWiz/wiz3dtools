@@ -1,23 +1,56 @@
 import { pool } from '../config/database.js';
-import type { Product, CreateProductDto, UpdateProductDto } from '@wizqueue/shared';
+import type { Product, CreateProductDto, UpdateProductDto, ProductImage, Category } from '@wizqueue/shared';
 import { ProductColorModel } from './product-color.model.js';
 
 const SELECT = `
   id, name, description, sku, unit_price as "unitPrice",
   units_sold as "unitsSold", active,
+  published_to_store as "publishedToStore",
+  category_id as "categoryId",
+  store_title as "storeTitle",
+  store_description as "storeDescription",
+  wholesale_price as "wholesalePrice",
+  retail_price as "retailPrice",
   created_at as "createdAt", updated_at as "updatedAt"
 `;
+
+async function attachImages(productId: number): Promise<ProductImage[]> {
+  const result = await pool.query(
+    `SELECT id, product_id as "productId", url, sort_order as "sortOrder",
+            is_primary as "isPrimary", created_at as "createdAt"
+     FROM product_images WHERE product_id = $1 ORDER BY sort_order ASC, id ASC`,
+    [productId],
+  );
+  return result.rows as ProductImage[];
+}
+
+async function attachCategory(categoryId: number | null): Promise<Category | null> {
+  if (!categoryId) return null;
+  const result = await pool.query(
+    `SELECT id, name, slug, description, sort_order as "sortOrder",
+            created_at as "createdAt", updated_at as "updatedAt"
+     FROM categories WHERE id = $1`,
+    [categoryId],
+  );
+  return (result.rows[0] as Category) ?? null;
+}
 
 async function attachColors(rows: Record<string, unknown>[]): Promise<Product[]> {
   return Promise.all(
     rows.map(async (r) => {
       const colors = await ProductColorModel.findByProduct(r.id as number);
       const totalWeightGrams = colors.reduce((sum, c) => sum + c.weightGrams, 0);
+      const images = await attachImages(r.id as number);
+      const category = await attachCategory(r.categoryId as number | null);
       return {
         ...r,
         unitPrice: parseFloat(r.unitPrice as string),
+        wholesalePrice: parseFloat(r.wholesalePrice as string),
+        retailPrice: parseFloat(r.retailPrice as string),
         colors,
         totalWeightGrams,
+        images,
+        category,
       } as Product;
     }),
   );
@@ -30,13 +63,47 @@ export class ProductModel {
     if (result.rows.length === 0) return [];
     const productIds = result.rows.map((r) => r.id as number);
     const colorMap = await ProductColorModel.findByProductIds(productIds);
+
+    // Batch-load images
+    const imgResult = await pool.query(
+      `SELECT id, product_id as "productId", url, sort_order as "sortOrder",
+              is_primary as "isPrimary", created_at as "createdAt"
+       FROM product_images WHERE product_id = ANY($1) ORDER BY sort_order ASC, id ASC`,
+      [productIds],
+    );
+    const imageMap = new Map<number, ProductImage[]>();
+    for (const img of imgResult.rows as ProductImage[]) {
+      const list = imageMap.get(img.productId) ?? [];
+      list.push(img);
+      imageMap.set(img.productId, list);
+    }
+
+    // Batch-load categories
+    const catIds = [...new Set(result.rows.map((r) => r.categoryId as number | null).filter(Boolean))] as number[];
+    const catMap = new Map<number, Category>();
+    if (catIds.length > 0) {
+      const catResult = await pool.query(
+        `SELECT id, name, slug, description, sort_order as "sortOrder",
+                created_at as "createdAt", updated_at as "updatedAt"
+         FROM categories WHERE id = ANY($1)`,
+        [catIds],
+      );
+      for (const cat of catResult.rows as Category[]) {
+        catMap.set(cat.id, cat);
+      }
+    }
+
     return result.rows.map((r) => {
       const colors = colorMap.get(r.id as number) ?? [];
       return {
         ...r,
         unitPrice: parseFloat(r.unitPrice as string),
+        wholesalePrice: parseFloat(r.wholesalePrice as string),
+        retailPrice: parseFloat(r.retailPrice as string),
         colors,
         totalWeightGrams: colors.reduce((sum, c) => sum + c.weightGrams, 0),
+        images: imageMap.get(r.id as number) ?? [],
+        category: r.categoryId ? (catMap.get(r.categoryId as number) ?? null) : null,
       } as Product;
     });
   }
@@ -69,6 +136,12 @@ export class ProductModel {
     if (data.sku !== undefined) { fields.push(`sku = $${i++}`); values.push(data.sku || null); }
     if (data.unitPrice !== undefined) { fields.push(`unit_price = $${i++}`); values.push(data.unitPrice); }
     if (data.active !== undefined) { fields.push(`active = $${i++}`); values.push(data.active); }
+    if (data.publishedToStore !== undefined) { fields.push(`published_to_store = $${i++}`); values.push(data.publishedToStore); }
+    if (data.categoryId !== undefined) { fields.push(`category_id = $${i++}`); values.push(data.categoryId ?? null); }
+    if (data.storeTitle !== undefined) { fields.push(`store_title = $${i++}`); values.push(data.storeTitle ?? null); }
+    if (data.storeDescription !== undefined) { fields.push(`store_description = $${i++}`); values.push(data.storeDescription ?? null); }
+    if (data.wholesalePrice !== undefined) { fields.push(`wholesale_price = $${i++}`); values.push(data.wholesalePrice); }
+    if (data.retailPrice !== undefined) { fields.push(`retail_price = $${i++}`); values.push(data.retailPrice); }
 
     if (fields.length === 0) return this.findById(id);
 

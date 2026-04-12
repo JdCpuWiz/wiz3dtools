@@ -31,6 +31,18 @@ export type {
   UpdateProductDto,
 } from './types/product';
 
+// Category types
+export type {
+  Category,
+  CreateCategoryDto,
+  UpdateCategoryDto,
+} from './types/category';
+
+// Product image types
+export type {
+  ProductImage,
+} from './types/product-image';
+
 // Customer types
 export type {
   Customer,
