@@ -105,7 +105,8 @@
     background: linear-gradient(to bottom, #4a4a4a, #3a3a3a);
   }
   .wiz-table thead th {
-    @apply text-left px-4 py-3 font-semibold text-iron-100;
+    @apply text-left px-4 py-3 font-semibold;
+    color: #ff9900;
   }
   .wiz-table tbody tr {
     border-top: 1px solid #2d2d2d;
