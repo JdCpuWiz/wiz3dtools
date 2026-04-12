@@ -5,7 +5,7 @@ import { PageIcon } from '../common/PageIcon';
 
 export const ProductList: React.FC = () => {
   const navigate = useNavigate();
-  const { products, isLoading, delete: deleteProduct, update } = useProducts();
+  const { products, isLoading, delete: deleteProduct, update, copy: copyProduct } = useProducts();
 
   if (isLoading) {
     return (
@@ -91,6 +91,19 @@ export const ProductList: React.FC = () => {
                         className="btn-secondary btn-sm text-xs"
                       >
                         Edit
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const copy = await copyProduct(product.id);
+                            navigate(`/products/${copy.id}`);
+                          } catch {
+                            // error toast handled in hook
+                          }
+                        }}
+                        className="btn-secondary btn-sm text-xs"
+                      >
+                        Copy
                       </button>
                       <button
                         onClick={async () => {

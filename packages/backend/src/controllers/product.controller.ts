@@ -73,6 +73,15 @@ export class ProductController {
     } catch (error) { next(error); }
   }
 
+  async copy(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      const product = await service.copy(id);
+      res.status(201).json({ success: true, data: product, message: 'Product copied' });
+    } catch (error) { next(error); }
+  }
+
   async suggestSku(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
     try {
       const name = (req.query.name as string) || '';

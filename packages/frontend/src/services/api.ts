@@ -278,6 +278,12 @@ export const productApi = {
     const response = await api.get<ApiResponse<string>>(`/products/suggest-sku?${params.toString()}`);
     return response.data.data || '';
   },
+
+  copy: async (id: number): Promise<Product> => {
+    const response = await api.post<ApiResponse<Product>>(`/products/${id}/copy`);
+    if (!response.data.data) throw new Error('Failed to copy product');
+    return response.data.data;
+  },
 };
 
 // Colors API

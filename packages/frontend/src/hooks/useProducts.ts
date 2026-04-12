@@ -44,6 +44,14 @@ export const useProducts = (activeOnly = false) => {
     },
   });
 
+  const copyMutation = useMutation({
+    mutationFn: productApi.copy,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: (error: Error) => toast.error(`Failed to copy: ${error.message}`),
+  });
+
   return {
     products: query.data || [],
     isLoading: query.isLoading,
@@ -51,8 +59,10 @@ export const useProducts = (activeOnly = false) => {
     create: (data: CreateProductDto) => createMutation.mutateAsync(data),
     update: (id: number, data: UpdateProductDto) => updateMutation.mutateAsync({ id, data }),
     delete: (id: number) => deleteMutation.mutateAsync(id),
+    copy: (id: number) => copyMutation.mutateAsync(id),
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
+    isCopying: copyMutation.isPending,
   };
 };
