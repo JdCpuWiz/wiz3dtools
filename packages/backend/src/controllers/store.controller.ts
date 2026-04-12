@@ -1,9 +1,48 @@
 import { Request, Response, NextFunction } from 'express';
 import { StoreService, CreateStoreOrderDto } from '../services/store.service.js';
+import { CustomerModel } from '../models/customer.model.js';
 
 const service = new StoreService();
 
 export class StoreController {
+  async getCustomer(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (!id || isNaN(id)) {
+        res.status(400).json({ success: false, error: 'Invalid customer id' });
+        return;
+      }
+      const customer = await CustomerModel.findById(id);
+      if (!customer) {
+        res.status(404).json({ success: false, error: 'Customer not found' });
+        return;
+      }
+      res.json({ success: true, data: customer });
+    } catch (error) { next(error); }
+  }
+
+  async updateCustomer(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (!id || isNaN(id)) {
+        res.status(400).json({ success: false, error: 'Invalid customer id' });
+        return;
+      }
+      const allowed = ['businessName', 'contactName', 'email', 'phone', 'addressLine1', 'addressLine2', 'city', 'stateProvince', 'postalCode', 'country'] as const;
+      type AllowedKey = typeof allowed[number];
+      const data: Partial<Record<AllowedKey, string>> = {};
+      for (const key of allowed) {
+        if (req.body[key] !== undefined) data[key] = req.body[key];
+      }
+      const customer = await CustomerModel.update(id, data);
+      if (!customer) {
+        res.status(404).json({ success: false, error: 'Customer not found' });
+        return;
+      }
+      res.json({ success: true, data: customer });
+    } catch (error) { next(error); }
+  }
+
   async getProducts(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const products = await service.getProducts();

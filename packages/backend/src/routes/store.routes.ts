@@ -11,5 +11,7 @@ router.use(requireStoreApiKey);
 router.get('/products', controller.getProducts.bind(controller));
 router.post('/orders', controller.createOrder.bind(controller));
 router.get('/orders', controller.getOrders.bind(controller));
+router.get('/customers/:id', controller.getCustomer.bind(controller));
+router.patch('/customers/:id', controller.updateCustomer.bind(controller));
 
 export default router;
