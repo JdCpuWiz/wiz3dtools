@@ -24,6 +24,7 @@ import reportsRoutes from './routes/reports.routes.js';
 import bambuRoutes from './routes/bambu.routes.js';
 import filamentJobRoutes from './routes/filament-job.routes.js';
 import categoryRoutes from './routes/category.routes.js';
+import storeRoutes from './routes/store.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -99,6 +100,9 @@ app.use('/api/auth/login', loginLimiter);
 
 // Auth routes (public — must be before requireAuth middleware)
 app.use('/api/auth', authRoutes);
+
+// Store API — API key auth only, no cookie/CSRF. Must be before requireAuth.
+app.use('/api/store', storeRoutes);
 
 // Protect all subsequent /api/* routes
 app.use('/api', requireAuth);
