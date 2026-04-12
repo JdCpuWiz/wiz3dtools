@@ -57,7 +57,7 @@ export const ProductList: React.FC = () => {
               {products.map((product) => (
                 <tr key={product.id}>
                   <td className="font-medium text-white">{product.name}</td>
-                  <td className="text-white hidden sm:table-cell font-mono text-xs">{product.sku || '—'}</td>
+                  <td className="text-white hidden sm:table-cell font-mono text-xs whitespace-nowrap">{product.sku || '—'}</td>
                   <td className="text-white hidden sm:table-cell">
                     {product.description
                       ? product.description.length > 60
