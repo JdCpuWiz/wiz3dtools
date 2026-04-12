@@ -87,7 +87,7 @@ export const PrintersPage: React.FC = () => {
   const hasBambuConfig = (p: Printer) => !!(p.ipAddress && p.serialNumber);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div className="flex items-center gap-3">
         <PageIcon src="/icons/printer-administration.png" alt="Printers" />
         <div>

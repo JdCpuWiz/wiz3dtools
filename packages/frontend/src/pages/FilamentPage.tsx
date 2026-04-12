@@ -333,7 +333,7 @@ export const FilamentPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <PageIcon src="/icons/filament-inventory.png" alt="Filament Inventory" />

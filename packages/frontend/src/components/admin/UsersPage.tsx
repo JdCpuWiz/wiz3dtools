@@ -253,7 +253,7 @@ export function UsersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <PageIcon src="/icons/user-administration.png" alt="Users" />

@@ -109,7 +109,7 @@ export function SalesReportPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <BarChart2 size={40} style={{ color: '#ff9900', flexShrink: 0 }} />

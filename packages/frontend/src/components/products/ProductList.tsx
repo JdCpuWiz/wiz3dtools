@@ -16,7 +16,7 @@ export const ProductList: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <PageIcon src="/icons/products.png" alt="Products" />
