@@ -1,11 +1,70 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProducts } from '../../hooks/useProducts';
 import { PageIcon } from '../common/PageIcon';
 
+type FilterTab = 'all' | 'active' | 'inactive' | 'webstore';
+type SortKey = 'name' | 'unitPrice' | 'unitsSold' | 'revenue';
+type SortDir = 'asc' | 'desc';
+
+const TABS: { key: FilterTab; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'active', label: 'Active' },
+  { key: 'inactive', label: 'Inactive' },
+  { key: 'webstore', label: 'On Webstore' },
+];
+
 export const ProductList: React.FC = () => {
   const navigate = useNavigate();
   const { products, isLoading, delete: deleteProduct, update, copy: copyProduct } = useProducts();
+
+  const [filter, setFilter] = useState<FilterTab>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const sortIcon = (key: SortKey) => {
+    if (sortKey !== key) return <span style={{ color: '#4b5563' }}> ↕</span>;
+    return <span style={{ color: '#ff9900' }}>{sortDir === 'asc' ? ' ↑' : ' ↓'}</span>;
+  };
+
+  const filtered = useMemo(() => {
+    let list = [...products];
+
+    if (filter === 'active') list = list.filter((p) => p.active);
+    else if (filter === 'inactive') list = list.filter((p) => !p.active);
+    else if (filter === 'webstore') list = list.filter((p) => p.publishedToStore);
+
+    list.sort((a, b) => {
+      let av: number | string = 0;
+      let bv: number | string = 0;
+      if (sortKey === 'name') { av = a.name.toLowerCase(); bv = b.name.toLowerCase(); }
+      else if (sortKey === 'unitPrice') { av = a.unitPrice; bv = b.unitPrice; }
+      else if (sortKey === 'unitsSold') { av = a.unitsSold; bv = b.unitsSold; }
+      else if (sortKey === 'revenue') { av = a.unitsSold * a.unitPrice; bv = b.unitsSold * b.unitPrice; }
+
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return list;
+  }, [products, filter, sortKey, sortDir]);
+
+  const counts = useMemo(() => ({
+    all: products.length,
+    active: products.filter((p) => p.active).length,
+    inactive: products.filter((p) => !p.active).length,
+    webstore: products.filter((p) => p.publishedToStore).length,
+  }), [products]);
 
   if (isLoading) {
     return (
@@ -16,46 +75,84 @@ export const ProductList: React.FC = () => {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <PageIcon src="/icons/products.png" alt="Products" />
           <h2 className="text-xl font-semibold text-iron-50">Products</h2>
         </div>
-        <button
-          onClick={() => navigate('/products/new')}
-          className="btn-primary btn-sm"
-        >
+        <button onClick={() => navigate('/products/new')} className="btn-primary btn-sm">
           + New Product
         </button>
       </div>
 
-      {products.length === 0 ? (
+      {/* Filter tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setFilter(tab.key)}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            style={filter === tab.key
+              ? { background: '#ff9900', color: '#0a0a0a' }
+              : { background: '#2d2d2d', color: '#d1d5db' }
+            }
+          >
+            {tab.label}
+            <span
+              className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-semibold"
+              style={filter === tab.key
+                ? { background: 'rgba(0,0,0,0.2)', color: '#0a0a0a' }
+                : { background: '#3a3a3a', color: '#9ca3af' }
+              }
+            >
+              {counts[tab.key]}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
         <div
           className="text-center py-16 rounded-xl"
           style={{ background: 'linear-gradient(to bottom, #3a3a3a, #2d2d2d)' }}
         >
-          <p className="text-lg font-medium text-iron-50">No products yet</p>
-          <p className="text-sm mt-1 text-white">Create your first product to get started</p>
+          <p className="text-lg font-medium text-iron-50">No products match this filter</p>
         </div>
       ) : (
         <div className="card-surface">
           <table className="wiz-table">
             <thead>
               <tr>
-                <th>Name</th>
+                <th>
+                  <button onClick={() => handleSort('name')} className="hover:text-white transition-colors">
+                    Name{sortIcon('name')}
+                  </button>
+                </th>
                 <th className="hidden sm:table-cell">SKU</th>
                 <th className="hidden sm:table-cell">Description</th>
-                <th>Unit Price</th>
-                <th>Units Sold</th>
-                <th className="hidden md:table-cell">Revenue</th>
+                <th>
+                  <button onClick={() => handleSort('unitPrice')} className="hover:text-white transition-colors">
+                    Unit Price{sortIcon('unitPrice')}
+                  </button>
+                </th>
+                <th>
+                  <button onClick={() => handleSort('unitsSold')} className="hover:text-white transition-colors">
+                    Units Sold{sortIcon('unitsSold')}
+                  </button>
+                </th>
+                <th className="hidden md:table-cell">
+                  <button onClick={() => handleSort('revenue')} className="hover:text-white transition-colors">
+                    Revenue{sortIcon('revenue')}
+                  </button>
+                </th>
                 <th>Status</th>
                 <th className="hidden md:table-cell">Webstore</th>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {products.map((product) => (
+              {filtered.map((product) => (
                 <tr key={product.id}>
                   <td className="font-medium text-white">{product.name}</td>
                   <td className="text-white hidden sm:table-cell font-mono text-xs whitespace-nowrap">{product.sku || '—'}</td>
