@@ -65,7 +65,7 @@ export interface PrinterLiveStatus {
   connected: boolean;
   gcodeState: string | null;       // IDLE | RUNNING | PAUSE | FINISH | FAILED
   mcPercent: number | null;
-  mcRemainingTime: number | null;  // seconds
+  mcRemainingTime: number | null;  // minutes (Bambu MQTT mc_remaining_time)
   layerNum: number | null;
   totalLayerNum: number | null;
   subtaskName: string | null;

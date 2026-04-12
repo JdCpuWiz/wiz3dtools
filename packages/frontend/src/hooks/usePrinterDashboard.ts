@@ -92,12 +92,12 @@ export function usePrinterDashboard() {
   return { liveStatuses, error };
 }
 
-// Format seconds to "Xh Ym" or "Ym" or "< 1m"
-export function formatTimeRemaining(seconds: number | null): string {
-  if (seconds === null || seconds === undefined) return '—';
-  if (seconds <= 0) return '0m';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
+// Format Bambu mc_remaining_time (minutes) to "Xh Ym" or "Ym" or "< 1m"
+export function formatTimeRemaining(minutes: number | null): string {
+  if (minutes === null || minutes === undefined) return '—';
+  if (minutes <= 0) return '0m';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
   if (h > 0) return `${h}h ${m}m`;
   if (m > 0) return `${m}m`;
   return '< 1m';
