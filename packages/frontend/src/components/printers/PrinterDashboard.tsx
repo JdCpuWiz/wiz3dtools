@@ -139,23 +139,20 @@ function PrinterCard({
                   const matched = matchAmsColor(slot.trayColor, colors);
                   const hasRemain = slot.remain !== null && slot.remain >= 0;
 
-                  // Primary amount display
-                  let amountLine: string;
-                  if (hasRemain) {
-                    amountLine = `${slot.remain}%`;
-                  } else if (matched && matched.inventoryGrams > 0) {
-                    amountLine = `~${Math.round(matched.inventoryGrams)}g`;
-                  } else {
-                    amountLine = '—';
-                  }
+                  // Amount: show % from AMS when available.
+                  // When remain is -1/unknown we genuinely don't know the spool amount —
+                  // inventoryGrams is total stock across all spools, not this spool.
+                  const amountLine = hasRemain ? `${slot.remain}%` : '—';
 
-                  // Secondary grams line: show approx grams from % when remain is known
+                  // Approx grams: only meaningful when AMS gives us a real % and we
+                  // know the manufacturer's full spool net weight to convert from.
                   let gramsLine: string | null = null;
                   if (hasRemain && matched?.manufacturer?.fullSpoolNetWeightG) {
                     const g = Math.round((slot.remain! / 100) * matched.manufacturer.fullSpoolNetWeightG);
                     gramsLine = `~${g}g`;
                   }
 
+                  // Prefer catalog color name over raw Bambu tray labels
                   const label = matched?.name ?? slot.traySubBrands ?? slot.trayType ?? '—';
 
                   return (
