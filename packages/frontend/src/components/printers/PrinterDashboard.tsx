@@ -14,7 +14,7 @@ function FilamentSummary({ jobs }: { jobs: FilamentJob[] }) {
   const totalGrams = jobs.reduce((s, j) => s + (j.filamentGrams ?? 0), 0);
   return (
     <div className="border-t pt-3 mt-1" style={{ borderColor: '#2d2d2d' }}>
-      <p className="text-xs font-semibold text-white uppercase tracking-wide mb-2">Last Print</p>
+      <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#ff9900' }}>Last Print</p>
       {jobName && <p className="text-xs text-white truncate mb-2">{jobName}</p>}
       <div className="space-y-1">
         {jobs.map((j) => (
@@ -38,7 +38,7 @@ function FilamentSummary({ jobs }: { jobs: FilamentJob[] }) {
       </div>
       {totalGrams > 0 && (
         <div className="flex justify-between mt-2 pt-1 border-t" style={{ borderColor: '#3a3a3a' }}>
-          <span className="text-xs text-white">Total</span>
+          <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>Total</span>
           <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>{totalGrams.toFixed(1)}g</span>
         </div>
       )}
@@ -123,7 +123,7 @@ function PrinterCard({
           {/* AMS slots */}
           {status.amsSlots.length > 0 && (
             <div className="col-span-2">
-              <p className="text-xs text-white mb-2">AMS Filament</p>
+              <p className="text-xs font-semibold mb-2" style={{ color: '#ff9900' }}>AMS Filament</p>
               <div className="grid grid-cols-4 gap-1">
                 {status.amsSlots.map((slot) => (
                   <div
@@ -139,7 +139,7 @@ function PrinterCard({
                       }}
                     />
                     <span className="text-xs text-white">{slot.remain !== null && slot.remain >= 0 ? `${slot.remain}%` : '—'}</span>
-                    <span className="text-xs text-white truncate w-full text-center">{slot.trayType || '—'}</span>
+                    <span className="text-xs font-semibold truncate w-full text-center" style={{ color: '#ff9900' }}>{slot.trayType || '—'}</span>
                   </div>
                 ))}
               </div>
@@ -171,7 +171,7 @@ function PrinterCard({
 function StatPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="card-surface rounded p-2 flex flex-col items-center">
-      <span className="text-xs text-white">{label}</span>
+      <span className="text-xs font-semibold" style={{ color: '#ff9900' }}>{label}</span>
       <span className="text-sm font-semibold text-white mt-0.5">{value}</span>
     </div>
   );
@@ -200,7 +200,7 @@ function PrinterQueueCard({ printerName, items }: { printerName: string; items: 
   return (
     <div className="card-surface rounded" style={{ overflow: 'hidden' }}>
       <div className="px-3 py-2 border-b border-[#2d2d2d] flex items-center justify-between">
-        <span className="text-xs font-semibold text-white uppercase tracking-wide">Queue</span>
+        <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#ff9900' }}>Queue</span>
         <span className="text-xs text-white">{active.length} item{active.length !== 1 ? 's' : ''}</span>
       </div>
       <div className="divide-y divide-[#2d2d2d]">
