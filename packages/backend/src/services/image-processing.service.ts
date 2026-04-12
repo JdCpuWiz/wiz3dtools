@@ -79,26 +79,21 @@ function makeNoiseOverlay(size: number): Buffer {
  * Returns the path of the processed file (saved alongside the original).
  * Throws on failure — caller should fall back to original if this errors.
  */
-const MIME_BY_EXT: Record<string, string> = {
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.webp': 'image/webp',
-};
-
 export async function processProductImage(inputPath: string): Promise<string> {
-  // Dynamic import because @imgly/background-removal-node is ESM-only
-  const { removeBackground } = await import('@imgly/background-removal-node');
-
-  // 1. Remove background → transparent PNG in memory.
-  // The library needs a Blob with an explicit MIME type so its image decoder
-  // knows the format — passing a raw Buffer causes "Unsupported format" errors.
   const ext = path.extname(inputPath).toLowerCase();
-  const mimeType = MIME_BY_EXT[ext] ?? 'image/jpeg';
+
+  // 1. Remove background via rembg sidecar (POST raw image, receive transparent PNG).
+  const rembgUrl = `${process.env.REMBG_URL ?? 'http://rembg:7000'}/api/remove`;
   const inputBuffer = await fsPromises.readFile(inputPath);
-  const inputBlob = new Blob([inputBuffer], { type: mimeType });
-  const resultBlob = await removeBackground(inputBlob);
-  const transparentBuffer = Buffer.from(await resultBlob.arrayBuffer());
+  const rembgResponse = await fetch(rembgUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'image/png' }, // rembg accepts any image; PNG header is fine
+    body: inputBuffer,
+  });
+  if (!rembgResponse.ok) {
+    throw new Error(`rembg API returned ${rembgResponse.status}: ${await rembgResponse.text()}`);
+  }
+  const transparentBuffer = Buffer.from(await rembgResponse.arrayBuffer());
 
   // 2. Scan raw pixels to find tight bounding box of the subject
   const { data, info } = await sharp(transparentBuffer)

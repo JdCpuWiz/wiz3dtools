@@ -38,15 +38,25 @@ services:
       - STORE_API_KEY=${STORE_API_KEY}
       - STORE_IMAGE_PUBLIC_BASE=${STORE_IMAGE_PUBLIC_BASE:-https://tools.wiz3dprints.com/uploads/store}
       - MAX_IMAGE_SIZE=${MAX_IMAGE_SIZE:-5242880}
-      # Cache dir for @imgly/background-removal-node ONNX models (~200MB, downloaded once)
-      - IMGLY_BACKGROUND_REMOVAL_CACHE_DIR=/app/model-cache
+      - REMBG_URL=http://rembg:7000
     volumes:
       - ${UPLOADS_PATH:-./uploads}:/app/uploads
-      - ${MODEL_CACHE_PATH:-./model-cache}:/app/model-cache
     networks:
       - wiz3dtools
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - rembg
+
+  rembg:
+    image: danielgatis/rembg:latest
+    container_name: wiz3dtools-rembg
+    restart: unless-stopped
+    command: ["s", "--host", "0.0.0.0", "--port", "7000", "--log_level", "warning"]
+    volumes:
+      - ${REMBG_MODELS_PATH:-./rembg-models}:/root/.u2net
+    networks:
+      - wiz3dtools
 
   frontend:
     build:

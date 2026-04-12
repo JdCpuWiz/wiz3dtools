@@ -11,7 +11,6 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@imgly/background-removal-node": "^1.4.5",
     "@wizqueue/shared": "^1.0.0",
     "sharp": "^0.33.5",
     "axios": "^1.6.5",
