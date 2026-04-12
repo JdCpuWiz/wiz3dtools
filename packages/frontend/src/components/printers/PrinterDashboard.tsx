@@ -69,7 +69,7 @@ function PrinterCard({
   const isRunning = status?.gcodeState === 'RUNNING';
 
   return (
-    <div className="card flex flex-col gap-4">
+    <div className="card flex flex-col gap-4 text-white">
       {/* Header */}
       <div className="flex items-center justify-between">
         <span
@@ -158,7 +158,7 @@ function PrinterCard({
 
       {/* Print failed notice — connected but last job errored */}
       {status?.connected && status.gcodeState === 'FAILED' && (
-        <p className="text-xs text-center" style={{ color: '#f87171' }}>
+        <p className="text-xs text-center" style={{ color: '#ffffff' }}>
           Last print job failed.{status.subtaskName ? ` (${status.subtaskName})` : ''} Start a new print to clear.
         </p>
       )}
