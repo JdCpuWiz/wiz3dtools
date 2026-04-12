@@ -5,7 +5,7 @@ import { useFilamentJobs, useLastPrinterJob } from '../../hooks/useFilamentJobs'
 import { usePrinters } from '../../hooks/usePrinters';
 import { useColors } from '../../hooks/useColors';
 import { useQueue } from '../../hooks/useQueue';
-import type { PrinterLiveStatus, FilamentJob, Printer, QueueItem } from '@wizqueue/shared';
+import type { PrinterLiveStatus, FilamentJob, Printer, QueueItem, Color } from '@wizqueue/shared';
 
 // ── Printer Card ───────────────────────────────────────────────────────────────
 
@@ -47,14 +47,23 @@ function FilamentSummary({ jobs }: { jobs: FilamentJob[] }) {
   );
 }
 
+/** Match an 8-char Bambu AMS hex (RRGGBBAA) to a catalog color (stored as #RRGGBB). */
+function matchAmsColor(trayColor: string | null, colors: Color[]): Color | null {
+  if (!trayColor || trayColor.length < 6) return null;
+  const search = trayColor.slice(0, 6).toUpperCase();
+  return colors.find((c) => c.hex.replace('#', '').toUpperCase() === search) ?? null;
+}
+
 function PrinterCard({
   status,
   printer,
   monitorOnline,
+  colors,
 }: {
   status: PrinterLiveStatus | null;
   printer: Printer;
   monitorOnline: boolean;
+  colors: Color[];
 }) {
   const hasBambuConfig = !!(printer.ipAddress && printer.serialNumber);
   const lastJob = useLastPrinterJob(printer.name);
@@ -126,23 +135,56 @@ function PrinterCard({
             <div className="col-span-2">
               <p className="text-xs font-semibold mb-2" style={{ color: '#ff9900' }}>AMS Filament</p>
               <div className="grid grid-cols-4 gap-1">
-                {status.amsSlots.map((slot) => (
-                  <div
-                    key={`${slot.amsId}.${slot.trayId}`}
-                    className="rounded p-1.5 flex flex-col items-center gap-1"
-                    style={{ background: '#2d2d2d' }}
-                  >
+                {status.amsSlots.map((slot) => {
+                  const matched = matchAmsColor(slot.trayColor, colors);
+                  const hasRemain = slot.remain !== null && slot.remain >= 0;
+
+                  // Primary amount display
+                  let amountLine: string;
+                  if (hasRemain) {
+                    amountLine = `${slot.remain}%`;
+                  } else if (matched && matched.inventoryGrams > 0) {
+                    amountLine = `~${Math.round(matched.inventoryGrams)}g`;
+                  } else {
+                    amountLine = '—';
+                  }
+
+                  // Secondary grams line: show approx grams from % when remain is known
+                  let gramsLine: string | null = null;
+                  if (hasRemain && matched?.manufacturer?.fullSpoolNetWeightG) {
+                    const g = Math.round((slot.remain! / 100) * matched.manufacturer.fullSpoolNetWeightG);
+                    gramsLine = `~${g}g`;
+                  }
+
+                  const label = matched?.name ?? slot.traySubBrands ?? slot.trayType ?? '—';
+
+                  return (
                     <div
-                      className="w-5 h-5 rounded-full border-2"
-                      style={{
-                        background: slot.trayColor ? `#${slot.trayColor.slice(0, 6)}` : '#444',
-                        borderColor: slot.trayColor ? `#${slot.trayColor.slice(0, 6)}` : '#444',
-                      }}
-                    />
-                    <span className="text-xs text-white">{slot.remain !== null && slot.remain >= 0 ? `${slot.remain}%` : '—'}</span>
-                    <span className="text-xs font-semibold truncate w-full text-center" style={{ color: '#ff9900' }}>{slot.trayType || '—'}</span>
-                  </div>
-                ))}
+                      key={`${slot.amsId}.${slot.trayId}`}
+                      className="rounded p-1.5 flex flex-col items-center gap-0.5"
+                      style={{ background: '#2d2d2d' }}
+                    >
+                      <div
+                        className="w-5 h-5 rounded-full border-2 flex-shrink-0"
+                        style={{
+                          background: slot.trayColor ? `#${slot.trayColor.slice(0, 6)}` : '#444',
+                          borderColor: slot.trayColor ? `#${slot.trayColor.slice(0, 6)}` : '#444',
+                        }}
+                      />
+                      <span className="text-xs font-semibold text-white">{amountLine}</span>
+                      {gramsLine && (
+                        <span className="text-xs text-white">{gramsLine}</span>
+                      )}
+                      <span
+                        className="text-xs font-semibold truncate w-full text-center leading-tight"
+                        style={{ color: '#ff9900' }}
+                        title={label}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -237,9 +279,8 @@ function PrinterQueueCard({ printerName, items }: { printerName: string; items: 
 
 // ── Filament Jobs Panel ────────────────────────────────────────────────────────
 
-function FilamentJobsPanel() {
+function FilamentJobsPanel({ colors }: { colors: Color[] }) {
   const { jobs, pendingCount, resolve, skip, isResolving } = useFilamentJobs('pending');
-  const { colors } = useColors();
   const [selectedColors, setSelectedColors] = useState<Record<number, number>>({});
 
   if (pendingCount === 0) return null;
@@ -366,6 +407,7 @@ export const PrinterDashboard: React.FC = () => {
   const { liveStatuses, error } = usePrinterDashboard();
   const { printers } = usePrinters();
   const { items: queueItems } = useQueue();
+  const { colors } = useColors();
 
   // Monitor is considered online if we got data back (even an empty array) with no error
   const monitorOnline = !error;
@@ -398,7 +440,7 @@ export const PrinterDashboard: React.FC = () => {
       </div>
 
       {/* Filament jobs pending banner */}
-      <FilamentJobsPanel />
+      <FilamentJobsPanel colors={colors} />
 
       {/* Printer columns: printer card + queue card stacked */}
       {activePrinters.length === 0 ? (
@@ -413,6 +455,7 @@ export const PrinterDashboard: React.FC = () => {
                 printer={printer}
                 status={statusById[printer.id] ?? null}
                 monitorOnline={monitorOnline}
+                colors={colors}
               />
               <PrinterQueueCard
                 printerName={printer.name}
