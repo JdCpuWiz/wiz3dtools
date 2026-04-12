@@ -124,6 +124,7 @@ export const ProductList: React.FC = () => {
           <table className="wiz-table">
             <thead>
               <tr>
+                <th className="w-10 pr-0" />
                 <th className="whitespace-nowrap">
                   <button onClick={() => handleSort('name')} className="hover:text-white transition-colors whitespace-nowrap">
                     Name{sortIcon('name')}
@@ -154,6 +155,26 @@ export const ProductList: React.FC = () => {
             <tbody>
               {filtered.map((product) => (
                 <tr key={product.id}>
+                  <td className="w-10 pr-0">
+                    {(() => {
+                      const img = product.images?.find((i) => i.isPrimary) ?? product.images?.[0];
+                      return img ? (
+                        <img
+                          src={img.url}
+                          alt={product.name}
+                          className="rounded"
+                          style={{ width: 40, height: 40, objectFit: 'cover', display: 'block' }}
+                        />
+                      ) : (
+                        <div
+                          className="rounded flex items-center justify-center text-xs"
+                          style={{ width: 40, height: 40, background: '#2d2d2d', color: '#6b7280' }}
+                        >
+                          —
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td className="font-medium text-white">{product.name}</td>
                   <td className="text-white hidden sm:table-cell font-mono text-xs whitespace-nowrap">{product.sku || '—'}</td>
                   <td className="text-white hidden sm:table-cell">
