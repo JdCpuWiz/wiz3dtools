@@ -31,8 +31,8 @@ export default {
           400: '#7a7a7a',
           300: '#8a8a8a',
           200: '#9a9a9a',
-          100: '#d1d5db',  // light text
-          50:  '#e5e5e5',  // platinum-white (primary text)
+          100: '#ffffff',  // white
+          50:  '#ffffff',  // white (primary text)
         },
       },
       fontFamily: {

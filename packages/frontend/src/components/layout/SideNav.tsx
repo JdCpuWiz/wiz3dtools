@@ -25,7 +25,7 @@ function NavItem({
         }`
       }
       style={({ isActive }) => ({
-        color: isActive ? '#ffffff' : '#9ca3af',
+        color: isActive ? '#ffffff' : '#ffffff',
         backgroundColor: isActive ? '#ff9900' : 'transparent',
         borderLeft: isActive ? '2px solid #e68a00' : '2px solid transparent',
       })}
@@ -53,7 +53,7 @@ function SectionHeader({
       className="w-full flex items-center gap-2 mt-5 mb-1 pr-4 hover:opacity-80 transition-opacity"
       style={{ paddingLeft: '0.75rem' }}
     >
-      <span className="text-xs font-bold uppercase tracking-wider shrink-0" style={{ color: '#e5e5e5' }}>
+      <span className="text-xs font-bold uppercase tracking-wider shrink-0" style={{ color: '#ffffff' }}>
         {label}
       </span>
       <div className="flex-1 h-px" style={{ backgroundColor: '#2d2d2d' }} />
@@ -172,7 +172,7 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
           <button
             onClick={handleLogout}
             className="flex items-center gap-2.5 py-1.5 text-sm rounded-md mx-0 pl-4 pr-3 transition-colors w-full text-left"
-            style={{ color: '#9ca3af', borderLeft: '2px solid transparent' }}
+            style={{ color: '#ffffff', borderLeft: '2px solid transparent' }}
           >
             <LogOut size={15} />
             <span>Sign Out</span>
