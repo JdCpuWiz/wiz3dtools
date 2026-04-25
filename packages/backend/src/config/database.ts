@@ -12,7 +12,9 @@ const poolConfig: PoolConfig = {
   max: 30,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-  ...(process.env.NODE_ENV === 'production' && {
+  // Opt-in SSL via DATABASE_SSL=true — PgBouncer on the LAN cluster (.223:5432) doesn't accept SSL,
+  // so the previous "auto-on in production" behavior broke logins after the cluster moved behind PgBouncer.
+  ...(process.env.DATABASE_SSL === 'true' && {
     ssl: { rejectUnauthorized: false },
   }),
 };
