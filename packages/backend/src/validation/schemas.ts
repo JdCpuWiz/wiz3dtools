@@ -79,8 +79,8 @@ export const createProductSchema = z.object({
   categoryId: nullish(z.number().int()),
   storeTitle: nullish(z.string().max(255)),
   storeDescription: nullish(z.string().max(2000)),
-  wholesalePrice: z.number().min(0).optional(),
-  retailPrice: z.number().min(0).optional(),
+  wholesalePrice: nullish(z.number().min(0)),
+  retailPrice: nullish(z.number().min(0)),
 });
 
 export const updateProductSchema = createProductSchema.partial();
