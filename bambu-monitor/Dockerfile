@@ -8,6 +8,9 @@ RUN pip install --no-cache-dir \
     flask==3.0.3 \
     waitress==3.0.1
 
+ARG GIT_SHA=unknown
+RUN echo "Building for $GIT_SHA"
+
 COPY server.py .
 
 EXPOSE 8015

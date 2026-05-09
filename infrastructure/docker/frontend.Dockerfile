@@ -2,6 +2,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+ARG GIT_SHA=unknown
+RUN echo "Building for $GIT_SHA"
+
 # Copy workspace root and packages
 COPY package*.json ./
 COPY tsconfig.base.json ./
