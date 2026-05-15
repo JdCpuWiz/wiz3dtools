@@ -9,6 +9,7 @@ const controller = new StoreController();
 router.use(requireStoreApiKey);
 
 router.get('/products', controller.getProducts.bind(controller));
+router.get('/colors', controller.getColors.bind(controller));
 router.post('/orders', controller.createOrder.bind(controller));
 router.get('/orders', controller.getOrders.bind(controller));
 router.get('/orders/:id', controller.getOrder.bind(controller));

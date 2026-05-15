@@ -50,6 +50,13 @@ export class StoreController {
     } catch (error) { next(error); }
   }
 
+  async getColors(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const colors = await service.getActiveColors();
+      res.json({ success: true, data: colors });
+    } catch (error) { next(error); }
+  }
+
   async createOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { customerId, notes, lineItems } = req.body as CreateStoreOrderDto;
@@ -74,6 +81,18 @@ export class StoreController {
         if (item.unitPrice === undefined || item.unitPrice < 0) {
           res.status(400).json({ success: false, error: 'Each line item must have a valid unitPrice' });
           return;
+        }
+        if (item.colors !== undefined) {
+          if (!Array.isArray(item.colors)) {
+            res.status(400).json({ success: false, error: 'colors must be an array' });
+            return;
+          }
+          for (const c of item.colors) {
+            if (!c || typeof c !== 'object' || !Number.isInteger(c.colorId) || c.colorId < 1) {
+              res.status(400).json({ success: false, error: 'Each color override must have a positive integer colorId' });
+              return;
+            }
+          }
         }
       }
 

@@ -1,7 +1,10 @@
 import { pool } from '../config/database.js';
 import { SalesInvoiceModel } from '../models/sales-invoice.model.js';
 import { InvoiceLineItemModel } from '../models/invoice-line-item.model.js';
-import type { SalesInvoice } from '@wizqueue/shared';
+import { ProductColorModel } from '../models/product-color.model.js';
+import { LineItemColorModel } from '../models/item-color.model.js';
+import { ColorModel } from '../models/color.model.js';
+import type { SalesInvoice, Color, ProductColor, ItemColorDto } from '@wizqueue/shared';
 
 export interface StoreProduct {
   id: number;
@@ -14,6 +17,8 @@ export interface StoreProduct {
   categoryId: number | null;
   category: { id: number; name: string; slug: string } | null;
   images: { id: number; url: string; sortOrder: number; isPrimary: boolean }[];
+  /** Product recipe — default colors with per-slot weights. Pickers use these as defaults. */
+  colors: ProductColor[];
 }
 
 export interface StoreOrderLineItem {
@@ -22,6 +27,12 @@ export interface StoreOrderLineItem {
   unitPrice: number; // wholesalePrice at time of order
   productName?: string;
   notes?: string;
+  /**
+   * Per-slot color override. Must have same length as product recipe.
+   * Weights come from the recipe (server-side source of truth) — client
+   * weightGrams is ignored if provided. Omit to use recipe defaults.
+   */
+  colors?: ItemColorDto[];
 }
 
 export interface CreateStoreOrderDto {
@@ -78,6 +89,9 @@ export class StoreService {
       imageMap.set(img.productId as number, list);
     }
 
+    // Batch-load product color recipes (defaults the picker hydrates from)
+    const colorMap = await ProductColorModel.findByProductIds(productIds);
+
     return result.rows.map((r) => ({
       id: r.id as number,
       name: r.name as string,
@@ -91,19 +105,83 @@ export class StoreService {
         ? { id: r.cat_id as number, name: r.cat_name as string, slug: r.cat_slug as string }
         : null,
       images: imageMap.get(r.id as number) ?? [],
+      colors: colorMap.get(r.id as number) ?? [],
     }));
   }
 
+  async getActiveColors(): Promise<Color[]> {
+    return ColorModel.findAll(true);
+  }
+
   async createOrder(data: CreateStoreOrderDto): Promise<SalesInvoice> {
-    // Validate all products are published and active
+    // Pre-validate each line item: product is available AND has a color recipe.
+    // We also resolve the final colors[] per item up-front so we either succeed
+    // atomically or fail before mutating any state.
+    const resolved: { item: StoreOrderLineItem; productName: string; productSku: string | null; colors: ItemColorDto[] }[] = [];
+
     for (const item of data.lineItems) {
-      const result = await pool.query(
-        `SELECT id, name FROM products WHERE id = $1 AND published_to_store = TRUE AND active = TRUE`,
+      const productResult = await pool.query(
+        `SELECT id, name, sku FROM products WHERE id = $1 AND published_to_store = TRUE AND active = TRUE`,
         [item.productId],
       );
-      if (!result.rows[0]) {
+      const product = productResult.rows[0];
+      if (!product) {
         throw Object.assign(new Error(`Product ${item.productId} is not available in the store`), { statusCode: 400 });
       }
+
+      const recipe = await ProductColorModel.findByProduct(item.productId);
+      if (recipe.length === 0) {
+        throw Object.assign(
+          new Error(`Product ${item.productId} (${product.name}) has no color recipe configured and cannot be ordered`),
+          { statusCode: 400 },
+        );
+      }
+
+      let colors: ItemColorDto[];
+      if (item.colors === undefined) {
+        // No override — use recipe defaults
+        colors = recipe.map((pc, i) => ({
+          colorId: pc.colorId,
+          isPrimary: i === 0,
+          sortOrder: pc.sortOrder ?? i,
+          weightGrams: pc.weightGrams,
+          note: null,
+        }));
+      } else {
+        if (item.colors.length !== recipe.length) {
+          throw Object.assign(
+            new Error(`Color override for product ${item.productId} must have ${recipe.length} slot(s), got ${item.colors.length}`),
+            { statusCode: 400 },
+          );
+        }
+        // Validate every colorId is active
+        const colorIds = item.colors.map((c) => c.colorId);
+        const activeResult = await pool.query(
+          `SELECT id FROM colors WHERE id = ANY($1) AND active = TRUE`,
+          [colorIds],
+        );
+        const activeSet = new Set(activeResult.rows.map((r) => r.id as number));
+        for (const c of item.colors) {
+          if (!activeSet.has(c.colorId)) {
+            throw Object.assign(new Error(`Color ${c.colorId} is not active or does not exist`), { statusCode: 400 });
+          }
+        }
+        // Apply recipe weights positionally — server is the source of truth
+        colors = item.colors.map((c, i) => ({
+          colorId: c.colorId,
+          isPrimary: c.isPrimary ?? (i === 0),
+          sortOrder: c.sortOrder ?? i,
+          weightGrams: recipe[i].weightGrams,
+          note: c.note ?? null,
+        }));
+      }
+
+      resolved.push({
+        item,
+        productName: product.name as string,
+        productSku: (product.sku as string | null) ?? null,
+        colors,
+      });
     }
 
     // Create draft invoice — always tax-exempt for wholesalers
@@ -114,21 +192,17 @@ export class StoreService {
       notes: data.notes ?? undefined,
     });
 
-    // Add line items
-    for (const item of data.lineItems) {
-      const productResult = await pool.query(
-        `SELECT name, sku FROM products WHERE id = $1`,
-        [item.productId],
-      );
-      const product = productResult.rows[0];
-      await InvoiceLineItemModel.create(invoice.id, {
-        productId: item.productId,
-        productName: item.productName || (product?.name as string),
-        sku: (product?.sku as string | null) ?? undefined,
-        details: item.notes || undefined,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
+    // Add line items + persist colors
+    for (const r of resolved) {
+      const lineItem = await InvoiceLineItemModel.create(invoice.id, {
+        productId: r.item.productId,
+        productName: r.item.productName || r.productName,
+        sku: r.productSku ?? undefined,
+        details: r.item.notes || undefined,
+        quantity: r.item.quantity,
+        unitPrice: r.item.unitPrice,
       });
+      await LineItemColorModel.setColors(lineItem.id, r.colors);
     }
 
     // Return the full invoice with line items
