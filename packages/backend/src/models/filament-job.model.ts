@@ -21,6 +21,19 @@ const SELECT_FIELDS = `
   fj.resolved_at     as "resolvedAt"
 `;
 
+// pg returns DECIMAL columns as strings; parseFloat them so the frontend
+// can call .toFixed() etc. without runtime TypeErrors. null stays null.
+function parseRow(row: Record<string, unknown>): FilamentJob {
+  const num = (v: unknown): number | null =>
+    v === null || v === undefined ? null : parseFloat(v as string);
+  return {
+    ...row,
+    remainStart: num(row.remainStart),
+    remainEnd: num(row.remainEnd),
+    filamentGrams: num(row.filamentGrams),
+  } as FilamentJob;
+}
+
 export interface CreateFilamentJobDto {
   printerId?: number | null;
   jobName?: string | null;
@@ -49,7 +62,7 @@ export class FilamentJobModel {
        LIMIT 200`,
       params,
     );
-    return result.rows;
+    return result.rows.map(parseRow);
   }
 
   static async findPending(): Promise<FilamentJob[]> {
@@ -72,7 +85,7 @@ export class FilamentJobModel {
        WHERE fj.id = $1`,
       [id],
     );
-    return result.rows[0] || null;
+    return result.rows[0] ? parseRow(result.rows[0]) : null;
   }
 
   static async create(data: CreateFilamentJobDto): Promise<FilamentJob> {
@@ -121,7 +134,7 @@ export class FilamentJobModel {
        ORDER BY fj.created_at DESC`,
       [printerName],
     );
-    return result.rows;
+    return result.rows.map(parseRow);
   }
 
   // Returns all filament_job rows linked to a specific queue item.
@@ -136,7 +149,7 @@ export class FilamentJobModel {
        ORDER BY fj.created_at ASC`,
       [queueItemId],
     );
-    return result.rows;
+    return result.rows.map(parseRow);
   }
 
   static async resolve(id: number, colorId: number, filamentGrams: number): Promise<FilamentJob | null> {
