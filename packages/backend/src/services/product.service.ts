@@ -18,6 +18,30 @@ export class ProductService {
   }
 
   async update(id: number, data: UpdateProductDto): Promise<Product> {
+    // Wholesale-storefront invariant: a product visible to wholesale buyers
+    // (published_to_store=TRUE AND active=TRUE) MUST have ≥1 product_colors
+    // recipe slot. Without one, StoreService.createOrder rejects orders for
+    // it and the storefront filters it out — net effect was a published
+    // product that customers never see, with no warning. Enforce here when
+    // a request would push the product INTO the visible state.
+    if (data.publishedToStore === true || data.active === true) {
+      const current = await ProductModel.findById(id);
+      if (!current) throw new Error('Product not found');
+      const wouldBePublished = data.publishedToStore ?? current.publishedToStore;
+      const wouldBeActive = data.active ?? current.active;
+      if (wouldBePublished && wouldBeActive) {
+        const recipe = await ProductColorModel.findByProduct(id);
+        if (recipe.length === 0) {
+          throw Object.assign(
+            new Error(
+              'Cannot publish this product to the wholesale store without at least one recipe slot. Add a color to the recipe first, or uncheck "Published to store".',
+            ),
+            { statusCode: 400 },
+          );
+        }
+      }
+    }
+
     const product = await ProductModel.update(id, data);
     if (!product) throw new Error('Product not found');
     return product;

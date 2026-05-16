@@ -72,6 +72,24 @@ export class ProductController {
       if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
       const parsed = parseBody(setProductColorsSchema, req.body);
       if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+
+      // Wholesale-storefront invariant: emptying the recipe of a
+      // published+active product would silently hide it from the storefront
+      // (StoreService.getProducts filters by published_to_store=TRUE AND
+      // active=TRUE, and createOrder requires ≥1 recipe slot). Reject up
+      // front so the admin sees the constraint instead of a downstream
+      // silent disappearance.
+      if (parsed.data.colors.length === 0) {
+        const product = await service.getById(id);
+        if (product.publishedToStore && product.active) {
+          res.status(400).json({
+            success: false,
+            error: 'Cannot remove all recipe slots from a product that is published to the wholesale store. Uncheck "Published to store" first, then clear the recipe.',
+          });
+          return;
+        }
+      }
+
       const colors = await ProductColorModel.setColors(id, parsed.data.colors);
       res.json({ success: true, data: colors, message: 'Product colors updated' });
     } catch (error) { next(error); }

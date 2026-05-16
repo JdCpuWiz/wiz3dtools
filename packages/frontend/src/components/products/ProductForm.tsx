@@ -238,23 +238,33 @@ export const ProductForm: React.FC = () => {
   };
 
   const onSubmit = async (data: ProductFormFields) => {
-    let savedProductId = productId;
-    if (isEdit) {
-      await update(productId, data);
-    } else {
-      const created = await create(data);
-      savedProductId = created.id;
-    }
-
-    // Save product colors
     const colorDtos: ProductColorDto[] = colorWeights.map((c, i) => ({
       colorId: c.colorId,
       weightGrams: parseFloat(c.weightGrams) || 0,
       sortOrder: i,
     }));
-    await productApi.setColors(savedProductId, colorDtos);
-    queryClient.invalidateQueries({ queryKey: ['products'] });
 
+    if (isEdit) {
+      // Save colors BEFORE the product so the backend's published+active
+      // invariant check (which reads product_colors) sees the new recipe
+      // state when validating the publish toggle.
+      await productApi.setColors(productId, colorDtos);
+      await update(productId, data);
+    } else {
+      // Create is always unpublished server-side (ProductModel.create
+      // doesn't insert published_to_store). Set colors next, then — if the
+      // user wanted this product published — run a follow-up update with
+      // the publish flag, which will pass the invariant check now that the
+      // recipe exists.
+      const { publishedToStore, ...createData } = data;
+      const created = await create(createData);
+      await productApi.setColors(created.id, colorDtos);
+      if (publishedToStore === true) {
+        await update(created.id, { publishedToStore: true });
+      }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['products'] });
     navigate('/products');
   };
 
@@ -428,6 +438,12 @@ export const ProductForm: React.FC = () => {
               <span className="text-sm font-medium" style={{ color: '#ff9900' }}>Published to store</span>
             </label>
           </div>
+
+          {watch('publishedToStore') && colorWeights.length === 0 && (
+            <p className="text-xs text-red-400">
+              A recipe with at least one color slot is required before publishing. Add a color in the section above, or uncheck "Published to store".
+            </p>
+          )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
