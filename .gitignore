@@ -51,3 +51,6 @@ tmp/
 
 # Data import files (contain customer PII)
 data_import/
+
+# Claude Code agent runtime memory (machine-local, not source)
+.claude/agent-memory/
