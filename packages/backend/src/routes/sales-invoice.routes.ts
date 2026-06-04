@@ -19,7 +19,7 @@ router.put('/:id/line-items/:itemId/colors', colorController.setLineItemColors.b
 
 router.post('/:id/send', controller.sendEmail.bind(controller));
 router.post('/:id/ship', controller.ship.bind(controller));
-router.post('/:id/send-to-queue', controller.sendToQueue.bind(controller));
+// /send-to-queue removed in BuildPlan #6 Phase 3 — printing is manual via BamBuddy.
 router.get('/:id/pdf', controller.downloadPdf.bind(controller));
 
 export default router;

@@ -5,7 +5,7 @@ import { LineItemColorModel } from './item-color.model.js';
 const SELECT_FIELDS = `
   id, invoice_id as "invoiceId", product_id as "productId",
   product_name as "productName", sku, details, quantity,
-  unit_price as "unitPrice", queue_item_id as "queueItemId",
+  unit_price as "unitPrice",
   created_at as "createdAt"
 `;
 
@@ -90,12 +90,5 @@ export class InvoiceLineItemModel {
   static async delete(id: number): Promise<boolean> {
     const result = await pool.query('DELETE FROM invoice_line_items WHERE id = $1', [id]);
     return (result.rowCount || 0) > 0;
-  }
-
-  static async markSentToQueue(lineItemId: number, queueItemId: number): Promise<void> {
-    await pool.query(
-      'UPDATE invoice_line_items SET queue_item_id = $1 WHERE id = $2',
-      [queueItemId, lineItemId],
-    );
   }
 }

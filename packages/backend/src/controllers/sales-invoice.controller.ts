@@ -9,7 +9,6 @@ import {
   updateInvoiceSchema,
   addLineItemSchema,
   updateLineItemSchema,
-  sendToQueueSchema,
 } from '../validation/schemas.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
@@ -125,18 +124,6 @@ export class SalesInvoiceController {
       await service.ship(id);
       await writeAuditLog(req.user!.username, 'invoice.ship', `invoice:${id}`);
       res.json({ success: true, message: 'Invoice marked as shipped and customer notified' });
-    } catch (error) { next(error); }
-  }
-
-  async sendToQueue(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
-      const parsed = parseBody(sendToQueueSchema, req.body);
-      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
-      await service.sendToQueue(id, parsed.data.lineItemIds);
-      await writeAuditLog(req.user!.username, 'invoice.send_to_queue', `invoice:${id}`);
-      res.json({ success: true, message: 'Line items sent to print queue' });
     } catch (error) { next(error); }
   }
 

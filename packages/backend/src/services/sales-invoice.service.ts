@@ -1,11 +1,9 @@
 import { SalesInvoiceModel } from '../models/sales-invoice.model.js';
 import { InvoiceLineItemModel } from '../models/invoice-line-item.model.js';
-import { QueueItemModel } from '../models/queue-item.model.js';
 import { ProductModel } from '../models/product.model.js';
 import { ProductColorModel } from '../models/product-color.model.js';
-import { LineItemColorModel, QueueItemColorModel } from '../models/item-color.model.js';
+import { LineItemColorModel } from '../models/item-color.model.js';
 import { sendShippingEmail } from './email.service.js';
-import { pool } from '../config/database.js';
 import type {
   SalesInvoice,
   CreateSalesInvoiceDto,
@@ -13,6 +11,7 @@ import type {
   CreateLineItemDto,
   InvoiceLineItem,
 } from '@wizqueue/shared';
+// InvoiceLineItem stays imported — addLineItem returns it.
 
 export class SalesInvoiceService {
   async getAll(): Promise<SalesInvoice[]> {
@@ -99,50 +98,16 @@ export class SalesInvoiceService {
     await SalesInvoiceModel.markShipped(invoiceId, invoice.trackingNumber?.trim() || null);
     await sendShippingEmail(invoice.customer, invoice.invoiceNumber, invoice.carrier, invoice.trackingNumber?.trim() || null);
 
-    // Remove all queue items linked to this invoice's line items (any status)
-    await pool.query(
-      `DELETE FROM queue_items
-       WHERE id IN (
-         SELECT queue_item_id
-         FROM invoice_line_items
-         WHERE invoice_id = $1
-           AND queue_item_id IS NOT NULL
-       )`,
-      [invoiceId]
-    );
+    // BuildPlan #6 Phase 3 (2026-06-04): queue_items table dropped. The
+    // previous queue-cleanup query (DELETE FROM queue_items WHERE id IN
+    // SELECT queue_item_id ...) is gone with it. Printing happens in
+    // BamBuddy now; the invoice ship event records the sale and updates
+    // units_sold, nothing else.
 
     // Recalculate units_sold for all products on this invoice based on all shipped invoices
     const productIds = invoice.lineItems
       .map((li) => li.productId)
       .filter((id): id is number => id !== null);
     await ProductModel.recalcSoldFromShippedInvoices(productIds);
-  }
-
-  async sendToQueue(invoiceId: number, lineItemIds?: number[]): Promise<void> {
-    const invoice = await this.getById(invoiceId);
-    const items = lineItemIds
-      ? invoice.lineItems.filter((li) => lineItemIds.includes(li.id))
-      : invoice.lineItems;
-
-    for (const lineItem of items as InvoiceLineItem[]) {
-      if (lineItem.queueItemId) continue; // already queued
-
-      const queueItem = await QueueItemModel.create({
-        productName: lineItem.productName,
-        sku: lineItem.sku || undefined,
-        details: lineItem.details || undefined,
-        quantity: lineItem.quantity,
-        status: 'pending',
-      });
-
-      await InvoiceLineItemModel.markSentToQueue(lineItem.id, queueItem.id);
-
-      // Copy colors from line item to queue item
-      if (lineItem.colors && lineItem.colors.length > 0) {
-        await QueueItemColorModel.copyFromLineItem(lineItem.id, queueItem.id);
-      }
-
-      // units_sold is recalculated at ship time — not tracked here
-    }
   }
 }

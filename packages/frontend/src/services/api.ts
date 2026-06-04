@@ -1,9 +1,5 @@
 import axios from 'axios';
 import type {
-  QueueItem,
-  CreateQueueItemDto,
-  UpdateQueueItemDto,
-  ReorderQueueDto,
   ApiResponse,
   Customer,
   CreateCustomerDto,
@@ -31,18 +27,17 @@ import type {
   UpdateColorDto,
   ItemColor,
   ItemColorDto,
-  Printer,
-  CreatePrinterDto,
-  UpdatePrinterDto,
-  FilamentJob,
-  PrinterLiveStatus,
 } from '@wizqueue/shared';
+
+// BuildPlan #6 Phase 3 (2026-06-04): queueApi / printerApi / bambuApi /
+// filamentJobApi removed — BamBuddy owns those domains now. The queue,
+// printer, and filament-attribution endpoints they hit no longer exist
+// in the wiz3dtools backend.
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 console.log('API Base URL:', API_BASE_URL);
 
-// In-memory CSRF token — set by AuthContext after login/me, cleared on logout
 let _csrfToken: string | null = null;
 export function setCsrfToken(token: string | null) { _csrfToken = token; }
 
@@ -53,11 +48,10 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // send HttpOnly JWT cookie on every request
-  timeout: 120000, // 2 minute timeout for file uploads
+  withCredentials: true,
+  timeout: 120000,
 });
 
-// Log all requests; attach CSRF token for mutating methods
 api.interceptors.request.use((config) => {
   console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
   const method = (config.method || 'get').toLowerCase();
@@ -86,59 +80,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// Queue API
-export const queueApi = {
-  getAll: async (): Promise<QueueItem[]> => {
-    const response = await api.get<ApiResponse<QueueItem[]>>('/queue');
-    return response.data.data || [];
-  },
-
-  getById: async (id: number): Promise<QueueItem> => {
-    const response = await api.get<ApiResponse<QueueItem>>(`/queue/${id}`);
-    if (!response.data.data) {
-      throw new Error('Queue item not found');
-    }
-    return response.data.data;
-  },
-
-  create: async (data: CreateQueueItemDto): Promise<QueueItem> => {
-    const response = await api.post<ApiResponse<QueueItem>>('/queue', data);
-    if (!response.data.data) {
-      throw new Error('Failed to create queue item');
-    }
-    return response.data.data;
-  },
-
-  createBatch: async (items: CreateQueueItemDto[]): Promise<QueueItem[]> => {
-    const response = await api.post<ApiResponse<QueueItem[]>>('/queue/batch', { items });
-    return response.data.data || [];
-  },
-
-  update: async (id: number, data: UpdateQueueItemDto): Promise<QueueItem> => {
-    const response = await api.put<ApiResponse<QueueItem>>(`/queue/${id}`, data);
-    if (!response.data.data) {
-      throw new Error('Failed to update queue item');
-    }
-    return response.data.data;
-  },
-
-  delete: async (id: number): Promise<void> => {
-    await api.delete(`/queue/${id}`);
-  },
-
-  reorder: async (data: ReorderQueueDto): Promise<void> => {
-    await api.patch('/queue/reorder', data);
-  },
-
-  updateStatus: async (id: number, status: string): Promise<QueueItem> => {
-    const response = await api.patch<ApiResponse<QueueItem>>(`/queue/${id}/status`, { status });
-    if (!response.data.data) {
-      throw new Error('Failed to update status');
-    }
-    return response.data.data;
-  },
-};
 
 // Customer API
 export const customerApi = {
@@ -217,10 +158,6 @@ export const salesInvoiceApi = {
 
   sendEmail: async (id: number): Promise<void> => {
     await api.post(`/sales-invoices/${id}/send`);
-  },
-
-  sendToQueue: async (id: number, lineItemIds?: number[]): Promise<void> => {
-    await api.post(`/sales-invoices/${id}/send-to-queue`, { lineItemIds });
   },
 
   ship: async (id: number): Promise<void> => {
@@ -372,14 +309,6 @@ export const colorApi = {
     if (!response.data.data) throw new Error('Failed to add spool');
     return response.data.data;
   },
-
-  setQueueItemColors: async (queueItemId: number, colors: ItemColorDto[]): Promise<ItemColor[]> => {
-    const response = await api.put<ApiResponse<ItemColor[]>>(
-      `/queue/${queueItemId}/colors`,
-      { colors },
-    );
-    return response.data.data || [];
-  },
 };
 
 // Manufacturer API
@@ -403,30 +332,6 @@ export const manufacturerApi = {
 
   delete: async (id: number): Promise<void> => {
     await api.delete(`/manufacturers/${id}`);
-  },
-};
-
-// Printer API
-export const printerApi = {
-  getAll: async (): Promise<Printer[]> => {
-    const response = await api.get<ApiResponse<Printer[]>>('/printers');
-    return response.data.data || [];
-  },
-
-  create: async (data: CreatePrinterDto): Promise<Printer> => {
-    const response = await api.post<ApiResponse<Printer>>('/printers', data);
-    if (!response.data.data) throw new Error('Failed to create printer');
-    return response.data.data;
-  },
-
-  update: async (id: number, data: UpdatePrinterDto): Promise<Printer> => {
-    const response = await api.put<ApiResponse<Printer>>(`/printers/${id}`, data);
-    if (!response.data.data) throw new Error('Failed to update printer');
-    return response.data.data;
-  },
-
-  delete: async (id: number): Promise<void> => {
-    await api.delete(`/printers/${id}`);
   },
 };
 
@@ -455,52 +360,6 @@ export const userApi = {
 
   delete: async (id: number): Promise<void> => {
     await api.delete(`/users/${id}`);
-  },
-};
-
-// Bambu live status API
-export const bambuApi = {
-  getLiveStatus: async (): Promise<PrinterLiveStatus[]> => {
-    const response = await api.get<ApiResponse<PrinterLiveStatus[]>>('/bambu/live');
-    return response.data.data || [];
-  },
-};
-
-// Filament Jobs API
-export const filamentJobApi = {
-  getAll: async (status?: string): Promise<{ jobs: FilamentJob[]; pendingCount: number }> => {
-    const params = status ? `?status=${status}` : '';
-    const response = await api.get<any>(`/filament-jobs${params}`);
-    return {
-      jobs: response.data.data || [],
-      pendingCount: response.data.meta?.pendingCount ?? 0,
-    };
-  },
-
-  getLastByPrinter: async (printerName: string): Promise<FilamentJob[]> => {
-    const response = await api.get<ApiResponse<FilamentJob[]>>(
-      `/filament-jobs/last-print?printerName=${encodeURIComponent(printerName)}`,
-    );
-    return response.data.data ?? [];
-  },
-
-  getByQueueItem: async (queueItemId: number): Promise<FilamentJob[]> => {
-    const response = await api.get<ApiResponse<FilamentJob[]>>(
-      `/filament-jobs/by-queue-item/${queueItemId}`,
-    );
-    return response.data.data ?? [];
-  },
-
-  resolve: async (id: number, colorId: number): Promise<FilamentJob> => {
-    const response = await api.put<ApiResponse<FilamentJob>>(`/filament-jobs/${id}/resolve`, { colorId });
-    if (!response.data.data) throw new Error('Failed to resolve job');
-    return response.data.data;
-  },
-
-  skip: async (id: number): Promise<FilamentJob> => {
-    const response = await api.put<ApiResponse<FilamentJob>>(`/filament-jobs/${id}/skip`, {});
-    if (!response.data.data) throw new Error('Failed to skip job');
-    return response.data.data;
   },
 };
 

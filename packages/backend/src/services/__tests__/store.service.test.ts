@@ -22,7 +22,6 @@ vi.mock('../../models/invoice-line-item.model.js', () => ({
 }));
 vi.mock('../../models/item-color.model.js', () => ({
   LineItemColorModel: { setColors: vi.fn() },
-  QueueItemColorModel: {},
 }));
 vi.mock('../../models/color.model.js', () => ({
   ColorModel: { findAll: vi.fn() },

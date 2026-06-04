@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ColorModel } from '../models/color.model.js';
-import { LineItemColorModel, QueueItemColorModel } from '../models/item-color.model.js';
-import { InvoiceLineItemModel } from '../models/invoice-line-item.model.js';
+import { LineItemColorModel } from '../models/item-color.model.js';
 import { parseBody, createColorSchema, updateColorSchema, setItemColorsSchema } from '../validation/schemas.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
@@ -61,25 +60,9 @@ export class ColorController {
       const parsed = parseBody(setItemColorsSchema, req.body);
       if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
       const result = await LineItemColorModel.setColors(itemId, parsed.data.colors);
-
-      // If this line item has been sent to queue, sync colors to the queue item too
-      const lineItem = await InvoiceLineItemModel.findById(itemId);
-      if (lineItem?.queueItemId) {
-        await QueueItemColorModel.setColors(lineItem.queueItemId, parsed.data.colors);
-      }
-
       res.json({ success: true, data: result, message: 'Colors updated' });
     } catch (error) { next(error); }
   }
 
-  async setQueueItemColors(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
-      const parsed = parseBody(setItemColorsSchema, req.body);
-      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
-      const result = await QueueItemColorModel.setColors(id, parsed.data.colors);
-      res.json({ success: true, data: result, message: 'Colors updated' });
-    } catch (error) { next(error); }
-  }
+  // BuildPlan #6 Phase 3: setQueueItemColors removed alongside the queue subsystem.
 }

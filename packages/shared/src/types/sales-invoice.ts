@@ -12,7 +12,6 @@ export interface InvoiceLineItem {
   details: string | null;
   quantity: number;
   unitPrice: number;
-  queueItemId: number | null;
   colors: ItemColor[];
   createdAt: string;
 }

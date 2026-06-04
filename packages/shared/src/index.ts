@@ -1,11 +1,4 @@
-// Queue Item types
-export type {
-  QueueItem,
-  QueueItemStatus,
-  CreateQueueItemDto,
-  UpdateQueueItemDto,
-  ReorderQueueDto,
-} from './types/queue-item';
+// Queue Item / Printer / FilamentJob types removed in BuildPlan #6 Phase 3.
 
 // Invoice types
 export type {
@@ -80,13 +73,4 @@ export type {
   UpdateColorDto,
 } from './types/color';
 
-// Printer types
-export type {
-  Printer,
-  CreatePrinterDto,
-  UpdatePrinterDto,
-  FilamentJob,
-  ResolveFilamentJobDto,
-  PrinterLiveStatus,
-  AmsSlot,
-} from './types/printer';
+// Printer / FilamentJob / live status types removed in BuildPlan #6 Phase 3.

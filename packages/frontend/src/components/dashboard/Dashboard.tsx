@@ -1,13 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { PageIcon } from '../common/PageIcon';
-import { useQueue } from '../../hooks/useQueue';
 import { useSalesInvoices } from '../../hooks/useSalesInvoices';
 import { useProducts } from '../../hooks/useProducts';
 import { useColors } from '../../hooks/useColors';
-import { usePrinters } from '../../hooks/usePrinters';
-import { usePrinterDashboard, formatTimeRemaining, getPrinterStatusStyle } from '../../hooks/usePrinterDashboard';
-import type { SalesInvoice, Color, Printer, PrinterLiveStatus } from '@wizqueue/shared';
+import type { SalesInvoice, Color } from '@wizqueue/shared';
+
+// BuildPlan #6 Phase 3 (2026-06-04): Dashboard lost the Print Queue +
+// Printers grid — those concerns moved to BamBuddy. The Filament card
+// no longer needs queue-driven "color needed" gating; critical/low
+// alerts now surface for every active color in the catalog.
 
 interface StatCardProps {
   title: string;
@@ -43,17 +45,15 @@ function netFilamentGrams(c: Color): number {
   return c.inventoryGrams - (c.manufacturer?.emptySpoolWeightG ?? 0);
 }
 
-function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColorIds: Set<number> }) {
+function FilamentCard({ colors }: { colors: Color[] }) {
   const withInventory = colors.filter((c) => c.active);
 
   const critical = withInventory.filter((c) => {
-    if (!neededColorIds.has(c.id)) return false;
     const net = netFilamentGrams(c);
     const threshold = c.manufacturer?.criticalThresholdG ?? 200;
     return net <= threshold;
   });
   const low = withInventory.filter((c) => {
-    if (!neededColorIds.has(c.id)) return false;
     const net = netFilamentGrams(c);
     const criticalT = c.manufacturer?.criticalThresholdG ?? 200;
     const lowT = c.manufacturer?.lowThresholdG ?? 500;
@@ -79,7 +79,7 @@ function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColor
       {critical.length > 0 && (
         <div
           className="flex items-center justify-between py-1 px-2 rounded mb-1 text-xs font-semibold"
-          style={{ background: '#dc2626', color: '#ffffff' }}
+          style={{ background: '#b91c1c', color: '#ffffff' }}
         >
           <span>⚠ Critical</span>
           <span>{critical.length} color{critical.length !== 1 ? 's' : ''}</span>
@@ -118,74 +118,6 @@ function FilamentCard({ colors, neededColorIds }: { colors: Color[]; neededColor
   );
 }
 
-function PrinterSummaryCard({ printer, status }: { printer: Printer; status: PrinterLiveStatus | null }) {
-  const hasBambuConfig = !!(printer.ipAddress && printer.serialNumber);
-  const style = status
-    ? getPrinterStatusStyle(status)
-    : !hasBambuConfig
-      ? { label: 'No Config', bg: '#4b5563', text: '#ffffff' }
-      : { label: 'Connecting…', bg: '#6b7280', text: '#ffffff' };
-
-  const isRunning = status?.gcodeState === 'RUNNING';
-  const isPaused  = status?.gcodeState === 'PAUSE';
-
-  return (
-    <div className="card flex flex-col gap-2" style={{ minWidth: 0 }}>
-      <div className="flex items-center justify-between gap-2">
-        <span
-          className="px-2 py-0.5 rounded text-xs font-semibold truncate"
-          style={{ background: printer.badgeColor || '#4b5563', color: '#ffffff' }}
-        >
-          {printer.name}
-        </span>
-        <span
-          className="px-2 py-0.5 rounded text-xs font-semibold shrink-0"
-          style={{ background: style.bg, color: style.text }}
-        >
-          {style.label}
-        </span>
-      </div>
-
-      {status?.connected && (isRunning || isPaused) ? (
-        <>
-          {status.subtaskName && (
-            <p className="text-xs text-white truncate">{status.subtaskName}</p>
-          )}
-          <div className="w-full rounded-full h-1.5" style={{ background: '#2d2d2d' }}>
-            <div
-              className="h-1.5 rounded-full transition-all"
-              style={{
-                width: `${status.mcPercent ?? 0}%`,
-                background: isRunning ? '#ff9900' : '#eab308',
-              }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-white">
-            <span>{status.mcPercent !== null ? `${status.mcPercent}%` : '—'}</span>
-            <span>⏱ {formatTimeRemaining(status.mcRemainingTime)}</span>
-          </div>
-          <div className="flex gap-3 text-xs text-white pt-0.5">
-            {status.nozzleTemper !== null && (
-              <span>🔥 {status.nozzleTemper.toFixed(0)}°C</span>
-            )}
-            {status.bedTemper !== null && (
-              <span>⬛ {status.bedTemper.toFixed(0)}°C</span>
-            )}
-          </div>
-        </>
-      ) : status?.connected ? (
-        <p className="text-xs text-white">
-          {status.nozzleTemper !== null ? `Nozzle ${status.nozzleTemper.toFixed(0)}°C` : 'Idle'}
-        </p>
-      ) : (
-        <p className="text-xs text-white">
-          {!hasBambuConfig ? 'Configure in Admin → Printers' : 'Waiting for MQTT…'}
-        </p>
-      )}
-    </div>
-  );
-}
-
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -199,17 +131,9 @@ const statusColors: Record<string, { color: string; bg: string; label: string }>
 };
 
 export const Dashboard: React.FC = () => {
-  const { items: queueItems, isLoading: queueLoading } = useQueue();
   const { invoices, isLoading: invoicesLoading } = useSalesInvoices();
   const { products, isLoading: productsLoading } = useProducts();
   const { colors, isLoading: colorsLoading } = useColors();
-  const { printers } = usePrinters();
-  const { liveStatuses } = usePrinterDashboard();
-
-  const pending = queueItems.filter((i) => i.status === 'pending').length;
-  const printing = queueItems.filter((i) => i.status === 'printing').length;
-  const pendingQty = queueItems.filter((i) => i.status === 'pending').reduce((s, i) => s + i.quantity, 0);
-  const printingQty = queueItems.filter((i) => i.status === 'printing').reduce((s, i) => s + i.quantity, 0);
 
   const draft = invoices.filter((i) => i.status === 'draft' && !i.shippedAt).length;
   const sent = invoices.filter((i) => i.status === 'sent' && !i.shippedAt).length;
@@ -236,18 +160,9 @@ export const Dashboard: React.FC = () => {
 
   const fmt = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-  const neededColorIds = new Set(
-    queueItems
-      .filter((i) => i.status === 'pending' || i.status === 'printing')
-      .flatMap((i) => (i.colors || []).map((c) => c.colorId))
-  );
-
   const activeProducts = products.filter((p) => p.active).length;
   const recentInvoices = invoices.slice(0, 5);
-  const isLoading = queueLoading || invoicesLoading || productsLoading || colorsLoading;
-
-  const activePrinters = printers.filter((p) => p.active);
-  const statusById = Object.fromEntries(liveStatuses.map((s) => [s.printerId, s]));
+  const isLoading = invoicesLoading || productsLoading || colorsLoading;
 
   if (isLoading) {
     return (
@@ -267,28 +182,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Print Queue */}
-        <StatCard title="Print Queue" to="/queue">
-          <div className="divide-y divide-[#2d2d2d]">
-            <Pill
-              label={`Pending${pendingQty !== pending ? ` (${pendingQty} pcs)` : ''}`}
-              count={pending}
-              color="#ffffff"
-              bg="#6b7280"
-            />
-            <Pill
-              label={`Printing${printingQty !== printing ? ` (${printingQty} pcs)` : ''}`}
-              count={printing}
-              color="#0a0a0a"
-              bg="#ff9900"
-            />
-          </div>
-          {queueItems.length === 0 && (
-            <p className="text-sm text-white mt-2">Queue is empty</p>
-          )}
-        </StatCard>
-
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Invoices */}
         <StatCard title="Invoices" to="/invoices">
           <div className="divide-y divide-[#2d2d2d]">
@@ -328,7 +222,7 @@ export const Dashboard: React.FC = () => {
         </StatCard>
 
         {/* Filament */}
-        <FilamentCard colors={colors} neededColorIds={neededColorIds} />
+        <FilamentCard colors={colors} />
 
         {/* Products */}
         <StatCard title="Products" to="/products">
@@ -341,25 +235,6 @@ export const Dashboard: React.FC = () => {
           )}
         </StatCard>
       </div>
-
-      {/* Printers */}
-      {activePrinters.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: '#ff9900' }}>Printers</h2>
-            <Link to="/printers" className="text-xs" style={{ color: '#ff9900' }}>View all →</Link>
-          </div>
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
-            {activePrinters.map((printer) => (
-              <PrinterSummaryCard
-                key={printer.id}
-                printer={printer}
-                status={statusById[printer.id] ?? null}
-              />
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Recent Invoices */}
       {recentInvoices.length > 0 && (

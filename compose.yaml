@@ -36,7 +36,11 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGIN=${CORS_ORIGIN:-https://tools.wiz3dprints.com}
       - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
-      - BAMBU_MONITOR_URL=${BAMBU_MONITOR_URL:-http://bambu-monitor:8015}
+      # BUILDPLAN_6_PHASE_3 (2026-06-04): BAMBU_MONITOR_URL removed — backend
+      # no longer proxies the bambu-monitor (service deleted). BAMBUDDY_URL +
+      # BAMBUDDY_API_KEY remain on the backend for Phase 4's colors sync.
+      - BAMBUDDY_URL=${BAMBUDDY_URL:-http://192.168.7.147:8000}
+      - BAMBUDDY_API_KEY=${BAMBUDDY_API_KEY}
       - STORE_API_KEY=${STORE_API_KEY}
       - STORE_IMAGE_PUBLIC_BASE=${STORE_IMAGE_PUBLIC_BASE:-https://tools.wiz3dprints.com/uploads/store}
       - MAX_IMAGE_SIZE=${MAX_IMAGE_SIZE:-5242880}
@@ -96,32 +100,10 @@ services:
     depends_on:
       - backend
 
-  bambu-monitor:
-    # BuildPlan #6 Phase 2 (2026-06-04): no longer speaks MQTT. Polls
-    # BamBuddy at ${BAMBUDDY_URL}/api/v1/printers/{id}/status and
-    # re-publishes the data in the same shape the dashboard already
-    # consumes. host.docker.internal extra_hosts removed — we now reach
-    # BamBuddy at a static LAN IP, not via host-gateway.
-    build:
-      context: ./bambu-monitor
-      dockerfile: Dockerfile
-      args:
-        - GIT_SHA=${GIT_SHA:-unknown}
-    container_name: wiz3dtools-bambu-monitor
-    restart: unless-stopped
-    ports:
-      - "8015:8015"
-    environment:
-      - WIZ3DTOOLS_URL=${WIZ3DTOOLS_URL:-http://backend:3000}
-      - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
-      - MONITOR_PORT=8015
-      - CONFIG_RELOAD_S=${BAMBU_CONFIG_RELOAD_S:-60}
-      - BAMBUDDY_URL=${BAMBUDDY_URL:-http://192.168.7.147:8000}
-      - BAMBUDDY_API_KEY=${BAMBUDDY_API_KEY}
-    networks:
-      - wiz3dtools
-    depends_on:
-      - backend
+  # BuildPlan #6 Phase 3 (2026-06-04): wiz3dtools-bambu-monitor service
+  # removed entirely. Phase 2 cut it over from MQTT to BamBuddy REST;
+  # Phase 3 removes the dashboard + printer registry it fed — the
+  # service has no remaining consumers.
 
 networks:
   wiz3dtools:

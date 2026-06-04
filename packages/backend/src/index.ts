@@ -11,7 +11,6 @@ import { testOllamaConnection } from './config/ollama.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { requireAuth } from './middleware/auth.middleware.js';
 import authRoutes from './routes/auth.routes.js';
-import queueRoutes from './routes/queue.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import customerRoutes from './routes/customer.routes.js';
 import salesInvoiceRoutes from './routes/sales-invoice.routes.js';
@@ -19,12 +18,11 @@ import productRoutes from './routes/product.routes.js';
 import usersRoutes from './routes/users.routes.js';
 import colorRoutes from './routes/color.routes.js';
 import manufacturerRoutes from './routes/manufacturer.routes.js';
-import printerRoutes from './routes/printer.routes.js';
 import reportsRoutes from './routes/reports.routes.js';
-import bambuRoutes from './routes/bambu.routes.js';
-import filamentJobRoutes from './routes/filament-job.routes.js';
 import categoryRoutes from './routes/category.routes.js';
 import storeRoutes from './routes/store.routes.js';
+// BuildPlan #6 Phase 3 (2026-06-04): queue, printers, filament-jobs,
+// and bambu proxy routes removed — BamBuddy owns those domains now.
 
 // Load environment variables
 dotenv.config();
@@ -108,7 +106,6 @@ app.use('/api/store', storeRoutes);
 app.use('/api', requireAuth);
 
 // Protected API Routes
-app.use('/api/queue', queueRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/sales-invoices', salesInvoiceRoutes);
@@ -116,10 +113,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/colors', colorRoutes);
 app.use('/api/manufacturers', manufacturerRoutes);
-app.use('/api/printers', printerRoutes);
 app.use('/api/reports', reportsRoutes);
-app.use('/api/bambu', bambuRoutes);
-app.use('/api/filament-jobs', filamentJobRoutes);
 app.use('/api/categories', categoryRoutes);
 
 // Root endpoint
@@ -130,8 +124,10 @@ app.get('/', (_req: Request, res: Response) => {
     description: '3D Printing Queue Generator API',
     endpoints: {
       health: '/health',
-      queue: '/api/queue',
       upload: '/api/upload',
+      salesInvoices: '/api/sales-invoices',
+      products: '/api/products',
+      colors: '/api/colors',
     },
   });
 });

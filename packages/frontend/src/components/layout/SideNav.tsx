@@ -127,8 +127,6 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
           <SectionHeader label="Operations" sectionKey="operations" open={sections.operations} onToggle={toggleSection} />
           {sections.operations && (
             <>
-              <NavItem to="/queue" label="Queue" onClick={onClose} />
-              <NavItem to="/printers" label="Printers" onClick={onClose} />
               <NavItem to="/customers" label="Customers" onClick={onClose} />
               <NavItem to="/products" label="Products" onClick={onClose} />
               <NavItem to="/invoices" label="Invoices" onClick={onClose} />
@@ -152,7 +150,6 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
                 <>
                   <NavItem to="/admin/users" label="Users" onClick={onClose} />
                   <NavItem to="/admin/colors" label="Colors" onClick={onClose} />
-                  <NavItem to="/admin/printers" label="Printers" onClick={onClose} />
                   <NavItem to="/admin/categories" label="Categories" onClick={onClose} />
                 </>
               )}

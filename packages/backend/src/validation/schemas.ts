@@ -85,37 +85,8 @@ export const createProductSchema = z.object({
 
 export const updateProductSchema = createProductSchema.partial();
 
-// ---------------------------------------------------------------------------
-// Queue
-// ---------------------------------------------------------------------------
-
-export const createQueueItemSchema = z.object({
-  productName: z.string().min(1, 'Product name is required').max(200),
-  sku: nullish(z.string().max(50)),
-  details: nullish(z.string().max(2000)),
-  quantity: z.number().int().min(1, 'Quantity must be at least 1'),
-  position: z.number().int().min(0).optional(),
-  status: z.enum(['pending', 'printing', 'completed', 'cancelled']).optional(),
-  invoiceId: nullish(z.number().int().positive()),
-  priority: z.number().int().optional(),
-  notes: nullish(z.string().max(2000)),
-  printerName: nullish(z.string().max(100)),
-});
-
-export const updateQueueItemSchema = createQueueItemSchema.partial();
-
-export const batchCreateQueueSchema = z.object({
-  items: z.array(createQueueItemSchema).min(1, 'Items array must not be empty'),
-});
-
-export const reorderQueueSchema = z.object({
-  itemId: z.number().int().positive('itemId must be a positive integer'),
-  newPosition: z.number().int().min(0, 'newPosition must be a non-negative integer'),
-});
-
-export const updateQueueStatusSchema = z.object({
-  status: z.enum(['pending', 'printing', 'completed', 'cancelled']),
-});
+// Queue / Printer / Filament-job schemas removed in BuildPlan #6 Phase 3.
+// BamBuddy owns those domains now.
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -211,10 +182,6 @@ export const updateInvoiceSchema = z.object({
 
 export const addLineItemSchema = lineItemBodySchema;
 export const updateLineItemSchema = lineItemBodySchema.partial();
-
-export const sendToQueueSchema = z.object({
-  lineItemIds: z.array(z.number().int().positive()).optional(),
-});
 
 // ---------------------------------------------------------------------------
 // Users

@@ -63,7 +63,7 @@ export const InvoiceDetail: React.FC = () => {
 
   const { csrfToken } = useAuth();
   const { invoice, isLoading, addLineItem, updateLineItem, deleteLineItem, updateLineItemColors } = useSalesInvoice(invoiceId);
-  const { sendEmail, sendToQueue, update, ship, isSending, isShipping } = useSalesInvoices();
+  const { sendEmail, update, ship, isSending, isShipping } = useSalesInvoices();
   const { customers } = useCustomers();
   const { products } = useProducts(true);
   const { colors: availableColors } = useColors();
@@ -188,13 +188,8 @@ export const InvoiceDetail: React.FC = () => {
               {isShipping ? 'Saving…' : invoice.carrier === 'Customer Pickup' ? '🏪 Ready for Pickup' : '🚚 Mark as Shipped'}
             </button>
           )}
-          <button
-            onClick={() => sendToQueue(invoiceId)}
-            className="btn-sm text-sm font-medium px-3 py-1.5 rounded-lg transition-all"
-            style={{ background: 'linear-gradient(to bottom,#22c55e,#16a34a)', color: '#fff', boxShadow: '0 4px 8px rgb(0 0 0 / 0.4)' }}
-          >
-            Send All → Queue
-          </button>
+          {/* BuildPlan #6 Phase 3: "Send All → Queue" button removed —
+              printing happens manually in BamBuddy now. */}
           {invoice.status !== 'cancelled' && (
             <button
               onClick={() => sendEmail(invoiceId)}
@@ -391,7 +386,6 @@ export const InvoiceDetail: React.FC = () => {
                   onUpdate={(itemId, data) => { if (confirmIfPaid()) updateLineItem(itemId, data); }}
                   onUpdateColors={(itemId, colors) => { if (confirmIfPaid()) updateLineItemColors(itemId, colors); }}
                   onDelete={(itemId) => { if (confirmIfPaid()) deleteLineItem(itemId); }}
-                  onSendToQueue={(itemId) => sendToQueue(invoiceId, [itemId])}
                 />
               ))}
 

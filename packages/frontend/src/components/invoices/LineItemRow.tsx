@@ -9,7 +9,6 @@ interface LineItemRowProps {
   onUpdate: (itemId: number, data: Partial<{ productId: number; productName: string; sku: string; details: string; quantity: number; unitPrice: number }>) => void;
   onUpdateColors?: (itemId: number, colors: ItemColorDto[]) => void;
   onDelete: (itemId: number) => void;
-  onSendToQueue?: (itemId: number) => void;
   readOnly?: boolean;
 }
 
@@ -19,7 +18,7 @@ const inputSt: React.CSSProperties = {
   boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)',
 };
 
-export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpdateColors, onDelete, onSendToQueue, readOnly }) => {
+export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpdateColors, onDelete, readOnly }) => {
   const { colors: availableColors } = useColors();
   const { products } = useProducts(true);
   const [editing, setEditing] = useState(false);
@@ -167,13 +166,8 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
       </td>
       <td className="px-3 py-2.5">
         <div className="flex items-center gap-1.5 justify-end flex-wrap">
-          {item.queueItemId ? (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: '#15803d', color: '#ffffff' }}>In queue</span>
-          ) : onSendToQueue ? (
-            <button onClick={() => onSendToQueue(item.id)} className="btn-sm text-xs px-2 py-1 rounded font-medium transition-all" style={{ background: '#15803d', color: '#ffffff' }}>
-              → Queue
-            </button>
-          ) : null}
+          {/* BuildPlan #6 Phase 3: "In queue" badge + "→ Queue" button removed —
+              printing happens in BamBuddy now, not via the wiz3dtools queue. */}
           {!readOnly && (
             <>
               <button onClick={openEdit} className="btn-secondary btn-sm text-xs">Edit</button>
