@@ -97,6 +97,11 @@ services:
       - backend
 
   bambu-monitor:
+    # BuildPlan #6 Phase 2 (2026-06-04): no longer speaks MQTT. Polls
+    # BamBuddy at ${BAMBUDDY_URL}/api/v1/printers/{id}/status and
+    # re-publishes the data in the same shape the dashboard already
+    # consumes. host.docker.internal extra_hosts removed — we now reach
+    # BamBuddy at a static LAN IP, not via host-gateway.
     build:
       context: ./bambu-monitor
       dockerfile: Dockerfile
@@ -111,10 +116,10 @@ services:
       - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
       - MONITOR_PORT=8015
       - CONFIG_RELOAD_S=${BAMBU_CONFIG_RELOAD_S:-60}
+      - BAMBUDDY_URL=${BAMBUDDY_URL:-http://192.168.7.147:8000}
+      - BAMBUDDY_API_KEY=${BAMBUDDY_API_KEY}
     networks:
       - wiz3dtools
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       - backend
 

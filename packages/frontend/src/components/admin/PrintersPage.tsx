@@ -137,26 +137,35 @@ export const PrintersPage: React.FC = () => {
             </div>
           </div>
           <div className="border-t pt-3" style={{ borderColor: '#3a3a3a' }}>
-            <p className="text-xs text-white mb-2">Bambu Configuration (optional — enables live monitoring)</p>
+            <p className="text-xs text-white mb-2">
+              Bambu Configuration — serial number is the lookup key into BamBuddy.
+              IP address and access code are now managed by BamBuddy (
+              <a href="https://bambuddy.deckerzoo.com" target="_blank" rel="noreferrer" className="underline">UI</a>
+              ); leaving them blank here is fine.
+            </p>
             <div className="flex items-end gap-3 flex-wrap">
               <div>
-                <label className="block text-xs font-medium text-white mb-1">IP Address</label>
+                <label className="block text-xs font-medium text-white mb-1">
+                  IP Address <span className="text-white opacity-70">(BamBuddy)</span>
+                </label>
                 <input className="input" style={{ width: 160 }} value={newBambu.ipAddress}
                   onChange={(e) => setNewBambu({ ...newBambu, ipAddress: e.target.value })}
-                  placeholder="192.168.x.x" />
+                  placeholder="leave blank" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-white mb-1">Serial Number</label>
+                <label className="block text-xs font-medium text-white mb-1">Serial Number *</label>
                 <input className="input" style={{ width: 160 }} value={newBambu.serialNumber}
                   onChange={(e) => setNewBambu({ ...newBambu, serialNumber: e.target.value })}
                   placeholder="01P09C..." />
               </div>
               <div>
-                <label className="block text-xs font-medium text-white mb-1">Access Code</label>
+                <label className="block text-xs font-medium text-white mb-1">
+                  Access Code <span className="text-white opacity-70">(BamBuddy)</span>
+                </label>
                 <input className="input" style={{ width: 130 }} type="password"
                   value={newBambu.accessCode}
                   onChange={(e) => setNewBambu({ ...newBambu, accessCode: e.target.value })}
-                  placeholder="8-digit code" />
+                  placeholder="leave blank" />
               </div>
             </div>
           </div>
@@ -214,29 +223,33 @@ export const PrintersPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="border-t pt-3" style={{ borderColor: '#3a3a3a' }}>
-                  <p className="text-xs text-white mb-2">Bambu Configuration</p>
+                  <p className="text-xs text-white mb-2">
+                    Bambu Configuration — serial is the BamBuddy lookup key.
+                    IP + access code now live in BamBuddy.
+                  </p>
                   <div className="flex items-end gap-3 flex-wrap">
                     <div>
-                      <label className="block text-xs font-medium text-white mb-1">IP Address</label>
+                      <label className="block text-xs font-medium text-white mb-1">
+                        IP Address <span className="text-white opacity-70">(BamBuddy)</span>
+                      </label>
                       <input className="input" style={{ width: 160 }} value={editBambu.ipAddress}
                         onChange={(e) => setEditBambu({ ...editBambu, ipAddress: e.target.value })}
-                        placeholder="192.168.x.x" />
+                        placeholder="leave blank" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-white mb-1">Serial Number</label>
+                      <label className="block text-xs font-medium text-white mb-1">Serial Number *</label>
                       <input className="input" style={{ width: 160 }} value={editBambu.serialNumber}
                         onChange={(e) => setEditBambu({ ...editBambu, serialNumber: e.target.value })}
                         placeholder="01P09C..." />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-white mb-1">
-                        Access Code{' '}
-                        <span className="text-white">(leave blank to keep existing)</span>
+                        Access Code <span className="text-white opacity-70">(BamBuddy)</span>
                       </label>
                       <input className="input" style={{ width: 130 }} type="password"
                         value={editBambu.accessCode}
                         onChange={(e) => setEditBambu({ ...editBambu, accessCode: e.target.value })}
-                        placeholder="New code only" />
+                        placeholder="leave blank" />
                     </div>
                   </div>
                 </div>

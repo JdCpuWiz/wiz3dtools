@@ -65,7 +65,8 @@ function PrinterCard({
   monitorOnline: boolean;
   colors: Color[];
 }) {
-  const hasBambuConfig = !!(printer.ipAddress && printer.serialNumber);
+  // BuildPlan #6 Phase 2: serial is the BamBuddy lookup key; ipAddress moved to BamBuddy.
+  const hasBambuConfig = !!printer.serialNumber;
   const lastJob = useLastPrinterJob(printer.name);
 
   const style = status
@@ -189,10 +190,10 @@ function PrinterCard({
       ) : (
         <p className="text-white text-sm text-center py-4">
           {!hasBambuConfig
-            ? 'Set IP, serial, and access code in Admin → Printers to enable monitoring.'
+            ? 'Set the serial number in Admin → Printers to enable monitoring (IP + access code live in BamBuddy).'
             : !monitorOnline
               ? 'Bambu monitor service is offline. Check container logs.'
-              : 'Establishing MQTT connection… LAN Mode must be enabled on the printer.'}
+              : 'Waiting for BamBuddy status… ensure the printer is reachable in the BamBuddy UI.'}
         </p>
       )}
 

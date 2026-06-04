@@ -1,9 +1,26 @@
 #!/usr/bin/env python3
 """
-Bambu Monitor — MQTT listener for Bambu P1S printers.
+Bambu Monitor — wiz3dtools-side proxy for BamBuddy printer state.
 
-Connects to each printer's local MQTT broker, tracks real-time print state,
-and creates filament_jobs in wiz3dtools when a print finishes.
+BuildPlan #6 Phase 2 (2026-06-04): rewritten to consume BamBuddy's REST
+API instead of speaking MQTT directly to printers. The MQTT-side
+(paho-mqtt, ssl, per-printer broker connections) is gone — BamBuddy is
+now the canonical MQTT consumer for the 3 P1S printers. We poll its
+`/api/v1/printers/{id}/status` endpoint and re-publish the data in the
+same JSON shape the wiz3dtools dashboard already consumes, so neither
+the Express backend (`/api/bambu/live` + `/events`) nor the React UI
+needs to change.
+
+Why polling and not SSE: BamBuddy's printer state is hot in its own
+process (it's the MQTT subscriber). 2-second polling against localhost
+HTTP costs nothing meaningful. Switching to SSE would require BamBuddy
+to expose a push channel, which it doesn't, and would add complexity
+for no real-time gain (2s granularity is invisible on the UI).
+
+Phase 2 keeps the legacy `inhouse_transition()` + `create_filament_job()`
+calls intact — those endpoints still exist in the wiz3dtools backend and
+the dashboard's "pending filament attribution" UI still depends on
+filament_jobs being created on FINISH. Phase 3 will rip them out together.
 """
 
 from __future__ import annotations
@@ -12,37 +29,47 @@ import json
 import logging
 import os
 import queue
-import ssl
 import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any
 
 import httpx
-import paho.mqtt.client as mqtt
 from flask import Flask, Response, jsonify
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("bambu-monitor")
-logging.getLogger("paho").setLevel(logging.WARNING)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
 WIZ3DTOOLS_URL   = os.getenv("WIZ3DTOOLS_URL", "http://backend:3000").rstrip("/")
+BAMBUDDY_URL     = os.getenv("BAMBUDDY_URL", "http://192.168.7.147:8000").rstrip("/")
+BAMBUDDY_API_KEY = os.getenv("BAMBUDDY_API_KEY", "")
 SERVICE_TOKEN    = os.getenv("MCP_SERVICE_TOKEN", "")
 MONITOR_PORT     = int(os.getenv("MONITOR_PORT", "8015"))
-CONFIG_RELOAD_S  = int(os.getenv("CONFIG_RELOAD_S", "300"))  # re-fetch printer configs every 5min
+POLL_INTERVAL_S  = float(os.getenv("POLL_INTERVAL_S", "2.0"))
+CONFIG_RELOAD_S  = int(os.getenv("CONFIG_RELOAD_S", "300"))
+# Refresh BamBuddy's printer index (the serial→bambuddy_id map) less often
+# than wiz3dtools config — BamBuddy printers change rarely.
+BAMBUDDY_INDEX_REFRESH_S = int(os.getenv("BAMBUDDY_INDEX_REFRESH_S", "300"))
 
-BAMBU_MQTT_PORT  = 8883
-BAMBU_USERNAME   = "bblp"
-
-# Minimum remain delta to consider a slot was used during the print
+# Minimum AMS remain delta to count a slot as used during a print.
 REMAIN_DELTA_THRESHOLD = 0.5  # %
 
 
-def _api_headers() -> dict:
+def _wiz_headers() -> dict:
     return {"Authorization": f"Bearer {SERVICE_TOKEN}"}
+
+
+def _bambuddy_headers() -> dict:
+    return {"X-API-Key": BAMBUDDY_API_KEY} if BAMBUDDY_API_KEY else {}
+
+
+# Bambu Studio reports speed_level as 1-4 (Silent/Standard/Sport/Ludicrous).
+# The original Bambu MQTT spd_mag was a 0-200% magnitude. Map categorical
+# back to the percentage the dashboard expects so the "Speed" pill keeps
+# showing a number rather than a label.
+SPEED_LEVEL_TO_PCT = {1: 50, 2: 100, 3: 125, 4: 166}
 
 
 # ── State ──────────────────────────────────────────────────────────────────────
@@ -59,11 +86,10 @@ class AmsSlotState:
 
 @dataclass
 class PrinterState:
-    printer_id: int
-    printer_name: str
-    serial: str
-    ip: str
-    access_code: str
+    printer_id: int           # wiz3dtools printer.id
+    printer_name: str         # wiz3dtools printer.name
+    serial: str               # Bambu serial number (lookup key into BamBuddy)
+    bambuddy_id: int | None = None  # BamBuddy's internal printer_id
     connected: bool = False
     gcode_state: str | None = None
     mc_percent: float | None = None
@@ -76,18 +102,15 @@ class PrinterState:
     chamber_temper: float | None = None
     spd_mag: int | None = None
     ams_slots: list[AmsSlotState] = field(default_factory=list)
-    # Snapshots for filament tracking
-    _ams_snapshot: dict[str, float] = field(default_factory=dict)  # "ams.tray" → remain%
-    _prev_gcode_state: str | None = None
+    _ams_snapshot: dict[str, float] = field(default_factory=dict)
     last_updated: str | None = None
     _lock: threading.Lock = field(default_factory=threading.Lock)
 
     def snapshot_key(self, ams_id: int, tray_id: int) -> str:
         return f"{ams_id}.{tray_id}"
 
-    def take_ams_snapshot(self):
+    def take_ams_snapshot(self) -> None:
         with self._lock:
-            # Include -1 (unknown remain) slots so we can detect them at print finish
             self._ams_snapshot = {
                 self.snapshot_key(s.ams_id, s.tray_id): s.remain
                 for s in self.ams_slots
@@ -95,13 +118,11 @@ class PrinterState:
             }
 
     def get_used_slots(self) -> list[tuple[AmsSlotState, float | None, float | None, bool]]:
-        """Return slots that were likely used during the print.
+        """Slots that likely supplied filament for the just-finished print.
 
-        Returns list of (slot, start%, end%, unknown_remain) where:
-        - Normal slots: start/end are real percentages, delta >= threshold
-        - Unknown-remain slots: start == end == -1; unknown_remain=True
-          These are always included as a safeguard — filament was loaded but
-          the AMS cannot track quantity (no RFID weight data or uncalibrated).
+        See the original implementation in this file's git history for the
+        semantics of (start, end, unknown_remain). Behavior unchanged from
+        the MQTT era — the data source is the only thing that moved.
         """
         used = []
         for slot in self.ams_slots:
@@ -111,8 +132,6 @@ class PrinterState:
             if start is None or end is None:
                 continue
             if start == -1 and end == -1:
-                # Slot was present at both snapshot and finish with unknown remain —
-                # include it so a pending job is always created for manual attribution
                 used.append((slot, None, None, True))
             elif start >= 0 and end >= 0 and (start - end) >= REMAIN_DELTA_THRESHOLD:
                 used.append((slot, start, end, False))
@@ -150,31 +169,30 @@ class PrinterState:
             }
 
 
-# ── Wiz3dtools helpers ─────────────────────────────────────────────────────────
+# ── Wiz3dtools helpers (unchanged contract from MQTT era) ──────────────────────
 
 def fetch_printer_configs() -> list[dict]:
-    """Fetch active printer configs (including access codes) from wiz3dtools."""
+    """Active wiz3dtools printers — we only care about ones with a serial."""
     try:
         r = httpx.get(
             f"{WIZ3DTOOLS_URL}/api/printers/config",
-            headers=_api_headers(),
+            headers=_wiz_headers(),
             timeout=10,
         )
         r.raise_for_status()
         data = r.json().get("data", [])
-        # Only return printers with Bambu config set
-        return [p for p in data if p.get("ipAddress") and p.get("serialNumber") and p.get("accessCode")]
+        return [p for p in data if p.get("serialNumber")]
     except Exception as e:
-        logger.error(f"Failed to fetch printer configs: {e}")
+        logger.error(f"Failed to fetch wiz3dtools printer configs: {e}")
         return []
 
 
 def fetch_colors() -> list[dict]:
-    """Fetch all active colors from wiz3dtools for hex matching."""
+    """All active colors from wiz3dtools (for AMS hex matching at FINISH)."""
     try:
         r = httpx.get(
             f"{WIZ3DTOOLS_URL}/api/colors",
-            headers=_api_headers(),
+            headers=_wiz_headers(),
             timeout=10,
         )
         r.raise_for_status()
@@ -185,30 +203,20 @@ def fetch_colors() -> list[dict]:
 
 
 def match_color_by_hex(ams_hex: str | None, colors: list[dict]) -> dict | None:
-    """Try to match an AMS RFID hex to a color in the catalog.
-
-    AMS hex is RRGGBBAA (8 chars). Our catalog stores #RRGGBB (6 chars).
-    Compare first 6 chars (ignore alpha).
-    """
     if not ams_hex or len(ams_hex) < 6:
         return None
     search = ams_hex[:6].upper()
     for c in colors:
-        catalog_hex = c.get("hex", "").lstrip("#").upper()
-        if catalog_hex == search:
+        if c.get("hex", "").lstrip("#").upper() == search:
             return c
     return None
 
 
 def inhouse_transition(printer_name: str, event: str) -> int | None:
-    """Advance the oldest in-house queue item for this printer.
-    event='start' → pending→printing; event='finish' → printing→completed.
-    Returns the queue_item_id if a matching item was found, else None.
-    """
     try:
         r = httpx.post(
             f"{WIZ3DTOOLS_URL}/api/queue/inhouse-transition",
-            headers={**_api_headers(), "Content-Type": "application/json"},
+            headers={**_wiz_headers(), "Content-Type": "application/json"},
             json={"printerName": printer_name, "event": event},
             timeout=5,
         )
@@ -223,8 +231,8 @@ def create_filament_job(
     printer_id: int,
     job_name: str | None,
     slot: AmsSlotState,
-    remain_start: float,
-    remain_end: float,
+    remain_start: float | None,
+    remain_end: float | None,
     color_id: int | None,
     status: str,
     filament_grams: float | None = None,
@@ -247,7 +255,7 @@ def create_filament_job(
     try:
         r = httpx.post(
             f"{WIZ3DTOOLS_URL}/api/filament-jobs",
-            headers={**_api_headers(), "Content-Type": "application/json"},
+            headers={**_wiz_headers(), "Content-Type": "application/json"},
             json=payload,
             timeout=10,
         )
@@ -258,7 +266,6 @@ def create_filament_job(
 
 
 def process_print_finish(state: PrinterState, colors: list[dict], queue_item_id: int | None = None) -> None:
-    """On print FINISH: calculate which slots were used, create filament jobs."""
     used_slots = state.get_used_slots()
     if not used_slots:
         logger.info(f"[{state.printer_name}] Print finished but no significant filament change detected.")
@@ -268,8 +275,6 @@ def process_print_finish(state: PrinterState, colors: list[dict], queue_item_id:
         matched_color = match_color_by_hex(slot.tray_color, colors)
 
         if unknown_remain:
-            # AMS reported -1 for this slot throughout — quantity untrackable.
-            # Always create a pending job so the user can manually attribute it.
             logger.info(
                 f"[{state.printer_name}] Slot {slot.ams_id}.{slot.tray_id} has unknown remain "
                 f"({slot.tray_color} {slot.tray_type}) — creating pending job for manual attribution."
@@ -287,11 +292,9 @@ def process_print_finish(state: PrinterState, colors: list[dict], queue_item_id:
             )
 
         elif matched_color:
-            # Auto-resolve: POST job with status=auto_resolved — backend deducts inventory automatically
             mfg = matched_color.get("manufacturer") or {}
             full_net = float(mfg.get("fullSpoolNetWeightG") or 1000)
             grams = round((remain_start - remain_end) / 100.0 * full_net, 2)
-
             create_filament_job(
                 printer_id=state.printer_id,
                 job_name=state.subtask_name,
@@ -305,7 +308,6 @@ def process_print_finish(state: PrinterState, colors: list[dict], queue_item_id:
             )
 
         else:
-            # No color match — create pending job for manual attribution
             create_filament_job(
                 printer_id=state.printer_id,
                 job_name=state.subtask_name,
@@ -323,189 +325,152 @@ def process_print_finish(state: PrinterState, colors: list[dict], queue_item_id:
             )
 
 
-# ── MQTT Client ────────────────────────────────────────────────────────────────
+# ── BamBuddy translation ───────────────────────────────────────────────────────
 
-class BambuPrinterClient:
+def fetch_bambuddy_printer_index() -> dict[str, int]:
+    """Build a {serial_number → bambuddy_id} map."""
+    try:
+        r = httpx.get(
+            f"{BAMBUDDY_URL}/api/v1/printers/",
+            headers=_bambuddy_headers(),
+            timeout=10,
+        )
+        r.raise_for_status()
+        printers = r.json()
+        return {p["serial_number"]: p["id"] for p in printers if p.get("serial_number") and p.get("is_active", True)}
+    except Exception as e:
+        logger.error(f"Failed to fetch BamBuddy printer index: {e}")
+        return {}
+
+
+def fetch_bambuddy_status(bambuddy_id: int) -> dict | None:
+    try:
+        r = httpx.get(
+            f"{BAMBUDDY_URL}/api/v1/printers/{bambuddy_id}/status",
+            headers=_bambuddy_headers(),
+            timeout=5,
+        )
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        logger.debug(f"BamBuddy status fetch failed for id={bambuddy_id}: {e}")
+        return None
+
+
+def apply_bambuddy_status(state: PrinterState, data: dict) -> None:
+    """Translate one BamBuddy status payload onto a wiz3dtools PrinterState.
+
+    Field mapping (BamBuddy → PrinterState):
+      connected         → connected
+      state             → gcode_state            (RUNNING/FINISH/IDLE/PREPARE/FAILED/PAUSE)
+      progress          → mc_percent             (0-100 float)
+      remaining_time    → mc_remaining_time      (seconds)
+      layer_num         → layer_num
+      total_layers      → total_layer_num
+      subtask_name      → subtask_name
+      temperatures.nozzle / .bed → nozzle_temper / bed_temper
+      speed_level (1-4) → spd_mag (via SPEED_LEVEL_TO_PCT)
+      ams[].tray[]      → ams_slots[]
+      chamber_temper    → null (P1S exposes no chamber thermistor in BamBuddy's payload)
+    """
+    with state._lock:
+        state.connected         = bool(data.get("connected", False))
+        state.gcode_state       = data.get("state")
+        state.mc_percent        = data.get("progress")
+        state.mc_remaining_time = data.get("remaining_time")
+        state.layer_num         = data.get("layer_num")
+        state.total_layer_num   = data.get("total_layers")
+        state.subtask_name      = data.get("subtask_name")
+
+        temps = data.get("temperatures") or {}
+        state.nozzle_temper  = temps.get("nozzle")
+        state.bed_temper     = temps.get("bed")
+        state.chamber_temper = None
+
+        speed_level = data.get("speed_level")
+        state.spd_mag = SPEED_LEVEL_TO_PCT.get(speed_level) if isinstance(speed_level, int) else None
+
+        # AMS: only overwrite when BamBuddy actually included tray entries
+        # (matches the MQTT-era guard against empty-array metadata updates).
+        new_slots: list[AmsSlotState] = []
+        for ams_unit in data.get("ams", []) or []:
+            ams_id = int(ams_unit.get("id", 0))
+            for tray in ams_unit.get("tray", []) or []:
+                tray_id = int(tray.get("id", 0))
+                remain = tray.get("remain")
+                new_slots.append(AmsSlotState(
+                    ams_id=ams_id,
+                    tray_id=tray_id,
+                    remain=float(remain) if remain is not None else None,
+                    tray_color=tray.get("tray_color"),
+                    tray_type=tray.get("tray_type"),
+                    tray_sub_brands=tray.get("tray_sub_brands"),
+                ))
+        if new_slots:
+            state.ams_slots = new_slots
+
+        state.last_updated = datetime.now(timezone.utc).isoformat()
+
+
+# ── Per-printer poller ─────────────────────────────────────────────────────────
+
+class PrinterPoller:
+    """One thread per printer. Polls BamBuddy at POLL_INTERVAL_S and fires
+    state-transition handlers (print start / finish) just like the old
+    MQTT message handler did.
+    """
+
     def __init__(self, state: PrinterState):
         self.state = state
         self._colors: list[dict] = []
-        self._client: mqtt.Client | None = None
-        self._stop = False
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
 
-    def start(self):
-        self._stop = False
-        self._connect()
-
-    def stop(self):
-        self._stop = True
-        self._cleanup_client()
-
-    def refresh_colors(self, colors: list[dict]):
+    def refresh_colors(self, colors: list[dict]) -> None:
         self._colors = colors
 
-    def _cleanup_client(self):
-        """Stop and discard the existing MQTT client cleanly."""
-        client = self._client
-        self._client = None
-        if client:
-            try:
-                client.loop_stop()
-            except Exception:
-                pass
-            try:
-                client.disconnect()
-            except Exception:
-                pass
-
-    def _connect(self):
-        if self._stop:
+    def start(self) -> None:
+        if self._thread and self._thread.is_alive():
             return
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._loop, daemon=True, name=f"poll-{self.state.printer_name}")
+        self._thread.start()
 
-        # Always clean up any previous client before creating a new one so
-        # stale loop_start() threads don't accumulate.
-        self._cleanup_client()
+    def stop(self) -> None:
+        self._stop_event.set()
 
-        client = mqtt.Client(client_id="", clean_session=True, protocol=mqtt.MQTTv311)
-        client.username_pw_set(BAMBU_USERNAME, self.state.access_code)
+    def _loop(self) -> None:
+        logger.info(f"[{self.state.printer_name}] Poller started (bambuddy_id={self.state.bambuddy_id})")
+        while not self._stop_event.is_set():
+            if self.state.bambuddy_id is None:
+                # No mapping yet — wait for monitor.reload to populate.
+                self._stop_event.wait(POLL_INTERVAL_S)
+                continue
 
-        tls_ctx = ssl.create_default_context()
-        tls_ctx.check_hostname = False
-        tls_ctx.verify_mode = ssl.CERT_NONE
-        client.tls_set_context(tls_ctx)
+            data = fetch_bambuddy_status(self.state.bambuddy_id)
+            if data is None:
+                # Transient error: mark disconnected, sleep, retry.
+                if self.state.connected:
+                    self.state.connected = False
+                    broadcast_state()
+                self._stop_event.wait(POLL_INTERVAL_S)
+                continue
 
-        # Delegate all reconnect logic to paho's built-in loop_start() mechanism.
-        # min_delay=5 so the first retry waits 5s; doubles each attempt up to 120s.
-        # This avoids fighting with our own manual reconnect thread.
-        client.reconnect_delay_set(min_delay=5, max_delay=120)
-
-        client.on_connect    = self._on_connect
-        client.on_disconnect = self._on_disconnect
-        client.on_message    = self._on_message
-
-        try:
-            # keepalive=30 sends pings every 30s; detects dead connections faster than 60s
-            client.connect(self.state.ip, BAMBU_MQTT_PORT, keepalive=30)
-            self._client = client
-            client.loop_start()
-            logger.info(f"[{self.state.printer_name}] Connecting to {self.state.ip}:{BAMBU_MQTT_PORT} (serial={self.state.serial})")
-        except Exception as e:
-            # connect() itself threw (e.g. DNS failure, network unreachable).
-            # loop hasn't started yet so paho can't retry — schedule manually.
-            logger.error(f"[{self.state.printer_name}] Connection failed: {e}")
-            if not self._stop:
-                t = threading.Timer(10, self._connect)
-                t.daemon = True
-                t.start()
-
-    def _on_connect(self, client, userdata, flags, rc):
-        _rc_desc = {
-            0: "accepted",
-            1: "refused — bad protocol version",
-            2: "refused — client ID rejected",
-            3: "refused — server unavailable",
-            4: "refused — bad username/password",
-            5: "refused — not authorised",
-        }
-        if rc == 0:
-            self.state.connected = True
-            topic = f"device/{self.state.serial}/report"
-            result, _ = client.subscribe(topic)
-            logger.info(
-                f"[{self.state.printer_name}] Connected (session_present={flags.get('session present', 0)}), "
-                f"subscribed to {topic} (result={result})"
-            )
-            # Ask the printer to immediately push its full current state
-            # (AMS slots, temps, print status) rather than waiting for the next
-            # scheduled publish, which can take 10-30s.
-            client.publish(
-                f"device/{self.state.serial}/request",
-                json.dumps({"pushing": {"sequence_id": "0", "command": "pushall"}}),
-            )
+            prev_state = self.state.gcode_state
+            apply_bambuddy_status(self.state, data)
             broadcast_state()
-        else:
-            logger.error(
-                f"[{self.state.printer_name}] MQTT connect refused rc={rc}: "
-                f"{_rc_desc.get(rc, 'unknown')} — paho will retry"
-            )
 
-    def _on_disconnect(self, client, userdata, rc):
-        self.state.connected = False
-        if rc == 0:
-            logger.info(f"[{self.state.printer_name}] Disconnected cleanly")
-        else:
-            logger.warning(
-                f"[{self.state.printer_name}] Disconnected unexpectedly rc={rc} "
-                f"(MQTT_ERR_CONN_LOST) — paho will reconnect with backoff"
-            )
-        broadcast_state()
+            new_state = self.state.gcode_state
+            if new_state and new_state != prev_state:
+                self._handle_state_transition(prev_state, new_state)
 
-    def _on_message(self, client, userdata, msg):
-        try:
-            payload = json.loads(msg.payload.decode("utf-8", errors="replace"))
-            print_data = payload.get("print", {})
-            if not print_data:
-                return
-            self._handle_print_status(print_data)
-        except Exception as e:
-            logger.debug(f"[{self.state.printer_name}] Message parse error: {e}")
+            self._stop_event.wait(POLL_INTERVAL_S)
+        logger.info(f"[{self.state.printer_name}] Poller stopped")
 
-    def _handle_print_status(self, data: dict):
-        prev_state = self.state.gcode_state
-        new_state  = data.get("gcode_state")
-
-        with self.state._lock:
-            if "mc_percent"        in data: self.state.mc_percent        = data["mc_percent"]
-            if "mc_remaining_time" in data: self.state.mc_remaining_time = data["mc_remaining_time"]
-            if "layer_num"         in data: self.state.layer_num         = data["layer_num"]
-            if "total_layer_num"   in data: self.state.total_layer_num   = data["total_layer_num"]
-            if "subtask_name"      in data: self.state.subtask_name      = data["subtask_name"]
-            if "nozzle_temper"     in data: self.state.nozzle_temper     = data["nozzle_temper"]
-            if "bed_temper"        in data: self.state.bed_temper        = data["bed_temper"]
-            if "chamber_temper"    in data: self.state.chamber_temper    = data["chamber_temper"]
-            if "spd_mag"           in data: self.state.spd_mag           = data["spd_mag"]
-            if new_state:                   self.state.gcode_state       = new_state
-
-            # Parse AMS data.
-            # Only replace ams_slots when the message actually contains tray
-            # entries — Bambu sends AMS messages with an empty ams[] array for
-            # metadata-only updates (e.g. tray_now changes) which would wipe
-            # the slot list and make colors disappear until the next full push.
-            ams_root = data.get("ams", {})
-            if ams_root and "ams" in ams_root:
-                new_slots: list[AmsSlotState] = []
-                for ams_unit in ams_root["ams"]:
-                    ams_id = int(ams_unit.get("id", 0))
-                    for tray in ams_unit.get("tray", []):
-                        tray_id = int(tray.get("id", 0))
-                        remain = tray.get("remain")
-                        slot = AmsSlotState(
-                            ams_id=ams_id,
-                            tray_id=tray_id,
-                            remain=float(remain) if remain is not None else None,
-                            tray_color=tray.get("tray_color"),
-                            tray_type=tray.get("tray_type"),
-                            tray_sub_brands=tray.get("tray_sub_brands"),
-                        )
-                        new_slots.append(slot)
-                if new_slots:  # ignore empty-array messages
-                    self.state.ams_slots = new_slots
-
-            self.state.last_updated = datetime.now(timezone.utc).isoformat()
-
-        # State transition handling (outside lock to avoid deadlock)
-        if new_state and new_state != prev_state:
-            self._handle_state_transition(prev_state, new_state)
-
-        broadcast_state()
-
-    def _handle_state_transition(self, prev: str | None, new: str):
+    def _handle_state_transition(self, prev: str | None, new: str) -> None:
         logger.info(f"[{self.state.printer_name}] State: {prev} → {new}")
 
         if new == "RUNNING" and prev not in ("RUNNING", "PAUSE"):
-            # Print started (or resumed from any pre-running state like PREPARE).
-            # PAUSE → RUNNING is a resume, not a new print start, so we exclude it.
-            # All other → RUNNING transitions (IDLE, FINISH, FAILED, PREPARE, None)
-            # are treated as a new print starting.
             self.state.take_ams_snapshot()
             logger.info(f"[{self.state.printer_name}] Print started ({prev} → RUNNING), AMS snapshot taken.")
             inhouse_transition(self.state.printer_name, "start")
@@ -518,66 +483,80 @@ class BambuPrinterClient:
             process_print_finish(self.state, self._colors, queue_item_id=queue_item_id)
 
 
-# ── Monitor Manager ────────────────────────────────────────────────────────────
+# ── Monitor manager ────────────────────────────────────────────────────────────
 
 class BambuMonitor:
-    def __init__(self):
-        self.clients: dict[str, BambuPrinterClient] = {}  # serial → client
-        self.states:  dict[str, PrinterState]        = {}  # serial → state
+    def __init__(self) -> None:
+        self.pollers: dict[str, PrinterPoller] = {}
+        self.states:  dict[str, PrinterState]   = {}
         self._lock = threading.Lock()
+        self._bambuddy_index: dict[str, int] = {}
 
-    def load_and_sync(self):
-        """Fetch printer configs and reconnect any new/changed printers."""
+    def refresh_bambuddy_index(self) -> None:
+        idx = fetch_bambuddy_printer_index()
+        if idx:
+            self._bambuddy_index = idx
+            with self._lock:
+                for serial, state in self.states.items():
+                    state.bambuddy_id = idx.get(serial)
+            logger.info(f"BamBuddy printer index: {len(idx)} printer(s) — {list(idx.values())}")
+
+    def load_and_sync(self) -> None:
+        """Fetch wiz3dtools configs + BamBuddy index, start/stop pollers."""
+        self.refresh_bambuddy_index()
         configs = fetch_printer_configs()
         colors  = fetch_colors()
 
-        current_serials = set()
+        current_serials: set[str] = set()
         for cfg in configs:
             serial = cfg["serialNumber"]
             current_serials.add(serial)
 
             with self._lock:
-                if serial in self.clients:
-                    # Refresh color cache on existing client
-                    self.clients[serial].refresh_colors(colors)
+                if serial in self.pollers:
+                    self.pollers[serial].refresh_colors(colors)
+                    self.states[serial].bambuddy_id = self._bambuddy_index.get(serial)
                 else:
                     state = PrinterState(
                         printer_id=cfg["id"],
                         printer_name=cfg["name"],
                         serial=serial,
-                        ip=cfg["ipAddress"],
-                        access_code=cfg["accessCode"],
+                        bambuddy_id=self._bambuddy_index.get(serial),
                     )
-                    client = BambuPrinterClient(state)
-                    client.refresh_colors(colors)
-                    self.clients[serial] = client
+                    poller = PrinterPoller(state)
+                    poller.refresh_colors(colors)
+                    self.pollers[serial] = poller
                     self.states[serial]  = state
-                    client.start()
-                    logger.info(f"Started client for printer '{cfg['name']}' ({serial})")
+                    poller.start()
+                    logger.info(f"Started poller for printer '{cfg['name']}' ({serial})")
 
-        # Stop clients for removed printers
         with self._lock:
-            removed = set(self.clients) - current_serials
+            removed = set(self.pollers) - current_serials
             for serial in removed:
-                logger.info(f"Stopping client for removed serial {serial}")
-                self.clients[serial].stop()
-                del self.clients[serial]
+                logger.info(f"Stopping poller for removed serial {serial}")
+                self.pollers[serial].stop()
+                del self.pollers[serial]
                 del self.states[serial]
-
 
     def get_all_status(self) -> list[dict]:
         with self._lock:
             return [s.to_dict() for s in self.states.values()]
 
-    def run_config_reloader(self):
-        """Periodically reload printer configs (picks up adds/edits/deletes from UI)."""
+    def run_config_reloader(self) -> None:
         while True:
             time.sleep(CONFIG_RELOAD_S)
-            logger.info("Reloading printer configs...")
+            logger.info("Reloading wiz3dtools printer configs...")
             self.load_and_sync()
+
+    def run_index_reloader(self) -> None:
+        while True:
+            time.sleep(BAMBUDDY_INDEX_REFRESH_S)
+            logger.debug("Refreshing BamBuddy printer index...")
+            self.refresh_bambuddy_index()
 
 
 monitor = BambuMonitor()
+
 
 # ── SSE broadcast ──────────────────────────────────────────────────────────────
 
@@ -586,7 +565,6 @@ _sse_lock = threading.Lock()
 
 
 def broadcast_state() -> None:
-    """Push current printer state to all connected SSE clients."""
     data = json.dumps(monitor.get_all_status())
     with _sse_lock:
         dead = [q for q in _sse_clients if q.full()]
@@ -613,17 +591,20 @@ def status():
 def health():
     connected = sum(1 for s in monitor.states.values() if s.connected)
     total     = len(monitor.states)
-    return jsonify({"status": "ok", "connected": connected, "total": total})
+    return jsonify({
+        "status": "ok",
+        "connected": connected,
+        "total": total,
+        "bambuddy": BAMBUDDY_URL,
+    })
 
 
 @app.route("/events")
 def events():
-    """SSE stream — pushes full printer state on every MQTT update."""
     q: queue.Queue = queue.Queue(maxsize=20)
     with _sse_lock:
         _sse_clients.append(q)
 
-    # Send current state immediately so the client doesn't wait for next MQTT tick
     initial = json.dumps(monitor.get_all_status())
     q.put_nowait(initial)
 
@@ -634,7 +615,6 @@ def events():
                     data = q.get(timeout=25)
                     yield f"data: {data}\n\n"
                 except queue.Empty:
-                    # Keepalive comment so nginx/proxies don't close the connection
                     yield ": keepalive\n\n"
         finally:
             with _sse_lock:
@@ -652,19 +632,25 @@ def events():
 
 @app.route("/reload", methods=["POST"])
 def reload():
-    """Immediately reload printer configs — called by wiz3dtools after any printer add/update/delete."""
     logger.info("Config reload triggered via API")
     monitor.load_and_sync()
     connected = sum(1 for s in monitor.states.values() if s.connected)
-    return jsonify({"status": "ok", "printers": len(monitor.states), "connected": connected})
+    return jsonify({
+        "status": "ok",
+        "printers": len(monitor.states),
+        "connected": connected,
+        "bambuddy_index_size": len(monitor._bambuddy_index),
+    })
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    logger.info("Bambu Monitor starting...")
+    logger.info(f"Bambu Monitor (BamBuddy REST mode) starting — BAMBUDDY_URL={BAMBUDDY_URL}")
+    if not BAMBUDDY_API_KEY:
+        logger.warning("BAMBUDDY_API_KEY is empty — BamBuddy will return 401 on every poll.")
 
-    # Initial load — retry until wiz3dtools is ready
+    # Wait for wiz3dtools backend to come up before first sync.
     for attempt in range(10):
         configs = fetch_printer_configs()
         if configs or attempt >= 5:
@@ -674,9 +660,9 @@ if __name__ == "__main__":
 
     monitor.load_and_sync()
 
-    # Background config reloader
-    reloader = threading.Thread(target=monitor.run_config_reloader, daemon=True)
-    reloader.start()
+    # Background reloaders — wiz3dtools config every 5min, BamBuddy index every 5min.
+    threading.Thread(target=monitor.run_config_reloader, daemon=True, name="cfg-reloader").start()
+    threading.Thread(target=monitor.run_index_reloader, daemon=True, name="idx-reloader").start()
 
     logger.info(f"Starting REST API on port {MONITOR_PORT}")
     from waitress import serve
