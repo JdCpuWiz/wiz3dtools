@@ -383,3 +383,41 @@ git pull origin master
 npm run migrate          # apply any new SQL migrations
 docker compose up -d --build
 ```
+
+---
+
+## BamBuddy integration (BuildPlan #6 Phases 2-5, 2026-06-04)
+
+**The 3 Bambu P1S printers are no longer wired into wiz3dtools.** BamBuddy at `https://bambuddy.deckerzoo.com` (CT 106, 192.168.7.147) is the canonical MQTT consumer for printers, owns the print queue + archive, and tracks every spool via Spoolman. wiz3dtools retains the **color catalog** (used by the wiz3d-prints customer store) + Sales Invoice line-item ColorPicker.
+
+### Source-of-truth split
+
+| Concern | Owner | Notes |
+|---|---|---|
+| Printer registry, status, MQTT | BamBuddy | UI at https://bambuddy.deckerzoo.com |
+| Print queue | BamBuddy | `/api/v1/queue/*` |
+| Filament catalog (what colors exist) | BamBuddy → synced to wiz3dtools | 633 rows pulled into `colors` |
+| Filament inventory (grams remaining) | BamBuddy → synced to wiz3dtools | `colors.inventory_grams` overwritten on each sync |
+| **Store availability** (`colors.active`) | **wiz3dtools** | NEVER touched by sync — Wiz curates which BamBuddy colors appear on the wiz3d-prints store |
+| **Display order** (`colors.sort_order`) | **wiz3dtools** | NEVER touched by sync |
+| Line-item color assignment | wiz3dtools | `line_item_colors` |
+| Customer orders | wiz3dtools (+ wiz3d-prints store front) | via `/api/store/*` |
+
+### Sync mechanics
+
+- **Endpoint**: `POST /api/colors/sync-from-bambuddy` (admin-only). One-shot pull.
+- **UI trigger**: "⟳ Sync from BamBuddy" button on `/admin/colors`. Shows last-sync timestamp + diff toast (added / updated / unchanged / manufacturer-unmatched).
+- **Cron**: nightly 03:00 local on the wiz3dtools LXC. The ansible playbook installs the crontab entry; logs to `/home/shad/wiz3dtools/logs/bambuddy-sync.log`.
+- **Match key**: `bambuddy_id` (precise, set after first sync) → fallback `(hex, material)` for first-time linking.
+- **New colors arrive `active=false`** — Wiz manually flips them on if he intends to stock them.
+- **Manufacturer linking**: case-insensitive name match into the local `manufacturers` table. No auto-create. Unmatched manufacturers surface in the diff for manual fix-up via `/admin/manufacturers`.
+- **inventory_grams formula**: `gross = sum(label_weight - weight_used for non-archived spools matching color) + one × manufacturer.empty_spool_weight_g`. The "+ one empty spool" keeps the existing dashboard math `net = inventory_grams - empty_spool_weight` returning correct net weight regardless of spool count.
+
+### Required env vars
+
+```
+BAMBUDDY_URL=http://192.168.7.147:8000
+BAMBUDDY_API_KEY=<create in BamBuddy UI: Settings → API Keys>
+```
+
+Both also live on the bambuddy-mcp bridge (CT 106), so the API key is shared between the two services.

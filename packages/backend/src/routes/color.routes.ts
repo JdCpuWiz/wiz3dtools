@@ -14,4 +14,7 @@ router.put('/:id', requireAdmin, controller.update.bind(controller));
 router.delete('/:id', requireAdmin, controller.delete.bind(controller));
 router.post('/:id/add-spool', requireAdmin, controller.addSpool.bind(controller));
 
+// BuildPlan #6 Phase 4 — admin-only pull from BamBuddy's filament catalog
+router.post('/sync-from-bambuddy', requireAdmin, controller.syncFromBambuddy.bind(controller));
+
 export default router;

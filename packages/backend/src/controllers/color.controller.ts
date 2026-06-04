@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ColorModel } from '../models/color.model.js';
 import { LineItemColorModel } from '../models/item-color.model.js';
 import { parseBody, createColorSchema, updateColorSchema, setItemColorsSchema } from '../validation/schemas.js';
+import { fullSync } from '../services/bambuddy-sync.service.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
 export class ColorController {
@@ -65,4 +66,19 @@ export class ColorController {
   }
 
   // BuildPlan #6 Phase 3: setQueueItemColors removed alongside the queue subsystem.
+
+  // BuildPlan #6 Phase 4 — POST /api/colors/sync-from-bambuddy
+  // One-shot pull from BamBuddy's filament catalog + spool inventory.
+  // Returns a diff summary the admin UI surfaces as a toast. Idempotent;
+  // safe to call from a nightly cron.
+  async syncFromBambuddy(_req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const result = await fullSync();
+      res.json({
+        success: true,
+        data: result,
+        message: `Catalog: ${result.catalog.added} added, ${result.catalog.updated} updated, ${result.catalog.untouched} unchanged. Inventory: ${result.inventory.colorsUpdated} colors refreshed.`,
+      });
+    } catch (error) { next(error); }
+  }
 }

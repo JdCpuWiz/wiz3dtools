@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useColors } from '../../hooks/useColors';
 import { useManufacturers } from '../../hooks/useManufacturers';
 import { PageIcon } from '../common/PageIcon';
+import { colorApi } from '../../services/api';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Color } from '@wizqueue/shared';
 
 const inputSt: React.CSSProperties = {
@@ -260,6 +263,36 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
 export const ColorsPage: React.FC = () => {
   const { colors, isLoading } = useColors();
   const [showAdd, setShowAdd] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<string | null>(
+    () => (typeof localStorage !== 'undefined' ? localStorage.getItem('bambuddy-last-sync') : null),
+  );
+  const queryClient = useQueryClient();
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const result = await colorApi.syncFromBambuddy();
+      const c = result.catalog;
+      const i = result.inventory;
+      const ts = new Date(result.finishedAt).toLocaleString();
+      localStorage.setItem('bambuddy-last-sync', ts);
+      setLastSync(ts);
+      const mfgWarn = c.manufacturerUnmatched > 0
+        ? ` · ${c.manufacturerUnmatched} need manufacturer`
+        : '';
+      toast.success(
+        `Catalog: +${c.added} added, ${c.updated} updated, ${c.untouched} unchanged${mfgWarn}. ` +
+        `Inventory: ${i.colorsUpdated} colors refreshed (${(i.totalGrams / 1000).toFixed(2)} kg total).`,
+        { duration: 8000 },
+      );
+      queryClient.invalidateQueries({ queryKey: ['colors'] });
+    } catch (err: any) {
+      toast.error(`Sync failed: ${err.message || err}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   if (isLoading) {
     return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" /></div>;
@@ -273,13 +306,26 @@ export const ColorsPage: React.FC = () => {
             <PageIcon src="/icons/filament-color-administration.png" alt="Colors" />
             <div>
               <h2 className="text-xl font-semibold text-iron-50">Color Catalog</h2>
-              <p className="text-sm text-white mt-0.5">Manage print colors, manufacturers, and inventory</p>
+              <p className="text-sm text-white mt-0.5">
+                Manage print colors, manufacturers, and inventory
+                {lastSync && <span className="text-xs ml-2" style={{ color: '#9ca3af' }}>· Last BamBuddy sync: {lastSync}</span>}
+              </p>
             </div>
           </div>
         </div>
-        {!showAdd && (
-          <button onClick={() => setShowAdd(true)} className="btn-primary btn-sm">+ Add Color</button>
-        )}
+        <div className="flex gap-2">
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="btn-secondary btn-sm"
+            title="Pull BamBuddy's filament catalog + per-color inventory. New colors arrive inactive."
+          >
+            {syncing ? 'Syncing…' : '⟳ Sync from BamBuddy'}
+          </button>
+          {!showAdd && (
+            <button onClick={() => setShowAdd(true)} className="btn-primary btn-sm">+ Add Color</button>
+          )}
+        </div>
       </div>
 
       {showAdd && <AddColorForm onDone={() => setShowAdd(false)} />}

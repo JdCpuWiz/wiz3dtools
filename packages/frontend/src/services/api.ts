@@ -309,7 +309,20 @@ export const colorApi = {
     if (!response.data.data) throw new Error('Failed to add spool');
     return response.data.data;
   },
+
+  // BuildPlan #6 Phase 4 — admin-only pull from BamBuddy's filament catalog
+  syncFromBambuddy: async (): Promise<BambuddySyncResult> => {
+    const response = await api.post<ApiResponse<BambuddySyncResult>>(`/colors/sync-from-bambuddy`);
+    if (!response.data.data) throw new Error('Failed to sync from BamBuddy');
+    return response.data.data;
+  },
 };
+
+export interface BambuddySyncResult {
+  catalog: { added: number; updated: number; untouched: number; manufacturerUnmatched: number; total: number };
+  inventory: { colorsUpdated: number; totalGrams: number; unmatchedSpools: number };
+  finishedAt: string;
+}
 
 // Manufacturer API
 export const manufacturerApi = {
