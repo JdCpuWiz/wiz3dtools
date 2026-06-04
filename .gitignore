@@ -2,6 +2,10 @@
 node_modules/
 package-lock.json
 
+# Python (bambu-monitor)
+__pycache__/
+*.pyc
+
 # Build outputs
 dist/
 build/
