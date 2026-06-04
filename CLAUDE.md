@@ -72,6 +72,9 @@ PostgreSQL. Migrations live in `packages/backend/migrations/` and are applied in
 | `013_create_line_item_colors_table.sql` | `line_item_colors` | Colors assigned to invoice line items (colorId, isPrimary, note, sortOrder) |
 | `014_create_queue_item_colors_table.sql` | `queue_item_colors` | Colors assigned to queue items; auto-copied from line item on send-to-queue |
 | `015_reseed_bambu_colors.sql` | `colors` | TRUNCATE + re-insert correct Bambu Lab PLA colors (run if seeded with wrong colors) |
+| `016`–`032` | various | Tracking, audit logs, manufacturers, filament fields on colors, product colors, categories, store fields on products, printers (later dropped), filament jobs (later dropped), in-house queue (later dropped), printer badge colors (later dropped), product images, backfill recipes |
+| `033_drop_queue_subsystem.sql` | drop | **BuildPlan #6 Phase 3** — drops `queue_items`, `queue_item_colors`, `filament_jobs`, `printers`; drops `invoice_line_items.queue_item_id` |
+| `034_add_bambuddy_link_to_colors.sql` | `colors` | **BuildPlan #6 Phase 4** — adds `bambuddy_id` (partial unique) + `material` (varchar, defaulted to PLA on existing rows) so the BamBuddy sync can link rows precisely |
 
 ---
 
@@ -129,7 +132,7 @@ migrations/
 PDF upload → `pdf.service.ts` converts pages to base64 images → `ollama.service.ts` sends to Ollama vision model → extracted `ExtractedProduct[]` → saved as `queue_items`.
 
 ### Sales invoice flow
-Create invoice (with optional line items) → add/edit line items, picking from product catalog or entering manually → Download PDF (`pdf-generator.service.ts`) → Send email (`email.service.ts`) → Send to queue (`sales-invoice.service.ts`) → `queue_items` rows created, `units_sold` incremented on linked products.
+Create invoice (with optional line items) → add/edit line items, picking from product catalog or entering manually → Download PDF (`pdf-generator.service.ts`) → Send email (`email.service.ts`). Print fulfillment happens manually in BamBuddy — wiz3dtools no longer runs a queue (BuildPlan #6 Phase 3).
 
 ### All API endpoints
 
@@ -137,17 +140,6 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 - `POST /api/auth/login` — `{ username, password }` → `{ user, token }`
 - `POST /api/auth/register` — optionalAuth; first user gets admin, subsequent require admin token
 - `GET /api/auth/me` — requireAuth; returns current user
-
-**Queue**
-- `GET /api/queue` — list all (ordered by position)
-- `POST /api/queue` — create item
-- `GET /api/queue/:id`
-- `PUT /api/queue/:id`
-- `DELETE /api/queue/:id`
-- `POST /api/queue/batch` — batch create
-- `PATCH /api/queue/reorder` — drag-drop reorder `{ itemId, newPosition }`
-- `PATCH /api/queue/:id/status` — status update `{ status }`
-- `PUT /api/queue/:id/colors` — set colors `{ colors: [{ colorId, isPrimary, note, sortOrder }] }`
 
 **Upload (Ollama OCR)**
 - `POST /api/upload` — PDF upload (multipart), triggers Ollama extraction
@@ -177,16 +169,28 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 - `POST /api/sales-invoices/:id/line-items`
 - `PUT /api/sales-invoices/:id/line-items/:itemId`
 - `DELETE /api/sales-invoices/:id/line-items/:itemId`
-- `PUT /api/sales-invoices/:id/line-items/:itemId/colors` — set colors; also syncs to linked queue item if already queued
+- `PUT /api/sales-invoices/:id/line-items/:itemId/colors` — set colors on a line item
 - `POST /api/sales-invoices/:id/send` — generates PDF + sends email, marks status=sent
-- `POST /api/sales-invoices/:id/send-to-queue` — body: `{ lineItemIds?: number[] }` (omit for all); creates queue_items, increments product units_sold
+- `POST /api/sales-invoices/:id/ship` — marks shipped, notifies customer
 - `GET /api/sales-invoices/:id/pdf` — streams PDF download
 
-**Colors**
+**Colors** (catalog used by Sales Invoice ColorPicker + wiz3d-prints store)
 - `GET /api/colors` — list all colors (authenticated)
 - `POST /api/colors` — create (admin only)
 - `PUT /api/colors/:id` — update (admin only)
 - `DELETE /api/colors/:id` — delete (admin only)
+- `POST /api/colors/:id/add-spool` — admin-only inventory bump
+- `POST /api/colors/sync-from-bambuddy` — admin-only one-shot pull from BamBuddy's filament catalog + spool ledger. See the "BamBuddy integration" section near the bottom of this file for sync semantics.
+
+**Manufacturers** (admin only)
+- `GET /api/manufacturers` / `POST` / `PUT /:id` / `DELETE /:id`
+
+**Reports**
+- `GET /api/reports/sales` — date-range sales aggregates
+- `GET /api/reports/sales/pdf` — PDF export
+
+**Categories**
+- `GET /api/categories` / `POST` (admin) / `PUT /:id` (admin) / `DELETE /:id` (admin)
 
 **Users** (admin only)
 - `GET /api/users` — list all users
@@ -195,8 +199,19 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 - `POST /api/users/:id/reset-password` — hash + update password
 - `DELETE /api/users/:id` — delete user (cannot delete own account)
 
+**Store** (API-key auth, no cookie) — consumed by wiz3d-prints
+- `GET /api/store/products`
+- `GET /api/store/colors` — wiz3d-prints customer color picker source
+- `POST /api/store/orders` — customer places an order
+- `GET /api/store/orders?customerId=...` — list a customer's orders
+- `GET /api/store/orders/:id?customerId=...`
+- `GET /api/store/customers/:id` / `PATCH /api/store/customers/:id`
+
 **Health**
-- `GET /health` — `{ status, services: { database, ollama } }`
+- `GET /health` — `{ status, version, services: { database, ollama } }`
+
+**Removed in BuildPlan #6 Phase 3** (call sites all gone — kept here for grep-discoverability):
+`/api/queue/*`, `/api/printers/*`, `/api/bambu/*`, `/api/filament-jobs/*`, `POST /api/sales-invoices/:id/send-to-queue`.
 
 ---
 
@@ -204,7 +219,6 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 
 | File | Exports |
 |---|---|
-| `queue-item.ts` | `QueueItem`, `QueueItemStatus`, `CreateQueueItemDto`, `UpdateQueueItemDto`, `ReorderQueueDto` |
 | `invoice.ts` | `Invoice`, `ExtractedProduct`, `InvoiceUploadResponse`, `InvoiceProcessingStatus` |
 | `customer.ts` | `Customer`, `CreateCustomerDto`, `UpdateCustomerDto` |
 | `product.ts` | `Product`, `CreateProductDto`, `UpdateProductDto` |
@@ -351,13 +365,17 @@ Default tax rate: **7%** (Iowa sales tax). Shipping is not taxed.
 | `COMPANY_EMAIL` | — | Appears on PDF invoices |
 | `COMPANY_PHONE` | — | Appears on PDF invoices |
 | `COMPANY_ADDRESS` | — | Appears on PDF invoices |
+| `MCP_SERVICE_TOKEN` | — | Bearer token used by `wiz3dtools-mcp` (Jarvis bridge, port 8014) for service-account auth |
+| `STORE_API_KEY` | — | API-key auth for `/api/store/*` (wiz3d-prints customer site) |
+| `BAMBUDDY_URL` | `http://192.168.7.147:8000` | BamBuddy base URL (used by `bambuddy-sync.service.ts`) |
+| `BAMBUDDY_API_KEY` | — | `X-API-Key` value for BamBuddy. Same key shared with the bambuddy-mcp bridge on CT 106 |
 
 ---
 
 ## Deployment
 
-Docker Compose (`compose.yaml`) — three containers:
-- `wizqueue-backend` → port 3000
+Docker Compose (`compose.yaml`) — four containers (BuildPlan #6 Phase 3 removed `wiz3dtools-bambu-monitor`):
+- `wiz3dtools-backend` → port 3000
 - `wizqueue-frontend` → nginx on port 8080 (`VITE_API_URL=/api`, proxied to backend)
 - `wizqueue-ollama` → port 11434 (or Ollama runs natively on host — accessed via `host.docker.internal`)
 

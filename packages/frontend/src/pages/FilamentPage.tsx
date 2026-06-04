@@ -314,7 +314,7 @@ export const FilamentPage: React.FC = () => {
 
   const activeColors = colors.filter((c) => c.active);
 
-  const filtered = filter === 'all'
+  const filteredUnsorted = filter === 'all'
     ? colors  // show all including disabled
     : activeColors.filter((c) => {
         const s = stockStatus(c);
@@ -322,6 +322,17 @@ export const FilamentPage: React.FC = () => {
         if (filter === 'low') return s === 'low';
         return true;
       });
+
+  // BuildPlan #6 Phase 5: after the BamBuddy sync dumps 600+ inactive
+  // colors into the catalog, the inventory list defaults to showing
+  // every row. Sort active-first so Wiz's actually-stocked filaments
+  // stay at the top; sort_order then alphabetical inside each tier.
+  const filtered = [...filteredUnsorted].sort((a, b) => {
+    if (a.active !== b.active) return a.active ? -1 : 1;
+    const orderDiff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    if (orderDiff !== 0) return orderDiff;
+    return a.name.localeCompare(b.name);
+  });
 
   const criticalCount = activeColors.filter((c) => { const s = stockStatus(c); return s === 'critical' || s === 'empty'; }).length;
   const lowCount = activeColors.filter((c) => stockStatus(c) === 'low').length;
