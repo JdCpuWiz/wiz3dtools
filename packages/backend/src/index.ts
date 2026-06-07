@@ -21,6 +21,7 @@ import manufacturerRoutes from './routes/manufacturer.routes.js';
 import reportsRoutes from './routes/reports.routes.js';
 import categoryRoutes from './routes/category.routes.js';
 import storeRoutes from './routes/store.routes.js';
+import wholesaleUsersRoutes from './routes/wholesale-users.routes.js';
 // BuildPlan #6 Phase 3 (2026-06-04): queue, printers, filament-jobs,
 // and bambu proxy routes removed — BamBuddy owns those domains now.
 
@@ -115,6 +116,7 @@ app.use('/api/colors', colorRoutes);
 app.use('/api/manufacturers', manufacturerRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/wholesale-users', wholesaleUsersRoutes);
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {

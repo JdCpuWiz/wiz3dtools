@@ -15,6 +15,7 @@ import { UsersPage } from './components/admin/UsersPage';
 import { ColorsPage } from './components/admin/ColorsPage';
 import { ManufacturersPage } from './components/admin/ManufacturersPage';
 import { CategoriesPage } from './components/admin/CategoriesPage';
+import { WholesalePage } from './components/admin/WholesalePage';
 import { FilamentPage } from './pages/FilamentPage';
 import { SalesReportPage } from './components/reports/SalesReportPage';
 
@@ -42,6 +43,7 @@ function App() {
           <Route path="/admin/colors" element={<ProtectedRoute><Layout><ColorsPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/manufacturers" element={<ProtectedRoute><Layout><ManufacturersPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/categories" element={<ProtectedRoute><Layout><CategoriesPage /></Layout></ProtectedRoute>} />
+          <Route path="/admin/wholesale" element={<ProtectedRoute><Layout><WholesalePage /></Layout></ProtectedRoute>} />
           <Route path="/filament" element={<ProtectedRoute><Layout><FilamentPage /></Layout></ProtectedRoute>} />
           <Route path="/reports/sales" element={<ProtectedRoute><Layout><SalesReportPage /></Layout></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

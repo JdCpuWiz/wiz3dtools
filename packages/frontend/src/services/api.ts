@@ -376,6 +376,55 @@ export const userApi = {
   },
 };
 
+// Wholesale Users API (admin only) — proxied through to wiz3d-prints.
+// Source of truth for wholesale credentials lives in wiz3d-prints' DB;
+// wiz3dtools is just the admin client. See BuildPlan #11 Phase 1.
+export interface WholesaleUser {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+  wiz3dtoolsCustomerId: number | null;
+  createdAt: string;
+}
+
+export const wholesaleUserApi = {
+  getAll: async (): Promise<WholesaleUser[]> => {
+    const response = await api.get<ApiResponse<WholesaleUser[]>>('/wholesale-users');
+    return response.data.data || [];
+  },
+
+  create: async (data: {
+    name: string;
+    email: string;
+    password: string;
+    wiz3dtoolsCustomerId?: number | null;
+  }): Promise<WholesaleUser> => {
+    const response = await api.post<ApiResponse<WholesaleUser>>('/wholesale-users', data);
+    if (!response.data.data) throw new Error('Failed to create wholesale user');
+    return response.data.data;
+  },
+
+  update: async (
+    id: string,
+    data: {
+      name?: string;
+      email?: string;
+      password?: string;
+      active?: boolean;
+      wiz3dtoolsCustomerId?: number | null;
+    },
+  ): Promise<WholesaleUser> => {
+    const response = await api.patch<ApiResponse<WholesaleUser>>(`/wholesale-users/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update wholesale user');
+    return response.data.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/wholesale-users/${id}`);
+  },
+};
+
 // Reports API
 export const reportsApi = {
   getSalesReport: async (startDate: string, endDate: string) => {
