@@ -44,6 +44,10 @@ services:
       - STORE_API_KEY=${STORE_API_KEY}
       - STORE_IMAGE_PUBLIC_BASE=${STORE_IMAGE_PUBLIC_BASE:-https://tools.wiz3dprints.com/uploads/store}
       - MAX_IMAGE_SIZE=${MAX_IMAGE_SIZE:-5242880}
+      # BuildPlan #11 Phase 1 — wholesale-user admin proxy. Token must
+      # match `ADMIN_API_TOKEN` on the wiz3d-prints side.
+      - WIZ3D_PRINTS_API_URL=${WIZ3D_PRINTS_API_URL:-http://192.168.7.245:3000}
+      - WIZ3D_PRINTS_ADMIN_TOKEN=${WIZ3D_PRINTS_ADMIN_TOKEN}
       - REMBG_URL=http://rembg:7000
     volumes:
       - ${UPLOADS_PATH:-./uploads}:/app/uploads
