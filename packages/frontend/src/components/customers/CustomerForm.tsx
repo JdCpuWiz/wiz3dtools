@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form';
 import { useCustomer, useCustomers } from '../../hooks/useCustomers';
 import { useSalesInvoices } from '../../hooks/useSalesInvoices';
 import type { CreateCustomerDto, SalesInvoice } from '@wizqueue/shared';
+import { WholesaleAccessPanel } from './WholesaleAccessPanel';
+import { useAuth } from '../../context/AuthContext';
 
 const statusColors: Record<string, { color: string; bg: string }> = {
   draft:     { color: '#ffffff', bg: '#6b7280' },
@@ -31,6 +33,8 @@ export const CustomerForm: React.FC = () => {
 
   const { data: existing } = useCustomer(customerId);
   const { create, update, isCreating, isUpdating } = useCustomers();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { invoices } = useSalesInvoices();
   const customerInvoices = isEdit
     ? invoices
@@ -133,6 +137,17 @@ export const CustomerForm: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* Wholesale Access (edit mode + admin only) — BuildPlan #11 Phase 1.5.
+          One source of truth: wholesale login is just a property of the
+          customer record. No standalone admin page to maintain. */}
+      {isEdit && isAdmin && existing && (
+        <WholesaleAccessPanel
+          customerId={customerId}
+          customerName={existing.contactName}
+          customerEmail={existing.email}
+        />
+      )}
 
       {/* Invoice History (edit mode only) */}
       {isEdit && (
