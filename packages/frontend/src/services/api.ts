@@ -575,6 +575,39 @@ export const showcaseTestimonialsApi = {
   },
 };
 
+// Showcase About API — polymorphic: kind=stat|equipment|value, data shape per kind
+export type AboutBlockKind = 'stat' | 'equipment' | 'value';
+
+export interface ShowcaseAboutBlock {
+  id: string;
+  kind: AboutBlockKind;
+  data: Record<string, unknown>;
+  sortOrder: number;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const showcaseAboutApi = {
+  getAll: async (): Promise<ShowcaseAboutBlock[]> => {
+    const response = await api.get<ApiResponse<ShowcaseAboutBlock[]>>('/showcase-about');
+    return response.data.data || [];
+  },
+  create: async (data: Partial<ShowcaseAboutBlock>): Promise<ShowcaseAboutBlock> => {
+    const response = await api.post<ApiResponse<ShowcaseAboutBlock>>('/showcase-about', data);
+    if (!response.data.data) throw new Error('Failed to create about block');
+    return response.data.data;
+  },
+  update: async (id: string, data: Partial<ShowcaseAboutBlock>): Promise<ShowcaseAboutBlock> => {
+    const response = await api.put<ApiResponse<ShowcaseAboutBlock>>(`/showcase-about/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update about block');
+    return response.data.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/showcase-about/${id}`);
+  },
+};
+
 // Reports API
 export const reportsApi = {
   getSalesReport: async (startDate: string, endDate: string) => {

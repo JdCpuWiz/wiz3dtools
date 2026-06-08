@@ -26,6 +26,7 @@ import showcasePortfolioRoutes from './routes/showcase-portfolio.routes.js';
 import showcaseServicesRoutes from './routes/showcase-services.routes.js';
 import showcaseMaterialsRoutes from './routes/showcase-materials.routes.js';
 import showcaseTestimonialsRoutes from './routes/showcase-testimonials.routes.js';
+import showcaseAboutRoutes from './routes/showcase-about.routes.js';
 // BuildPlan #6 Phase 3 (2026-06-04): queue, printers, filament-jobs,
 // and bambu proxy routes removed — BamBuddy owns those domains now.
 
@@ -125,6 +126,7 @@ app.use('/api/showcase-portfolio', showcasePortfolioRoutes);
 app.use('/api/showcase-services', showcaseServicesRoutes);
 app.use('/api/showcase-materials', showcaseMaterialsRoutes);
 app.use('/api/showcase-testimonials', showcaseTestimonialsRoutes);
+app.use('/api/showcase-about', showcaseAboutRoutes);
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {
