@@ -16,6 +16,7 @@ import { ColorsPage } from './components/admin/ColorsPage';
 import { ManufacturersPage } from './components/admin/ManufacturersPage';
 import { CategoriesPage } from './components/admin/CategoriesPage';
 import { ShowcasePortfolioPage } from './components/admin/showcase/PortfolioPage';
+import { ShowcaseServicesPage } from './components/admin/showcase/ServicesPage';
 import { FilamentPage } from './pages/FilamentPage';
 import { SalesReportPage } from './components/reports/SalesReportPage';
 
@@ -51,6 +52,7 @@ function App() {
               wiz3d-prints' /api/portfolio. Other 4 entities (services,
               materials, testimonials, about) follow in later sub-phases. */}
           <Route path="/admin/showcase/portfolio" element={<ProtectedRoute><Layout><ShowcasePortfolioPage /></Layout></ProtectedRoute>} />
+          <Route path="/admin/showcase/services" element={<ProtectedRoute><Layout><ShowcaseServicesPage /></Layout></ProtectedRoute>} />
           <Route path="/filament" element={<ProtectedRoute><Layout><FilamentPage /></Layout></ProtectedRoute>} />
           <Route path="/reports/sales" element={<ProtectedRoute><Layout><SalesReportPage /></Layout></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -466,6 +466,45 @@ export const showcasePortfolioApi = {
   },
 };
 
+// Showcase Services API (admin only) — proxied through to wiz3d-prints.
+// Source of truth lives in wiz3d-prints' DB (Service). See BuildPlan #11
+// Phase 4.
+export interface ShowcaseService {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  features: string[];
+  pricing: string | null;
+  order: number;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const showcaseServicesApi = {
+  getAll: async (): Promise<ShowcaseService[]> => {
+    const response = await api.get<ApiResponse<ShowcaseService[]>>('/showcase-services');
+    return response.data.data || [];
+  },
+
+  create: async (data: Partial<ShowcaseService>): Promise<ShowcaseService> => {
+    const response = await api.post<ApiResponse<ShowcaseService>>('/showcase-services', data);
+    if (!response.data.data) throw new Error('Failed to create service');
+    return response.data.data;
+  },
+
+  update: async (id: string, data: Partial<ShowcaseService>): Promise<ShowcaseService> => {
+    const response = await api.put<ApiResponse<ShowcaseService>>(`/showcase-services/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update service');
+    return response.data.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/showcase-services/${id}`);
+  },
+};
+
 // Reports API
 export const reportsApi = {
   getSalesReport: async (startDate: string, endDate: string) => {
