@@ -4,6 +4,12 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    // Pull Tailwind classes from the @jdcpuwiz/homelab-ui package's
+    // compiled JS. Path goes up TWO levels because npm workspaces hoists
+    // the package to the monorepo root's node_modules. Without this,
+    // critical responsive classes (md:static, md:translate-x-0, etc.)
+    // don't make it into the v3 bundle.
+    "../../node_modules/@jdcpuwiz/homelab-ui/dist/**/*.{js,mjs,cjs}",
   ],
   theme: {
     extend: {

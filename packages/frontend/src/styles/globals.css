@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Override the @jdcpuwiz/homelab-ui Sidebar default width — wiz3dtools'
+   sidebar is wider (256px / w-64) to fit longer admin section labels.
+   Defensive --hl-title default so package PageHeader resolves a color
+   if ever used. */
+:root {
+  --hl-sidebar-width: 16rem;
+  --hl-title: #ffffff;
+}
+
 @layer base {
   /* Force dark theme — always iron black */
   html {

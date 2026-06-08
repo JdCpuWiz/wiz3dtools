@@ -1,6 +1,6 @@
 {
   "name": "@wizqueue/frontend",
-  "version": "1.29.0",
+  "version": "1.30.0",
   "description": "Frontend React application for wizqueue",
   "type": "module",
   "scripts": {
@@ -14,6 +14,7 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@headlessui/react": "^1.7.17",
+    "@jdcpuwiz/homelab-ui": "^0.4.1",
     "@tanstack/react-query": "^5.17.9",
     "@wizqueue/shared": "^1.0.0",
     "axios": "^1.6.5",
