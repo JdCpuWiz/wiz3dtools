@@ -15,6 +15,7 @@ import { UsersPage } from './components/admin/UsersPage';
 import { ColorsPage } from './components/admin/ColorsPage';
 import { ManufacturersPage } from './components/admin/ManufacturersPage';
 import { CategoriesPage } from './components/admin/CategoriesPage';
+import { ShowcasePortfolioPage } from './components/admin/showcase/PortfolioPage';
 import { FilamentPage } from './pages/FilamentPage';
 import { SalesReportPage } from './components/reports/SalesReportPage';
 
@@ -46,6 +47,10 @@ function App() {
               access is now managed inline on each customer record. Redirect
               any stale bookmarks to the customer list. */}
           <Route path="/admin/wholesale" element={<Navigate to="/customers" replace />} />
+          {/* Showcase CMS (BuildPlan #11 Phase 3) — admin proxies to
+              wiz3d-prints' /api/portfolio. Other 4 entities (services,
+              materials, testimonials, about) follow in later sub-phases. */}
+          <Route path="/admin/showcase/portfolio" element={<ProtectedRoute><Layout><ShowcasePortfolioPage /></Layout></ProtectedRoute>} />
           <Route path="/filament" element={<ProtectedRoute><Layout><FilamentPage /></Layout></ProtectedRoute>} />
           <Route path="/reports/sales" element={<ProtectedRoute><Layout><SalesReportPage /></Layout></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -425,6 +425,47 @@ export const wholesaleUserApi = {
   },
 };
 
+// Showcase Portfolio API (admin only) — proxied through to wiz3d-prints.
+// Source of truth lives in wiz3d-prints' DB (PortfolioItem). See
+// BuildPlan #11 Phase 3.
+export interface ShowcasePortfolioItem {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  material: string;
+  dimensions: string | null;
+  printTime: string | null;
+  images: string[];
+  featured: boolean;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const showcasePortfolioApi = {
+  getAll: async (): Promise<ShowcasePortfolioItem[]> => {
+    const response = await api.get<ApiResponse<ShowcasePortfolioItem[]>>('/showcase-portfolio');
+    return response.data.data || [];
+  },
+
+  create: async (data: Partial<ShowcasePortfolioItem>): Promise<ShowcasePortfolioItem> => {
+    const response = await api.post<ApiResponse<ShowcasePortfolioItem>>('/showcase-portfolio', data);
+    if (!response.data.data) throw new Error('Failed to create portfolio item');
+    return response.data.data;
+  },
+
+  update: async (id: string, data: Partial<ShowcasePortfolioItem>): Promise<ShowcasePortfolioItem> => {
+    const response = await api.put<ApiResponse<ShowcasePortfolioItem>>(`/showcase-portfolio/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update portfolio item');
+    return response.data.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/showcase-portfolio/${id}`);
+  },
+};
+
 // Reports API
 export const reportsApi = {
   getSalesReport: async (startDate: string, endDate: string) => {

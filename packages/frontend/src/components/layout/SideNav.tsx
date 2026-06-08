@@ -74,6 +74,7 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
   const [sections, setSections] = useState<Record<string, boolean>>({
     operations: true,
     filament: true,
+    showcase: true,
     admin: true,
   });
 
@@ -145,6 +146,12 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
 
           {isAdmin && (
             <>
+              <SectionHeader label="Showcase" sectionKey="showcase" open={sections.showcase} onToggle={toggleSection} />
+              {sections.showcase && (
+                <>
+                  <NavItem to="/admin/showcase/portfolio" label="Portfolio" onClick={onClose} />
+                </>
+              )}
               <SectionHeader label="Admin" sectionKey="admin" open={sections.admin} onToggle={toggleSection} />
               {sections.admin && (
                 <>
