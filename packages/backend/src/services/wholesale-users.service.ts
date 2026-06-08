@@ -1,12 +1,14 @@
 /**
  * wholesale-users.service — thin HTTP proxy to wiz3d-prints'
- * /api/admin/wholesale.
+ * /api/internal/wholesale-users.
  *
  * wiz3d-prints owns the wholesale User table (next-auth credentials live
  * there); wiz3dtools is just an admin client. All traffic goes through
- * the existing admin endpoints with an `X-Admin-Token` header matching
+ * the internal endpoints with an `X-Admin-Token` header matching
  * `ADMIN_API_TOKEN` on the wiz3d-prints side. See BuildPlan #11 Phase 1
- * for the architecture rationale.
+ * for the architecture rationale; Phase 8 renamed the URL from
+ * /api/admin/wholesale to /api/internal/wholesale-users when the
+ * wiz3d-prints built-in /admin/* surface was retired.
  *
  * No retries here — failures bubble up so the admin UI shows a real
  * error instead of masking transient outages.
@@ -77,13 +79,13 @@ async function call<T>(
 }
 
 export async function listWholesaleUsers(): Promise<WholesaleUser[]> {
-  return call<WholesaleUser[]>('/api/admin/wholesale', { method: 'GET' });
+  return call<WholesaleUser[]>('/api/internal/wholesale-users', { method: 'GET' });
 }
 
 export async function createWholesaleUser(
   input: CreateWholesaleUserInput,
 ): Promise<WholesaleUser> {
-  return call<WholesaleUser>('/api/admin/wholesale', {
+  return call<WholesaleUser>('/api/internal/wholesale-users', {
     method: 'POST',
     body: JSON.stringify(input),
   });
@@ -93,14 +95,14 @@ export async function updateWholesaleUser(
   id: string,
   input: UpdateWholesaleUserInput,
 ): Promise<WholesaleUser> {
-  return call<WholesaleUser>(`/api/admin/wholesale/${encodeURIComponent(id)}`, {
+  return call<WholesaleUser>(`/api/internal/wholesale-users/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
   });
 }
 
 export async function deleteWholesaleUser(id: string): Promise<void> {
-  await call<void>(`/api/admin/wholesale/${encodeURIComponent(id)}`, {
+  await call<void>(`/api/internal/wholesale-users/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 }
