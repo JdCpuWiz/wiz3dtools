@@ -17,6 +17,8 @@ import { ManufacturersPage } from './components/admin/ManufacturersPage';
 import { CategoriesPage } from './components/admin/CategoriesPage';
 import { ShowcasePortfolioPage } from './components/admin/showcase/PortfolioPage';
 import { ShowcaseServicesPage } from './components/admin/showcase/ServicesPage';
+import { ShowcaseMaterialsPage } from './components/admin/showcase/MaterialsPage';
+import { ShowcaseTestimonialsPage } from './components/admin/showcase/TestimonialsPage';
 import { FilamentPage } from './pages/FilamentPage';
 import { SalesReportPage } from './components/reports/SalesReportPage';
 
@@ -53,6 +55,8 @@ function App() {
               materials, testimonials, about) follow in later sub-phases. */}
           <Route path="/admin/showcase/portfolio" element={<ProtectedRoute><Layout><ShowcasePortfolioPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/showcase/services" element={<ProtectedRoute><Layout><ShowcaseServicesPage /></Layout></ProtectedRoute>} />
+          <Route path="/admin/showcase/materials" element={<ProtectedRoute><Layout><ShowcaseMaterialsPage /></Layout></ProtectedRoute>} />
+          <Route path="/admin/showcase/testimonials" element={<ProtectedRoute><Layout><ShowcaseTestimonialsPage /></Layout></ProtectedRoute>} />
           <Route path="/filament" element={<ProtectedRoute><Layout><FilamentPage /></Layout></ProtectedRoute>} />
           <Route path="/reports/sales" element={<ProtectedRoute><Layout><SalesReportPage /></Layout></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

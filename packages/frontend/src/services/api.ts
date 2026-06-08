@@ -505,6 +505,76 @@ export const showcaseServicesApi = {
   },
 };
 
+// Showcase Materials API
+export interface ShowcaseMaterial {
+  id: string;
+  name: string;
+  description: string;
+  properties: string[];
+  applications: string[];
+  colors: string[];
+  order: number;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const showcaseMaterialsApi = {
+  getAll: async (): Promise<ShowcaseMaterial[]> => {
+    const response = await api.get<ApiResponse<ShowcaseMaterial[]>>('/showcase-materials');
+    return response.data.data || [];
+  },
+  create: async (data: Partial<ShowcaseMaterial>): Promise<ShowcaseMaterial> => {
+    const response = await api.post<ApiResponse<ShowcaseMaterial>>('/showcase-materials', data);
+    if (!response.data.data) throw new Error('Failed to create material');
+    return response.data.data;
+  },
+  update: async (id: string, data: Partial<ShowcaseMaterial>): Promise<ShowcaseMaterial> => {
+    const response = await api.put<ApiResponse<ShowcaseMaterial>>(`/showcase-materials/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update material');
+    return response.data.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/showcase-materials/${id}`);
+  },
+};
+
+// Showcase Testimonials API
+export interface ShowcaseTestimonial {
+  id: string;
+  name: string;
+  role: string;
+  company: string | null;
+  content: string;
+  rating: number;
+  icon: string | null;
+  featured: boolean;
+  published: boolean;
+  portfolioItemId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const showcaseTestimonialsApi = {
+  getAll: async (): Promise<ShowcaseTestimonial[]> => {
+    const response = await api.get<ApiResponse<ShowcaseTestimonial[]>>('/showcase-testimonials');
+    return response.data.data || [];
+  },
+  create: async (data: Partial<ShowcaseTestimonial>): Promise<ShowcaseTestimonial> => {
+    const response = await api.post<ApiResponse<ShowcaseTestimonial>>('/showcase-testimonials', data);
+    if (!response.data.data) throw new Error('Failed to create testimonial');
+    return response.data.data;
+  },
+  update: async (id: string, data: Partial<ShowcaseTestimonial>): Promise<ShowcaseTestimonial> => {
+    const response = await api.put<ApiResponse<ShowcaseTestimonial>>(`/showcase-testimonials/${id}`, data);
+    if (!response.data.data) throw new Error('Failed to update testimonial');
+    return response.data.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/showcase-testimonials/${id}`);
+  },
+};
+
 // Reports API
 export const reportsApi = {
   getSalesReport: async (startDate: string, endDate: string) => {

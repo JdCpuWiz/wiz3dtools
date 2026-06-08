@@ -151,6 +151,8 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
                 <>
                   <NavItem to="/admin/showcase/portfolio" label="Portfolio" onClick={onClose} />
                   <NavItem to="/admin/showcase/services" label="Services" onClick={onClose} />
+                  <NavItem to="/admin/showcase/materials" label="Materials" onClick={onClose} />
+                  <NavItem to="/admin/showcase/testimonials" label="Testimonials" onClick={onClose} />
                 </>
               )}
               <SectionHeader label="Admin" sectionKey="admin" open={sections.admin} onToggle={toggleSection} />
