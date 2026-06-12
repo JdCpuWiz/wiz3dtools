@@ -193,6 +193,33 @@ export class SalesInvoiceModel {
     );
   }
 
+  /**
+   * Flip an invoice to 'paid' exactly once. No-op if already paid (Stripe + PayPal
+   * webhooks both retry). Returns `{ transitioned: true }` only on the first call —
+   * lets webhook handlers decide whether to send a confirmation email.
+   */
+  static async markPaid(
+    id: number,
+    paymentProvider: string,
+    paymentRef: string,
+  ): Promise<{ transitioned: boolean; invoice: SalesInvoice } | null> {
+    const result = await pool.query(
+      `UPDATE sales_invoices
+         SET status = 'paid',
+             payment_provider = $2,
+             payment_ref = $3,
+             paid_at = NOW(),
+             updated_at = NOW()
+       WHERE id = $1 AND status <> 'paid'
+       RETURNING id`,
+      [id, paymentProvider, paymentRef],
+    );
+    const transitioned = (result.rowCount ?? 0) > 0;
+    const invoice = await this.findById(id);
+    if (!invoice) return null;
+    return { transitioned, invoice };
+  }
+
   static async delete(id: number): Promise<boolean> {
     const result = await pool.query('DELETE FROM sales_invoices WHERE id = $1', [id]);
     return (result.rowCount || 0) > 0;

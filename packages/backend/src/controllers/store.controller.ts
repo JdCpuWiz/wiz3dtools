@@ -106,7 +106,7 @@ export class StoreController {
 
   async createOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { customerId, notes, lineItems } = req.body as CreateStoreOrderDto;
+      const { customerId, notes, lineItems, taxExempt, taxRate } = req.body as CreateStoreOrderDto;
 
       if (!customerId || !Number.isInteger(customerId)) {
         res.status(400).json({ success: false, error: 'customerId is required' });
@@ -114,6 +114,14 @@ export class StoreController {
       }
       if (!Array.isArray(lineItems) || lineItems.length === 0) {
         res.status(400).json({ success: false, error: 'lineItems must be a non-empty array' });
+        return;
+      }
+      if (taxExempt !== undefined && typeof taxExempt !== 'boolean') {
+        res.status(400).json({ success: false, error: 'taxExempt must be a boolean' });
+        return;
+      }
+      if (taxRate !== undefined && (typeof taxRate !== 'number' || !Number.isFinite(taxRate) || taxRate < 0 || taxRate > 1)) {
+        res.status(400).json({ success: false, error: 'taxRate must be a number between 0 and 1' });
         return;
       }
       for (const item of lineItems) {
@@ -143,7 +151,7 @@ export class StoreController {
         }
       }
 
-      const invoice = await service.createOrder({ customerId, notes, lineItems });
+      const invoice = await service.createOrder({ customerId, notes, lineItems, taxExempt, taxRate });
       res.status(201).json({ success: true, data: invoice });
     } catch (error: any) {
       if (error.statusCode) {
@@ -163,6 +171,36 @@ export class StoreController {
       }
       const orders = await service.getOrdersByCustomer(customerId);
       res.json({ success: true, data: orders });
+    } catch (error) { next(error); }
+  }
+
+  async markPaid(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (!id || isNaN(id)) {
+        res.status(400).json({ success: false, error: 'Invalid order id' });
+        return;
+      }
+      const { customerId, paymentProvider, paymentRef } = req.body ?? {};
+      if (!Number.isInteger(customerId) || customerId < 1) {
+        res.status(400).json({ success: false, error: 'customerId is required' });
+        return;
+      }
+      if (typeof paymentProvider !== 'string' || paymentProvider.trim().length === 0) {
+        res.status(400).json({ success: false, error: 'paymentProvider is required' });
+        return;
+      }
+      if (typeof paymentRef !== 'string' || paymentRef.trim().length === 0) {
+        res.status(400).json({ success: false, error: 'paymentRef is required' });
+        return;
+      }
+
+      const result = await service.markOrderPaid(id, customerId, paymentProvider.trim(), paymentRef.trim());
+      if (!result) {
+        res.status(404).json({ success: false, error: 'Order not found' });
+        return;
+      }
+      res.json({ success: true, data: result.invoice, transitioned: result.transitioned });
     } catch (error) { next(error); }
   }
 

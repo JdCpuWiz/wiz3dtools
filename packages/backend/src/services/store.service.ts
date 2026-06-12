@@ -39,6 +39,10 @@ export interface CreateStoreOrderDto {
   customerId: number;
   notes?: string;
   lineItems: StoreOrderLineItem[];
+  /** Defaults to true (wholesale behavior). Consumer checkout passes false. */
+  taxExempt?: boolean;
+  /** Defaults to 0. Consumer checkout passes the applicable nexus rate. */
+  taxRate?: number;
 }
 
 export interface StoreOrderSummary {
@@ -184,11 +188,12 @@ export class StoreService {
       });
     }
 
-    // Create draft invoice — always tax-exempt for wholesalers
+    // Create draft invoice. Defaults preserve wholesale (taxExempt:true, taxRate:0);
+    // consumer checkout flips both to charge sales tax.
     const invoice = await SalesInvoiceModel.create({
       customerId: data.customerId,
-      taxExempt: true,
-      taxRate: 0,
+      taxExempt: data.taxExempt ?? true,
+      taxRate: data.taxRate ?? 0,
       notes: data.notes ?? undefined,
     });
 
@@ -216,6 +221,23 @@ export class StoreService {
     // Ensure the invoice belongs to this customer
     if (!invoice || invoice.customerId !== customerId) return null;
     return invoice;
+  }
+
+  /**
+   * Idempotent paid flip. Verifies the invoice belongs to the passed customerId
+   * before touching it. Returns `transitioned:true` only on the first call so
+   * the caller (Stripe / PayPal webhook) can decide whether to fire a
+   * confirmation email — retries get `transitioned:false` and skip the send.
+   */
+  async markOrderPaid(
+    id: number,
+    customerId: number,
+    paymentProvider: string,
+    paymentRef: string,
+  ): Promise<{ transitioned: boolean; invoice: SalesInvoice } | null> {
+    const existing = await SalesInvoiceModel.findById(id);
+    if (!existing || existing.customerId !== customerId) return null;
+    return SalesInvoiceModel.markPaid(id, paymentProvider, paymentRef);
   }
 
   async getOrdersByCustomer(customerId: number): Promise<StoreOrderSummary[]> {

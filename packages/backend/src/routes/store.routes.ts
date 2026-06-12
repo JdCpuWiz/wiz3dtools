@@ -13,6 +13,7 @@ router.get('/colors', controller.getColors.bind(controller));
 router.post('/orders', controller.createOrder.bind(controller));
 router.get('/orders', controller.getOrders.bind(controller));
 router.get('/orders/:id', controller.getOrder.bind(controller));
+router.post('/orders/:id/mark-paid', controller.markPaid.bind(controller));
 router.post('/customers', controller.createCustomer.bind(controller));
 router.get('/customers/:id', controller.getCustomer.bind(controller));
 router.patch('/customers/:id', controller.updateCustomer.bind(controller));
