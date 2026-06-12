@@ -1,8 +1,10 @@
+import bcrypt from 'bcrypt';
 import { Request, Response, NextFunction } from 'express';
 import { StoreService, CreateStoreOrderDto } from '../services/store.service.js';
 import { CustomerModel } from '../models/customer.model.js';
 import { pool } from '../config/database.js';
 import { writeAuditLog } from '../models/audit-log.model.js';
+import { signStoreCustomerToken } from '../services/auth.service.js';
 
 // Bug #60 F1: store routes had no audit trail — invoices and customers
 // could be created via the store API with no record of who/where. Every
@@ -106,6 +108,46 @@ export class StoreController {
     } catch (error) { next(error); }
   }
 
+  // Change #148 F7: mint a short-lived per-customer token that scopes
+  // subsequent /api/store/* calls to a specific customerId. Caller
+  // (wiz3d-prints) proves customer identity with the email + password
+  // they just verified during consumer login. Customers without a
+  // password_hash (wholesale-only legacy rows) get 403 — they need to
+  // set a consumer password first.
+  async issueCustomerToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, password } = (req.body ?? {}) as { email?: unknown; password?: unknown };
+      if (typeof email !== 'string' || email.trim().length === 0) {
+        res.status(400).json({ success: false, error: 'email is required' });
+        return;
+      }
+      if (typeof password !== 'string' || password.length === 0) {
+        res.status(400).json({ success: false, error: 'password is required' });
+        return;
+      }
+      const row = await pool.query(
+        `SELECT id, password_hash AS "passwordHash" FROM customers WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+        [email.trim()],
+      );
+      const customer = row.rows[0] as { id: number; passwordHash: string | null } | undefined;
+      // Generic error in both branches — don't leak whether the email exists.
+      if (!customer || !customer.passwordHash) {
+        await writeAuditLog(STORE_ACTOR, 'store.token.issue-denied', `email:${email.trim()}`, `ip=${clientIp(req)} reason=no-credential`);
+        res.status(401).json({ success: false, error: 'Invalid credentials' });
+        return;
+      }
+      const ok = await bcrypt.compare(password, customer.passwordHash);
+      if (!ok) {
+        await writeAuditLog(STORE_ACTOR, 'store.token.issue-denied', `customer:${customer.id}`, `ip=${clientIp(req)} reason=bad-password`);
+        res.status(401).json({ success: false, error: 'Invalid credentials' });
+        return;
+      }
+      const { token, expiresAt } = signStoreCustomerToken(customer.id);
+      await writeAuditLog(STORE_ACTOR, 'store.token.issued', `customer:${customer.id}`, `ip=${clientIp(req)}`);
+      res.json({ success: true, data: { token, expiresAt, customerId: customer.id } });
+    } catch (error) { next(error); }
+  }
+
   async getProducts(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const products = await service.getProducts();
@@ -187,7 +229,13 @@ export class StoreController {
 
   async getOrders(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const customerId = parseInt(req.query.customerId as string);
+      // Change #148 F7: prefer the token's customerId when present —
+      // can't be tricked into listing someone else's orders by tampering
+      // the query param. Falls back to query when no token (legacy /
+      // flag-off path).
+      const tokenCustomerId = req.storeCustomer?.id;
+      const queryCustomerId = parseInt(req.query.customerId as string);
+      const customerId = tokenCustomerId ?? queryCustomerId;
       if (!customerId || isNaN(customerId)) {
         res.status(400).json({ success: false, error: 'customerId query param is required' });
         return;
@@ -242,7 +290,11 @@ export class StoreController {
         res.status(400).json({ success: false, error: 'Invalid order id' });
         return;
       }
-      const customerId = parseInt(req.query.customerId as string);
+      // Change #148 F7: token customerId wins; query is fallback. Stops
+      // ?customerId= tampering from reaching another customer's order.
+      const tokenCustomerId = req.storeCustomer?.id;
+      const queryCustomerId = parseInt(req.query.customerId as string);
+      const customerId = tokenCustomerId ?? queryCustomerId;
       if (!customerId || isNaN(customerId)) {
         res.status(400).json({ success: false, error: 'customerId query param is required' });
         return;

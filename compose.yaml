@@ -43,6 +43,11 @@ services:
       - BAMBUDDY_API_KEY=${BAMBUDDY_API_KEY}
       - STORE_API_KEY=${STORE_API_KEY}
       - STORE_IMAGE_PUBLIC_BASE=${STORE_IMAGE_PUBLIC_BASE:-https://tools.wiz3dprints.com/uploads/store}
+      # Change #148 F7 — per-customer signed tokens. Keep
+      # ENABLE_STORE_CUSTOMER_TOKEN=false until wiz3d-prints' consumer
+      # flow ships the token-fetch wiring; flip to true to enforce.
+      - STORE_CUSTOMER_TOKEN_SECRET=${STORE_CUSTOMER_TOKEN_SECRET}
+      - ENABLE_STORE_CUSTOMER_TOKEN=${ENABLE_STORE_CUSTOMER_TOKEN:-false}
       - MAX_IMAGE_SIZE=${MAX_IMAGE_SIZE:-5242880}
       # BuildPlan #11 Phase 1 — wholesale-user admin proxy. Token must
       # match `ADMIN_API_TOKEN` on the wiz3d-prints side.
