@@ -1,10 +1,57 @@
 import { Request, Response, NextFunction } from 'express';
 import { StoreService, CreateStoreOrderDto } from '../services/store.service.js';
 import { CustomerModel } from '../models/customer.model.js';
+import { pool } from '../config/database.js';
 
 const service = new StoreService();
 
 export class StoreController {
+  async createCustomer(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const allowed = ['businessName', 'contactName', 'email', 'phone', 'addressLine1', 'addressLine2', 'city', 'stateProvince', 'postalCode', 'country'] as const;
+      type AllowedKey = typeof allowed[number];
+      const data: Partial<Record<AllowedKey, string>> = {};
+      for (const key of allowed) {
+        const value = req.body?.[key];
+        if (typeof value === 'string' && value.trim().length > 0) {
+          data[key] = value.trim();
+        }
+      }
+
+      if (!data.email) {
+        res.status(400).json({ success: false, error: 'email is required' });
+        return;
+      }
+      if (!data.contactName) {
+        res.status(400).json({ success: false, error: 'contactName is required' });
+        return;
+      }
+
+      const existing = await pool.query(
+        `SELECT id FROM customers WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+        [data.email],
+      );
+      if (existing.rows.length > 0) {
+        res.status(409).json({ success: false, error: 'A customer with that email already exists' });
+        return;
+      }
+
+      const customer = await CustomerModel.create({
+        contactName: data.contactName,
+        email: data.email,
+        businessName: data.businessName,
+        phone: data.phone,
+        addressLine1: data.addressLine1,
+        addressLine2: data.addressLine2,
+        city: data.city,
+        stateProvince: data.stateProvince,
+        postalCode: data.postalCode,
+        country: data.country,
+      });
+      res.status(201).json({ success: true, data: customer });
+    } catch (error) { next(error); }
+  }
+
   async getCustomer(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = parseInt(req.params.id);
