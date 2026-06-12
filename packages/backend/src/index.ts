@@ -36,8 +36,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Trust proxy (required when behind nginx)
-app.set('trust proxy', 1);
+// Bug #60 F5: production runs behind both Traefik AND tinyauth (two hops),
+// so a trust of 1 reads the inner hop's IP and rate limits bind to the
+// same address for every request. 2 unwraps both hops to land on the real
+// client IP. Verify with `req.ip` matching X-Forwarded-For[0] after any
+// upstream proxy topology change.
+app.set('trust proxy', 2);
 
 // Middleware
 const allowedOrigins = process.env.CORS_ORIGIN
@@ -99,8 +103,26 @@ const loginLimiter = rateLimit({
   message: { success: false, error: 'Too many login attempts, please try again later' },
 });
 
+// Bug #60 F4: tight per-IP limit on the invoice/customer creation paths.
+// Legitimate traffic is bursty but bounded (a wholesale flow tops out at
+// a few dozen orders / customer creates per session); 60/15min is roomy
+// for that and still hard-stops a key-leak abuse pattern. Applies to all
+// HTTP methods on the path; reads (GET) skipped so order-status polls
+// don't get throttled.
+const creationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'GET' || req.method === 'HEAD',
+  message: { success: false, error: 'Too many creation requests, please slow down' },
+});
+
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', loginLimiter);
+app.use('/api/sales-invoices', creationLimiter);
+app.use('/api/store/orders', creationLimiter);
+app.use('/api/store/customers', creationLimiter);
 
 // Auth routes (public — must be before requireAuth middleware)
 app.use('/api/auth', authRoutes);

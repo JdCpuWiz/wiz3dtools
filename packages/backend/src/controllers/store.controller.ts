@@ -2,6 +2,20 @@ import { Request, Response, NextFunction } from 'express';
 import { StoreService, CreateStoreOrderDto } from '../services/store.service.js';
 import { CustomerModel } from '../models/customer.model.js';
 import { pool } from '../config/database.js';
+import { writeAuditLog } from '../models/audit-log.model.js';
+
+// Bug #60 F1: store routes had no audit trail — invoices and customers
+// could be created via the store API with no record of who/where. Every
+// mutation now writes an audit_logs row tagged actor='store-api' with the
+// source IP appended so we can pivot off a single attacker without
+// pulling Traefik logs. Reads remain unlogged (high volume, low risk).
+const STORE_ACTOR = 'store-api';
+
+function clientIp(req: Request): string {
+  const fwd = req.headers['x-forwarded-for'];
+  if (typeof fwd === 'string' && fwd.length > 0) return fwd.split(',')[0].trim();
+  return req.ip ?? 'unknown';
+}
 
 const service = new StoreService();
 
@@ -48,6 +62,7 @@ export class StoreController {
         postalCode: data.postalCode,
         country: data.country,
       });
+      await writeAuditLog(STORE_ACTOR, 'store.customer.create', `customer:${customer.id}`, `ip=${clientIp(req)} email=${data.email}`);
       res.status(201).json({ success: true, data: customer });
     } catch (error) { next(error); }
   }
@@ -86,6 +101,7 @@ export class StoreController {
         res.status(404).json({ success: false, error: 'Customer not found' });
         return;
       }
+      await writeAuditLog(STORE_ACTOR, 'store.customer.update', `customer:${id}`, `ip=${clientIp(req)} fields=${Object.keys(data).join(',')}`);
       res.json({ success: true, data: customer });
     } catch (error) { next(error); }
   }
@@ -152,6 +168,13 @@ export class StoreController {
       }
 
       const invoice = await service.createOrder({ customerId, notes, lineItems, taxExempt, taxRate });
+      const itemsTotal = lineItems.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+      await writeAuditLog(
+        STORE_ACTOR,
+        'store.invoice.create',
+        `invoice:${invoice.invoiceNumber}`,
+        `ip=${clientIp(req)} customerId=${customerId} items=${lineItems.length} itemsSubtotal=${itemsTotal.toFixed(2)}`,
+      );
       res.status(201).json({ success: true, data: invoice });
     } catch (error: any) {
       if (error.statusCode) {
@@ -199,6 +222,14 @@ export class StoreController {
       if (!result) {
         res.status(404).json({ success: false, error: 'Order not found' });
         return;
+      }
+      if (result.transitioned) {
+        await writeAuditLog(
+          STORE_ACTOR,
+          'store.invoice.mark-paid',
+          `invoice:${result.invoice.invoiceNumber}`,
+          `ip=${clientIp(req)} customerId=${customerId} provider=${paymentProvider.trim()} ref=${paymentRef.trim()}`,
+        );
       }
       res.json({ success: true, data: result.invoice, transitioned: result.transitioned });
     } catch (error) { next(error); }

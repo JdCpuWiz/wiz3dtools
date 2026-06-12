@@ -30,9 +30,23 @@ export async function register(req: Request, res: Response, next: NextFunction):
     const parsed = parseBody(registerSchema, req.body);
     if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
     const count = await UserModel.countAll();
-    // Bootstrap: first user can register without a token
-    // After that, require admin
-    if (count > 0) {
+    // Bug #60 F6: bootstrap used to depend solely on count===0. A DB outage,
+    // accidental DELETE, or restored-from-empty-snapshot would put the
+    // system into "first user wins" mode silently — unauthenticated
+    // attacker could register an admin. Now requires BOTH count===0 AND
+    // an explicit env flag, so bootstrap is a deliberate operator action,
+    // not a side effect of empty state. Remove ALLOW_BOOTSTRAP from .env
+    // after the first user is created so the flag can't be reused later.
+    const bootstrapAllowed = process.env.ALLOW_BOOTSTRAP === 'true';
+    const isBootstrap = count === 0 && bootstrapAllowed;
+    if (!isBootstrap) {
+      if (count === 0 && !bootstrapAllowed) {
+        res.status(503).json({
+          success: false,
+          error: 'Registration not configured. Set ALLOW_BOOTSTRAP=true on the server to create the first admin.',
+        });
+        return;
+      }
       if (!req.user) {
         res.status(401).json({ success: false, error: 'Authentication required' });
         return;
