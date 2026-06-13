@@ -10,6 +10,7 @@ import type {
   UpdateSalesInvoiceDto,
   CreateLineItemDto,
   InvoiceLineItem,
+  LineItemStatus,
 } from '@wizqueue/shared';
 // InvoiceLineItem stays imported — addLineItem returns it.
 
@@ -87,6 +88,14 @@ export class SalesInvoiceService {
     await InvoiceLineItemModel.delete(itemId);
   }
 
+  async updateLineItemStatus(invoiceId: number, itemId: number, status: LineItemStatus): Promise<InvoiceLineItem> {
+    const item = await InvoiceLineItemModel.findById(itemId);
+    if (!item || item.invoiceId !== invoiceId) throw new Error('Line item not found');
+    const updated = await InvoiceLineItemModel.updateStatus(itemId, status);
+    if (!updated) throw new Error('Line item not found');
+    return updated;
+  }
+
   async ship(invoiceId: number): Promise<void> {
     const invoice = await this.getById(invoiceId);
     if (invoice.shippedAt) throw new Error('Invoice has already been shipped');
@@ -94,6 +103,11 @@ export class SalesInvoiceService {
     if (!isPickup && !invoice.trackingNumber?.trim()) throw new Error('A tracking number is required before marking as shipped');
     if (!invoice.customer) throw new Error('Invoice has no customer');
     if (!isPickup && !invoice.customer.email) throw new Error(`Customer "${invoice.customer.contactName}" has no email address`);
+    if (invoice.lineItems.length === 0) throw new Error('Invoice has no line items');
+    const pending = invoice.lineItems.filter((li) => li.status === 'pending');
+    if (pending.length > 0) {
+      throw new Error(`${pending.length} line item${pending.length === 1 ? '' : 's'} still pending — mark each as completed or backordered before shipping`);
+    }
 
     await SalesInvoiceModel.markShipped(invoiceId, invoice.trackingNumber?.trim() || null);
     await sendShippingEmail(invoice.customer, invoice.invoiceNumber, invoice.carrier, invoice.trackingNumber?.trim() || null);

@@ -205,6 +205,7 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     };
 
     let rowIdx = 0; // separate from forEach idx so it resets visually per-page
+    let anyBackordered = false;
     invoice.lineItems.forEach((item: InvoiceLineItem) => {
       // ── Measure row height before drawing anything ────────────────────────
       doc.fontSize(8);
@@ -219,8 +220,11 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
       }
 
       const colorsH = (item.colors && item.colors.length > 0) ? (3 + item.colors.length * 10) : 0;
+      const isBackordered = item.status === 'backordered';
+      if (isBackordered) anyBackordered = true;
+      const backorderH = isBackordered ? 14 : 0; // 11pt badge + 3pt gap
 
-      const leftColH   = productH + skuH + colorsH;
+      const leftColH   = backorderH + productH + skuH + colorsH;
       const rowContent = Math.max(leftColH, detailsH, 12); // minimum 12pt content
       const rowHeight  = Math.ceil(rowContent) + VPAD * 2;
 
@@ -243,21 +247,33 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
       const textTop = rowY + VPAD;
       const clip1 = { lineBreak: false, ellipsis: true, height: 12 }; // single-line columns
 
+      // ── Backordered badge (above product name, when set) ──────────────────
+      let productTop = textTop;
+      if (isBackordered) {
+        const badgeText = 'BACKORDERED';
+        doc.fontSize(7).font('Helvetica-Bold');
+        const badgeW = doc.widthOfString(badgeText) + 8;
+        doc.fillColor('#eab308').roundedRect(colX.product + 4, textTop, badgeW, 11, 2).fill();
+        doc.fillColor('#000000').text(badgeText, colX.product + 8, textTop + 2, { lineBreak: false, width: badgeW });
+        doc.fillColor(DARK).font('Helvetica').fontSize(8);
+        productTop = textTop + 14;
+      }
+
       // ── Product name (wraps freely) ───────────────────────────────────────
       doc.fontSize(8);
-      doc.text(item.productName, colX.product + 4, textTop, { width: COL_W.product });
+      doc.text(item.productName, colX.product + 4, productTop, { width: COL_W.product });
 
       // ── SKU (single line, below product name) ─────────────────────────────
       if (item.sku) {
         doc.fillColor('#555555').fontSize(7)
-          .text(item.sku, colX.product + 4, textTop + productH + 3, { ...clip1, height: 10, width: COL_W.product });
+          .text(item.sku, colX.product + 4, productTop + productH + 3, { ...clip1, height: 10, width: COL_W.product });
         doc.fillColor(DARK).fontSize(8);
       }
 
       // ── Colors (swatch + name + note, below SKU) ──────────────────────────
       if (item.colors && item.colors.length > 0) {
         const sortedColors = [...item.colors].sort((a, b) => a.sortOrder - b.sortOrder);
-        let colorY = textTop + productH + skuH + 3;
+        let colorY = productTop + productH + skuH + 3;
         for (const ic of sortedColors) {
           doc.fillColor(ic.color.hex).rect(colX.product + 4, colorY + 1, 7, 7).fill();
           doc.fillColor(DARK).fontSize(7);
@@ -285,6 +301,13 @@ export async function generateInvoicePdf(invoice: SalesInvoice): Promise<Buffer>
     });
 
     doc.moveTo(M, rowY).lineTo(R, rowY).lineWidth(0.5).strokeColor(MID_GRAY).stroke();
+
+    if (anyBackordered) {
+      doc.fillColor('#b45309').fontSize(8).font('Helvetica-Bold')
+        .text('Note: items marked BACKORDERED are not included in this shipment and will ship separately.', M, rowY + 6, { width: CW });
+      doc.fillColor(DARK).font('Helvetica').fontSize(8);
+      rowY += 18;
+    }
 
     // ── Totals (light grey box) ────────────────────────────────────────────
     const { subtotal, shippingCost, taxAmount, total, totalWeightOz } = calcTotals(invoice);

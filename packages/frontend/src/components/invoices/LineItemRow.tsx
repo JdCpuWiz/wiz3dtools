@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { InvoiceLineItem, ItemColorDto } from '@wizqueue/shared';
+import type { InvoiceLineItem, ItemColorDto, LineItemStatus } from '@wizqueue/shared';
 import { useColors } from '../../hooks/useColors';
 import { useProducts } from '../../hooks/useProducts';
 import { ColorPicker, ColorSwatch } from '../common/ColorPicker';
@@ -8,6 +8,7 @@ interface LineItemRowProps {
   item: InvoiceLineItem;
   onUpdate: (itemId: number, data: Partial<{ productId: number; productName: string; sku: string; details: string; quantity: number; unitPrice: number }>) => void;
   onUpdateColors?: (itemId: number, colors: ItemColorDto[]) => void;
+  onUpdateStatus?: (itemId: number, status: LineItemStatus) => void;
   onDelete: (itemId: number) => void;
   readOnly?: boolean;
 }
@@ -18,7 +19,7 @@ const inputSt: React.CSSProperties = {
   boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)',
 };
 
-export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpdateColors, onDelete, readOnly }) => {
+export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpdateColors, onUpdateStatus, onDelete, readOnly }) => {
   const { colors: availableColors } = useColors();
   const { products } = useProducts(true);
   const [editing, setEditing] = useState(false);
@@ -97,6 +98,7 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
           <td className="px-3 py-2"><input type="number" min={1} value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value) || 1)} className={`${cellInputClass} w-14`} style={inputSt} /></td>
           <td className="px-3 py-2"><input type="number" min={0} step={0.01} value={unitPrice} onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)} className={`${cellInputClass} w-20`} style={inputSt} /></td>
           <td className="px-3 py-2 text-right font-medium" style={{ color: '#ff9900' }}>${(quantity * unitPrice).toFixed(2)}</td>
+          <td className="px-3 py-2 text-xs text-iron-400">—</td>
           <td className="px-3 py-2">
             <div className="flex gap-1">
               <button onClick={save} className="btn-primary btn-sm text-xs">Save</button>
@@ -106,7 +108,7 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
         </tr>
         {/* Color picker row */}
         <tr style={{ background: 'rgba(230,138,0,0.03)', borderBottom: '1px solid #2d2d2d' }}>
-          <td colSpan={6} className="px-3 pb-3 pt-1">
+          <td colSpan={7} className="px-3 pb-3 pt-1">
             <div style={{ borderTop: '1px solid #2d2d2d', paddingTop: 8 }}>
               <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#ff9900' }}>
                 Print Colors (1 primary + up to 3 more)
@@ -165,6 +167,42 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
         ${(item.quantity * item.unitPrice).toFixed(2)}
       </td>
       <td className="px-3 py-2.5">
+        {readOnly || !onUpdateStatus ? (
+          <StatusChip status={item.status} />
+        ) : (
+          <div className="flex flex-col items-start gap-1">
+            <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs text-white">
+              <input
+                type="checkbox"
+                checked={item.status === 'completed'}
+                onChange={(e) => onUpdateStatus(item.id, e.target.checked ? 'completed' : 'pending')}
+                className="h-4 w-4 cursor-pointer accent-emerald-500"
+              />
+              <span>Completed</span>
+            </label>
+            {item.status === 'backordered' ? (
+              <button
+                onClick={() => onUpdateStatus(item.id, 'pending')}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
+                style={{ background: '#eab308', color: '#000000' }}
+                title="Click to clear backorder"
+              >
+                ⚠ Backordered
+              </button>
+            ) : item.status === 'pending' ? (
+              <button
+                onClick={() => onUpdateStatus(item.id, 'backordered')}
+                className="text-xs px-1.5 py-0.5 rounded"
+                style={{ background: '#6b7280', color: '#ffffff' }}
+                title="Mark as backordered (will be flagged on invoice)"
+              >
+                Backorder
+              </button>
+            ) : null}
+          </div>
+        )}
+      </td>
+      <td className="px-3 py-2.5">
         <div className="flex items-center gap-1.5 justify-end flex-wrap">
           {/* BuildPlan #6 Phase 3: "In queue" badge + "→ Queue" button removed —
               printing happens in BamBuddy now, not via the wiz3dtools queue. */}
@@ -177,5 +215,27 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
         </div>
       </td>
     </tr>
+  );
+};
+
+const StatusChip: React.FC<{ status: LineItemStatus }> = ({ status }) => {
+  if (status === 'completed') {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: '#15803d', color: '#ffffff' }}>
+        ✓ Completed
+      </span>
+    );
+  }
+  if (status === 'backordered') {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: '#eab308', color: '#000000' }}>
+        ⚠ Backordered
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: '#6b7280', color: '#ffffff' }}>
+      Pending
+    </span>
   );
 };

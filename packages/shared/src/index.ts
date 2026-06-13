@@ -48,6 +48,7 @@ export type {
   SalesInvoice,
   SalesInvoiceStatus,
   InvoiceLineItem,
+  LineItemStatus,
   CreateSalesInvoiceDto,
   UpdateSalesInvoiceDto,
   CreateLineItemDto,

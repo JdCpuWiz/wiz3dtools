@@ -5,6 +5,7 @@ import type {
   UpdateSalesInvoiceDto,
   CreateLineItemDto,
   ItemColorDto,
+  LineItemStatus,
 } from '@wizqueue/shared';
 import toast from 'react-hot-toast';
 
@@ -129,6 +130,15 @@ export const useSalesInvoice = (id: number) => {
     onError: (error: Error) => toast.error(`Failed to save colors: ${error.message}`),
   });
 
+  const updateLineItemStatusMutation = useMutation({
+    mutationFn: ({ itemId, status }: { itemId: number; status: LineItemStatus }) =>
+      salesInvoiceApi.updateLineItemStatus(id, itemId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-invoices', id] });
+    },
+    onError: (error: Error) => toast.error(`Failed to update status: ${error.message}`),
+  });
+
   return {
     invoice: query.data,
     isLoading: query.isLoading,
@@ -139,5 +149,7 @@ export const useSalesInvoice = (id: number) => {
     deleteLineItem: (itemId: number) => deleteLineItemMutation.mutateAsync(itemId),
     updateLineItemColors: (itemId: number, colors: ItemColorDto[]) =>
       updateLineItemColorsMutation.mutateAsync({ itemId, colors }),
+    updateLineItemStatus: (itemId: number, status: LineItemStatus) =>
+      updateLineItemStatusMutation.mutateAsync({ itemId, status }),
   };
 };

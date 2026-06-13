@@ -8,6 +8,7 @@ import type {
   CreateSalesInvoiceDto,
   UpdateSalesInvoiceDto,
   InvoiceLineItem,
+  LineItemStatus,
   CreateLineItemDto,
   Product,
   ProductColor,
@@ -154,6 +155,12 @@ export const salesInvoiceApi = {
 
   deleteLineItem: async (invoiceId: number, itemId: number): Promise<void> => {
     await api.delete(`/sales-invoices/${invoiceId}/line-items/${itemId}`);
+  },
+
+  updateLineItemStatus: async (invoiceId: number, itemId: number, status: LineItemStatus): Promise<InvoiceLineItem> => {
+    const response = await api.patch<ApiResponse<InvoiceLineItem>>(`/sales-invoices/${invoiceId}/line-items/${itemId}/status`, { status });
+    if (!response.data.data) throw new Error('Failed to update line item status');
+    return response.data.data;
   },
 
   sendEmail: async (id: number): Promise<void> => {

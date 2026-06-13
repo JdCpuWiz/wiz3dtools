@@ -9,6 +9,7 @@ import {
   updateInvoiceSchema,
   addLineItemSchema,
   updateLineItemSchema,
+  updateLineItemStatusSchema,
 } from '../validation/schemas.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
@@ -92,6 +93,18 @@ export class SalesInvoiceController {
       if (isNaN(invoiceId) || isNaN(itemId)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
       await service.deleteLineItem(invoiceId, itemId);
       res.json({ success: true, message: 'Line item deleted' });
+    } catch (error) { next(error); }
+  }
+
+  async updateLineItemStatus(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const invoiceId = parseInt(req.params.id);
+      const itemId = parseInt(req.params.itemId);
+      if (isNaN(invoiceId) || isNaN(itemId)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      const parsed = parseBody(updateLineItemStatusSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      const item = await service.updateLineItemStatus(invoiceId, itemId, parsed.data.status);
+      res.json({ success: true, data: item, message: 'Line item status updated' });
     } catch (error) { next(error); }
   }
 

@@ -62,7 +62,7 @@ export const InvoiceDetail: React.FC = () => {
   const invoiceId = parseInt(id || '0');
 
   const { csrfToken } = useAuth();
-  const { invoice, isLoading, addLineItem, updateLineItem, deleteLineItem, updateLineItemColors } = useSalesInvoice(invoiceId);
+  const { invoice, isLoading, addLineItem, updateLineItem, deleteLineItem, updateLineItemColors, updateLineItemStatus } = useSalesInvoice(invoiceId);
   const { sendEmail, update, ship, isSending, isShipping } = useSalesInvoices();
   const { customers } = useCustomers();
   const { products } = useProducts(true);
@@ -89,6 +89,9 @@ export const InvoiceDetail: React.FC = () => {
   const subtotal = invoice.lineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0);
   const taxAmount = invoice.taxExempt ? 0 : subtotal * invoice.taxRate;
   const total = subtotal + (invoice.shippingCost || 0) + taxAmount;
+  const pendingCount = invoice.lineItems.filter((li) => li.status === 'pending').length;
+  const backorderedCount = invoice.lineItems.filter((li) => li.status === 'backordered').length;
+  const hasNoLineItems = invoice.lineItems.length === 0;
 
   // Shipment weight: sum of (color weightGrams × quantity) per line item
   const totalWeightGrams = invoice.lineItems.reduce((sum, li) => {
@@ -172,16 +175,25 @@ export const InvoiceDetail: React.FC = () => {
             <button
               onClick={() => {
                 const isPickup = invoice.carrier === 'Customer Pickup';
+                if (hasNoLineItems) { window.alert('Invoice has no line items.'); return; }
+                if (pendingCount > 0) { window.alert(`${pendingCount} line item${pendingCount === 1 ? ' is' : 's are'} still pending — mark each as completed or backordered before shipping.`); return; }
                 if (!isPickup && !invoice.trackingNumber?.trim()) { window.alert('Please add a tracking number before marking as shipped.'); return; }
                 if (!isPickup && !invoice.customer?.email) { window.alert('Customer has no email address — shipping notification cannot be sent.'); return; }
                 if (!invoice.carrier) { window.alert('Please select a carrier before marking as shipped.'); return; }
                 const confirmMsg = isPickup
-                  ? `Mark ${invoice.invoiceNumber} as ready for customer pickup?`
-                  : `Mark ${invoice.invoiceNumber} as shipped and notify ${invoice.customer?.email}?`;
+                  ? `Mark ${invoice.invoiceNumber} as ready for customer pickup?${backorderedCount > 0 ? `\n\n${backorderedCount} item${backorderedCount === 1 ? ' is' : 's are'} backordered and will be flagged on the invoice.` : ''}`
+                  : `Mark ${invoice.invoiceNumber} as shipped and notify ${invoice.customer?.email}?${backorderedCount > 0 ? `\n\n${backorderedCount} item${backorderedCount === 1 ? ' is' : 's are'} backordered and will be flagged on the invoice.` : ''}`;
                 if (window.confirm(confirmMsg)) ship(invoiceId);
               }}
-              disabled={isShipping || !invoice.carrier || (!invoice.trackingNumber?.trim() && invoice.carrier !== 'Customer Pickup') || (!invoice.customer?.email && invoice.carrier !== 'Customer Pickup')}
-              title={!invoice.carrier ? 'Select a carrier first' : !invoice.trackingNumber?.trim() && invoice.carrier !== 'Customer Pickup' ? 'Add a tracking number first' : !invoice.customer?.email && invoice.carrier !== 'Customer Pickup' ? 'Customer has no email' : undefined}
+              disabled={isShipping || hasNoLineItems || pendingCount > 0 || !invoice.carrier || (!invoice.trackingNumber?.trim() && invoice.carrier !== 'Customer Pickup') || (!invoice.customer?.email && invoice.carrier !== 'Customer Pickup')}
+              title={
+                hasNoLineItems ? 'Invoice has no line items'
+                  : pendingCount > 0 ? `${pendingCount} item${pendingCount === 1 ? '' : 's'} still pending — mark each as completed or backordered`
+                  : !invoice.carrier ? 'Select a carrier first'
+                  : !invoice.trackingNumber?.trim() && invoice.carrier !== 'Customer Pickup' ? 'Add a tracking number first'
+                  : !invoice.customer?.email && invoice.carrier !== 'Customer Pickup' ? 'Customer has no email'
+                  : undefined
+              }
               className="btn-sm text-sm font-medium px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(to bottom,#3b82f6,#2563eb)', color: '#fff', boxShadow: '0 4px 8px rgb(0 0 0 / 0.4)' }}
             >
@@ -375,7 +387,8 @@ export const InvoiceDetail: React.FC = () => {
                 <th className="text-left px-3 py-2 font-semibold w-16" style={{ color: '#ff9900' }}>Qty</th>
                 <th className="text-left px-3 py-2 font-semibold w-24" style={{ color: '#ff9900' }}>Unit Price</th>
                 <th className="text-right px-3 py-2 font-semibold w-24" style={{ color: '#ff9900' }}>Subtotal</th>
-                <th className="px-3 py-2 w-36" />
+                <th className="text-left px-3 py-2 font-semibold w-32" style={{ color: '#ff9900' }}>Status</th>
+                <th className="px-3 py-2 w-28" />
               </tr>
             </thead>
             <tbody>
@@ -385,6 +398,7 @@ export const InvoiceDetail: React.FC = () => {
                   item={item}
                   onUpdate={(itemId, data) => { if (confirmIfPaid()) updateLineItem(itemId, data); }}
                   onUpdateColors={(itemId, colors) => { if (confirmIfPaid()) updateLineItemColors(itemId, colors); }}
+                  onUpdateStatus={(itemId, status) => { if (!isShipped) updateLineItemStatus(itemId, status); }}
                   onDelete={(itemId) => { if (confirmIfPaid()) deleteLineItem(itemId); }}
                 />
               ))}
@@ -446,6 +460,7 @@ export const InvoiceDetail: React.FC = () => {
                     <td className="px-3 py-3 text-right font-medium" style={{ color: '#ff9900' }}>
                       ${(newItem.quantity * newItem.unitPrice).toFixed(2)}
                     </td>
+                    <td className="px-3 py-3 text-xs text-iron-400">—</td>
                     <td className="px-3 py-3">
                       <div className="flex flex-col gap-1">
                         <button onClick={handleAddItem} className="btn-primary btn-sm text-xs">Add</button>
@@ -455,7 +470,7 @@ export const InvoiceDetail: React.FC = () => {
                   </tr>
                   {showAddColors && (
                     <tr style={{ background: 'rgba(255,153,0,0.03)', borderBottom: '1px solid #2d2d2d' }}>
-                      <td colSpan={6} className="px-3 pb-3 pt-1">
+                      <td colSpan={7} className="px-3 pb-3 pt-1">
                         <div style={{ borderTop: '1px solid #2d2d2d', paddingTop: 8 }}>
                           <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#ff9900' }}>
                             Print Colors — 1 primary + up to 3 more
@@ -476,7 +491,7 @@ export const InvoiceDetail: React.FC = () => {
               )}
 
               {invoice.lineItems.length === 0 && !showAddRow && (
-                <tr><td colSpan={6} className="px-3 py-8 text-center text-iron-500 text-sm">No line items — click "+ Add Item"</td></tr>
+                <tr><td colSpan={7} className="px-3 py-8 text-center text-iron-500 text-sm">No line items — click "+ Add Item"</td></tr>
               )}
             </tbody>
           </table>

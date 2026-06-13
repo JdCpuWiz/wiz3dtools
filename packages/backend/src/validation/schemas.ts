@@ -183,6 +183,10 @@ export const updateInvoiceSchema = z.object({
 export const addLineItemSchema = lineItemBodySchema;
 export const updateLineItemSchema = lineItemBodySchema.partial();
 
+export const updateLineItemStatusSchema = z.object({
+  status: z.enum(['pending', 'completed', 'backordered']),
+});
+
 // ---------------------------------------------------------------------------
 // Users
 // ---------------------------------------------------------------------------

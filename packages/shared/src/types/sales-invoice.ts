@@ -3,6 +3,8 @@ import type { ItemColor } from './color';
 
 export type SalesInvoiceStatus = 'draft' | 'sent' | 'paid' | 'cancelled';
 
+export type LineItemStatus = 'pending' | 'completed' | 'backordered';
+
 export interface InvoiceLineItem {
   id: number;
   invoiceId: number;
@@ -12,6 +14,7 @@ export interface InvoiceLineItem {
   details: string | null;
   quantity: number;
   unitPrice: number;
+  status: LineItemStatus;
   colors: ItemColor[];
   createdAt: string;
 }

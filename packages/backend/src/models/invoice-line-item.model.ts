@@ -1,11 +1,11 @@
 import { pool } from '../config/database.js';
-import type { InvoiceLineItem, CreateLineItemDto } from '@wizqueue/shared';
+import type { InvoiceLineItem, CreateLineItemDto, LineItemStatus } from '@wizqueue/shared';
 import { LineItemColorModel } from './item-color.model.js';
 
 const SELECT_FIELDS = `
   id, invoice_id as "invoiceId", product_id as "productId",
   product_name as "productName", sku, details, quantity,
-  unit_price as "unitPrice",
+  unit_price as "unitPrice", status,
   created_at as "createdAt"
 `;
 
@@ -81,6 +81,16 @@ export class InvoiceLineItemModel {
     const result = await pool.query(
       `UPDATE invoice_line_items SET ${fields.join(', ')} WHERE id = $${i} RETURNING ${SELECT_FIELDS}`,
       values,
+    );
+    if (!result.rows[0]) return null;
+    const colors = await LineItemColorModel.findByLineItem(id);
+    return { ...result.rows[0], unitPrice: parseFloat(result.rows[0].unitPrice), colors };
+  }
+
+  static async updateStatus(id: number, status: LineItemStatus): Promise<InvoiceLineItem | null> {
+    const result = await pool.query(
+      `UPDATE invoice_line_items SET status = $1 WHERE id = $2 RETURNING ${SELECT_FIELDS}`,
+      [status, id],
     );
     if (!result.rows[0]) return null;
     const colors = await LineItemColorModel.findByLineItem(id);
