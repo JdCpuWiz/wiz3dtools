@@ -23,6 +23,11 @@ router.get('/colors', controller.getColors.bind(controller));
 router.post('/customers', controller.createCustomer.bind(controller));
 // Token mint: takes email + password, returns the per-customer token.
 router.post('/customers/token', controller.issueCustomerToken.bind(controller));
+// Credential sync (Change #150): wiz3d-prints uses this to keep the
+// customer's password_hash and email aligned with its own User table on
+// signup, password-change, and email-change. STORE_API_KEY-only — no
+// per-customer token (circular for new accounts / recovery flows).
+router.patch('/customers/:id/credential', controller.updateCredential.bind(controller));
 
 // ── Per-customer scope routes — Change #148 F7 ───────────────────────────────
 // requireStoreCustomerToken behavior is gated by ENABLE_STORE_CUSTOMER_TOKEN

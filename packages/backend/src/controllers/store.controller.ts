@@ -85,6 +85,72 @@ export class StoreController {
     } catch (error) { next(error); }
   }
 
+  // Change #150 — STORE_API_KEY-only path for wiz3d-prints to keep
+  // password_hash + email on the customers row in lockstep with its own
+  // User table. NOT gated by per-customer token because the customer is
+  // proving identity via the password they're setting — using a token
+  // would be circular for new accounts (no token exists yet) and
+  // ergonomically broken for password recovery flows.
+  async updateCredential(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (!id || isNaN(id)) {
+        res.status(400).json({ success: false, error: 'Invalid customer id' });
+        return;
+      }
+      const { email, password } = (req.body ?? {}) as { email?: unknown; password?: unknown };
+
+      const updates: string[] = [];
+      const values: unknown[] = [];
+      const changedFields: string[] = [];
+      let i = 1;
+
+      if (email !== undefined) {
+        if (typeof email !== 'string' || email.trim().length === 0 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+          res.status(400).json({ success: false, error: 'email must be a valid email string' });
+          return;
+        }
+        updates.push(`email = $${i++}`);
+        values.push(email.trim());
+        changedFields.push('email');
+      }
+
+      if (password !== undefined) {
+        if (typeof password !== 'string' || password.length < 8) {
+          res.status(400).json({ success: false, error: 'password must be at least 8 characters' });
+          return;
+        }
+        const passwordHash = await bcrypt.hash(password, 10);
+        updates.push(`password_hash = $${i++}`);
+        values.push(passwordHash);
+        changedFields.push('password');
+      }
+
+      if (updates.length === 0) {
+        res.status(400).json({ success: false, error: 'No credential fields provided (email or password)' });
+        return;
+      }
+
+      values.push(id);
+      const result = await pool.query(
+        `UPDATE customers SET ${updates.join(', ')} WHERE id = $${i} RETURNING id`,
+        values,
+      );
+      if (result.rowCount === 0) {
+        res.status(404).json({ success: false, error: 'Customer not found' });
+        return;
+      }
+
+      await writeAuditLog(
+        STORE_ACTOR,
+        'store.customer.credential-update',
+        `customer:${id}`,
+        `ip=${clientIp(req)} fields=${changedFields.join(',')}`,
+      );
+      res.json({ success: true, data: { id, updated: changedFields } });
+    } catch (error) { next(error); }
+  }
+
   async updateCustomer(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = parseInt(req.params.id);
