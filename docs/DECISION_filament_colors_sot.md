@@ -1,3 +1,7 @@
+---
+title: Decision — Filament / colors SoT
+---
+
 # DECISION — Filament / colors single source of truth
 
 **BuildPlan**: #18 Phase 1

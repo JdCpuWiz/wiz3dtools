@@ -49,6 +49,25 @@ There are no test scripts defined. Backend uses `tsx watch` for development hot-
 | `packages/backend` | Express + TypeScript API server (ESM modules, `"type": "module"`) |
 | `packages/frontend` | React + Vite + TypeScript + Tailwind CSS SPA |
 
+**Cross-system architecture** (which fields live in wiz3dtools vs
+wiz3d-prints vs BamBuddy, sync directions, auth model, the store API
+surface) — see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md). It's
+the canonical map of "where does X live and who else reads it" across
+the storefront ecosystem.
+
+**Keep ARCHITECTURE.md current** when:
+- A canonical owner moves (e.g. a field migrates between systems)
+- A new cross-system integration endpoint lands or retires
+- Sync direction or trigger changes
+- An auth surface changes shape
+- A whole new system joins or leaves the ecosystem
+
+Single-project refactors that don't change ownership don't need an
+ARCHITECTURE.md edit. The doc auto-mirrors to
+[docs.deckerzoo.com/projects/wiz3dtools/ARCHITECTURE](https://docs.deckerzoo.com/projects/wiz3dtools/ARCHITECTURE)
+on the next 5-minute homelab-docs sync, so an update lands publicly
+within minutes of the commit.
+
 ---
 
 ## Database
