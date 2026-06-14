@@ -300,7 +300,18 @@ export const colorApi = {
   },
 
   delete: async (id: number): Promise<void> => {
-    await api.delete(`/colors/${id}`);
+    try {
+      await api.delete(`/colors/${id}`);
+    } catch (err) {
+      // Axios's default error.message is "Request failed with status
+      // code 400" — useless to admin. The backend's pre-check throws
+      // a 409 with a clear actionable message in response.data.error
+      // (e.g. "Can't delete — referenced by 3 invoice line items…").
+      // Re-throw with that message so useColors' toast shows it.
+      const e = err as { response?: { data?: { error?: string; message?: string } }; message?: string };
+      const serverMsg = e.response?.data?.error ?? e.response?.data?.message;
+      throw new Error(serverMsg ?? e.message ?? 'Delete failed');
+    }
   },
 
   setLineItemColors: async (invoiceId: number, itemId: number, colors: ItemColorDto[]): Promise<ItemColor[]> => {

@@ -47,6 +47,13 @@ export interface Color {
   manufacturerId: number | null;
   manufacturer: Manufacturer | null;
   inventoryGrams: number;
+  // Number of invoice line items currently referencing this color.
+  // Populated by ColorModel.findAll() via a LEFT JOIN; absent on
+  // findById responses since the single-color path doesn't need it.
+  // Surfaces in /admin/colors as the "Invoices" column so admin can
+  // see at a glance which rows are safe to hard-delete (0) vs which
+  // should be Inactive (>0).
+  invoiceRefs?: number;
   createdAt: string;
   updatedAt: string;
 }

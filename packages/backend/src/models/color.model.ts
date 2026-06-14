@@ -40,10 +40,20 @@ function parseRow(row: Record<string, unknown>): Color {
 export class ColorModel {
   static async findAll(activeOnly = false): Promise<Color[]> {
     const where = activeOnly ? 'WHERE c.active = true' : '';
+    // LEFT JOIN a per-color invoice-reference count so the admin
+    // colors page can show how many invoices each color is locked
+    // into. Cheap on the catalog (~650 rows × 1 grouped subquery).
     const result = await pool.query(
-      `SELECT ${SELECT_FIELDS}
+      `WITH line_refs AS (
+         SELECT color_id, COUNT(*)::int AS n
+         FROM line_item_colors
+         GROUP BY color_id
+       )
+       SELECT ${SELECT_FIELDS},
+              COALESCE(lr.n, 0) AS "invoiceRefs"
        FROM colors c
        LEFT JOIN manufacturers m ON m.id = c.manufacturer_id
+       LEFT JOIN line_refs    lr ON lr.color_id = c.id
        ${where}
        ORDER BY m.name ASC NULLS LAST, c.name ASC`,
     );
@@ -110,6 +120,38 @@ export class ColorModel {
   }
 
   static async delete(id: number): Promise<boolean> {
+    // Pre-check FK references so the user gets a clear error instead
+    // of Postgres' generic "violates foreign key constraint" wrapped
+    // in the error handler's "Database constraint violation" 400.
+    //
+    // line_item_colors.color_id is NOT NULL with no ON DELETE action
+    // → the DELETE would fail at the DB layer if any invoice
+    // references this color. Mirror ProductModel.delete: raise a 409
+    // with an actionable message telling admin to disable instead.
+    //
+    // product_colors.color_id cascades — admin should know they're
+    // wiping recipes if they proceed (we still allow it; the message
+    // calls out the count so they can decide).
+    const refs = await pool.query<{ line_refs: string; product_refs: string }>(
+      `SELECT
+         (SELECT COUNT(*) FROM line_item_colors WHERE color_id = $1) AS line_refs,
+         (SELECT COUNT(*) FROM product_colors  WHERE color_id = $1) AS product_refs`,
+      [id],
+    );
+    const lineRefs = parseInt(refs.rows[0]?.line_refs ?? '0', 10);
+    const productRefs = parseInt(refs.rows[0]?.product_refs ?? '0', 10);
+
+    if (lineRefs > 0) {
+      const parts = [
+        `Can't delete this color — it's referenced by ${lineRefs} invoice line item${lineRefs === 1 ? '' : 's'}.`,
+        productRefs > 0 ? `(It's also in ${productRefs} product recipe${productRefs === 1 ? '' : 's'}.)` : '',
+        'Mark it Inactive instead (Status toggle), or use the dedupe tool to fold it into another color first.',
+      ].filter(Boolean).join(' ');
+      const err = new Error(parts);
+      (err as Error & { statusCode?: number }).statusCode = 409;
+      throw err;
+    }
+
     const result = await pool.query('DELETE FROM colors WHERE id = $1', [id]);
     return (result.rowCount || 0) > 0;
   }

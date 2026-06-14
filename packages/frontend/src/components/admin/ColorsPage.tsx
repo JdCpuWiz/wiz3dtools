@@ -346,7 +346,15 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
   };
 
   const handleDelete = () => {
-    if (!window.confirm(`Delete "${color.name}"? It will be removed from any existing invoices.`)) return;
+    // The backend pre-check refuses delete when invoice line items
+    // reference this color (the "Invoices" column shows the count).
+    // Product recipes cascade-delete, so admin loses any picker slot
+    // on products that used this color — surface that risk here.
+    const refs = color.invoiceRefs ?? 0;
+    const msg = refs > 0
+      ? `"${color.name}" is referenced by ${refs} invoice line item${refs === 1 ? '' : 's'} and can't be deleted. Set it Inactive instead?\n\n(Click Cancel to abort, or OK to try delete anyway — it will fail with a clear error.)`
+      : `Delete "${color.name}"?\n\nAny product recipes using this color will lose this color slot. This cannot be undone.`;
+    if (!window.confirm(msg)) return;
     deleteColor(color.id);
   };
 
@@ -424,6 +432,9 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
             />
             <span className="text-xs text-white">g</span>
           </div>
+        </td>
+        <td className="px-4 py-2 text-right font-mono tabular-nums text-xs text-white/60">
+          {color.invoiceRefs ?? 0}
         </td>
         <td className="px-4 py-2 text-sm text-white">{color.active ? 'Active' : 'Inactive'}</td>
         <td className="px-4 py-2 text-xs text-white/60">
@@ -514,6 +525,22 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
             </button>
           ))}
         </div>
+      </td>
+      {/* Invoices reference count — tells admin at a glance whether
+          this color is safe to delete (0) or must be set Inactive
+          instead (>0). Backend pre-check blocks the delete in either
+          case so the count > 0 row simply won't accept a Delete. */}
+      <td className="px-4 py-3 text-right font-mono tabular-nums text-xs">
+        {(color.invoiceRefs ?? 0) > 0 ? (
+          <span
+            className="text-white"
+            title={`${color.invoiceRefs} invoice line item${color.invoiceRefs === 1 ? '' : 's'} reference this color — cannot be deleted, only made inactive.`}
+          >
+            {color.invoiceRefs}
+          </span>
+        ) : (
+          <span className="text-white/40" title="No invoice references — safe to delete.">0</span>
+        )}
       </td>
       {/* Status — single button (Active green / Inactive grey), same
           convention as /products. Change #159 dropped the separate
@@ -954,6 +981,7 @@ export const ColorsPage: React.FC = () => {
                   the gram readout + progress bar + + Spool button stop
                   wrapping. */}
               <th className="text-right px-4 py-2.5 font-semibold w-72 whitespace-nowrap" style={{ color: '#ff9900' }}>Inventory</th>
+              <th className="text-right px-4 py-2.5 font-semibold w-20" style={{ color: '#ff9900' }} title="Number of invoice line items using this color">Invoices</th>
               <th className="text-left px-4 py-2.5 font-semibold w-28" style={{ color: '#ff9900' }}>Status</th>
               <th className="text-left px-4 py-2.5 font-semibold w-28" style={{ color: '#ff9900' }}>Multi</th>
               <th className="px-4 py-2.5 w-32" />
@@ -962,7 +990,7 @@ export const ColorsPage: React.FC = () => {
           <tbody>
             {visible.map((c, i) => <ColorRow key={c.id} color={c} index={i} isAdmin={isAdmin} />)}
             {visible.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-white text-sm">
+              <tr><td colSpan={10} className="px-4 py-8 text-center text-white text-sm">
                 {stockFilter === 'all' ? 'No colors yet' : 'No colors in this category'}
               </td></tr>
             )}
