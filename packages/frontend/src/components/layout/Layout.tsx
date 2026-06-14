@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { SideNav } from './SideNav';
 import { useAuth } from '../../context/AuthContext';
+
+// Exact pathnames that opt out of the 80rem (max-w-7xl) cap and use the
+// full content width. Add an entry here when a list/dashboard page
+// benefits from edge-to-edge layout on big monitors. List pages only —
+// detail/edit forms should stay narrow for readability.
+const WIDE_ROUTES = new Set(['/products']);
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,6 +17,8 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { idleWarning, resetIdleTimer, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isWide = WIDE_ROUTES.has(location.pathname);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [countdown, setCountdown] = useState(60);
 
@@ -66,7 +74,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <span className="text-sm font-bold text-white">Wiz3d Tools</span>
         </header>
 
-        <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
+        <main className={`flex-1 p-6 w-full ${isWide ? '' : 'max-w-7xl mx-auto'}`}>
           {children}
         </main>
 

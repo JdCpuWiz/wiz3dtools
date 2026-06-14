@@ -148,7 +148,8 @@ export const ProductList: React.FC = () => {
                   </button>
                 </th>
                 <th className="whitespace-nowrap">Status</th>
-                <th className="hidden md:table-cell whitespace-nowrap">Webstore</th>
+                <th className="hidden md:table-cell whitespace-nowrap">Store</th>
+                <th className="hidden md:table-cell whitespace-nowrap">Wholesale</th>
                 <th />
               </tr>
             </thead>
@@ -194,7 +195,7 @@ export const ProductList: React.FC = () => {
                   <td>
                     <button
                       onClick={() => update(product.id, { active: !product.active })}
-                      className="px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors"
+                      className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
                       style={product.active
                         ? { background: '#15803d', color: '#ffffff' }
                         : { background: '#6b7280', color: '#ffffff' }
@@ -204,30 +205,30 @@ export const ProductList: React.FC = () => {
                     </button>
                   </td>
                   <td className="hidden md:table-cell">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => update(product.id, { publishedToStore: !product.publishedToStore })}
-                        className="px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors"
-                        style={product.publishedToStore
-                          ? { background: '#1d4ed8', color: '#ffffff' }
-                          : { background: '#4b5563', color: '#ffffff' }
-                        }
-                        title={product.publishedToStore ? 'Visible on /shop' : 'Hidden from /shop'}
-                      >
-                        {product.publishedToStore ? 'Web' : 'Web off'}
-                      </button>
-                      <button
-                        onClick={() => update(product.id, { publishedToWholesale: !product.publishedToWholesale })}
-                        className="px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors"
-                        style={product.publishedToWholesale
-                          ? { background: '#6d28d9', color: '#ffffff' }
-                          : { background: '#4b5563', color: '#ffffff' }
-                        }
-                        title={product.publishedToWholesale ? 'Visible on /wholesale' : 'Hidden from /wholesale'}
-                      >
-                        {product.publishedToWholesale ? 'WS' : 'WS off'}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => update(product.id, { publishedToStore: !product.publishedToStore })}
+                      className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+                      style={product.publishedToStore
+                        ? { background: '#15803d', color: '#ffffff' }
+                        : { background: '#6b7280', color: '#ffffff' }
+                      }
+                      title={product.publishedToStore ? 'Visible on /shop' : 'Hidden from /shop'}
+                    >
+                      {product.publishedToStore ? 'On Store' : 'Off Store'}
+                    </button>
+                  </td>
+                  <td className="hidden md:table-cell">
+                    <button
+                      onClick={() => update(product.id, { publishedToWholesale: !product.publishedToWholesale })}
+                      className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+                      style={product.publishedToWholesale
+                        ? { background: '#15803d', color: '#ffffff' }
+                        : { background: '#6b7280', color: '#ffffff' }
+                      }
+                      title={product.publishedToWholesale ? 'Visible on /wholesale' : 'Hidden from /wholesale'}
+                    >
+                      {product.publishedToWholesale ? 'On Wholesale' : 'Off Wholesale'}
+                    </button>
                   </td>
                   <td>
                     <div className="flex items-center gap-2 justify-end">
