@@ -86,6 +86,12 @@ export const createProductSchema = z.object({
 
 export const updateProductSchema = createProductSchema.partial();
 
+// Bug #66 — color dedupe
+export const mergeColorsSchema = z.object({
+  keepId: z.number().int().positive(),
+  mergeIds: z.array(z.number().int().positive()).min(1),
+});
+
 // Queue / Printer / Filament-job schemas removed in BuildPlan #6 Phase 3.
 // BamBuddy owns those domains now.
 

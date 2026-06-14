@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { ColorModel } from '../models/color.model.js';
 import { LineItemColorModel } from '../models/item-color.model.js';
-import { parseBody, createColorSchema, updateColorSchema, setItemColorsSchema } from '../validation/schemas.js';
+import { parseBody, createColorSchema, updateColorSchema, setItemColorsSchema, mergeColorsSchema } from '../validation/schemas.js';
 import { fullSync } from '../services/bambuddy-sync.service.js';
+import { findDuplicates, mergeColors } from '../services/color-dedupe.service.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
 export class ColorController {
@@ -66,6 +67,35 @@ export class ColorController {
   }
 
   // BuildPlan #6 Phase 3: setQueueItemColors removed alongside the queue subsystem.
+
+  // Bug #66 — GET /api/colors/duplicates
+  // Returns groups of color rows sharing the same (UPPER(hex), material).
+  // Each row carries per-color usage counts so the admin UI can show how
+  // many invoice + product references depend on each candidate keeper.
+  async duplicates(_req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const groups = await findDuplicates();
+      res.json({ success: true, data: groups });
+    } catch (error) { next(error); }
+  }
+
+  // Bug #66 — POST /api/colors/merge
+  // Body: { keepId, mergeIds[] }. Repoints line_item_colors and
+  // product_colors (with UNIQUE conflict resolution by weight sum), then
+  // deletes the dupe color rows in one transaction. Refuses if any
+  // dupe row has bambuddy_id set — see color-dedupe.service.ts for why.
+  async merge(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const parsed = parseBody(mergeColorsSchema, req.body);
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+      const result = await mergeColors(parsed.data.keepId, parsed.data.mergeIds);
+      res.json({
+        success: true,
+        data: result,
+        message: `Merged ${result.merged} duplicate(s) into color ${result.keepId}. Repointed ${result.lineItemColorsRepointed} invoice color(s) and ${result.productColorsRepointed} product slot(s); merged ${result.productColorsMerged} overlapping product slot(s).`,
+      });
+    } catch (error) { next(error); }
+  }
 
   // BuildPlan #6 Phase 4 — POST /api/colors/sync-from-bambuddy
   // One-shot pull from BamBuddy's filament catalog + spool inventory.

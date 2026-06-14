@@ -4,6 +4,7 @@ import { useColors } from '../../hooks/useColors';
 import { useManufacturers } from '../../hooks/useManufacturers';
 import { PageIcon } from '../common/PageIcon';
 import { colorApi } from '../../services/api';
+import type { ColorDuplicateGroup, ColorDuplicateRow } from '../../services/api';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Color } from '@wizqueue/shared';
 
@@ -267,6 +268,7 @@ export const ColorsPage: React.FC = () => {
   const [lastSync, setLastSync] = useState<string | null>(
     () => (typeof localStorage !== 'undefined' ? localStorage.getItem('bambuddy-last-sync') : null),
   );
+  const [dedupeOpen, setDedupeOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const handleSync = async () => {
@@ -315,6 +317,13 @@ export const ColorsPage: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={() => setDedupeOpen(true)}
+            className="btn-secondary btn-sm"
+            title="Scan for colors that share the same hex + material. Bug #66."
+          >
+            Find Duplicates
+          </button>
+          <button
             onClick={handleSync}
             disabled={syncing}
             className="btn-secondary btn-sm"
@@ -350,6 +359,235 @@ export const ColorsPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {dedupeOpen && (
+        <DedupeModal
+          onClose={() => setDedupeOpen(false)}
+          onMerged={() => queryClient.invalidateQueries({ queryKey: ['colors'] })}
+        />
+      )}
     </div>
   );
 };
+
+// Bug #66 — Find Duplicates modal. Lists every (hex, material) group with
+// >1 color row, lets admin pick a keeper per group + run a transactional
+// merge. Defaults the keeper to the row already linked to BamBuddy
+// (bambuddy_id IS NOT NULL) because deleting a BB-linked row would just
+// have the next sync re-insert it.
+function DedupeModal({
+  onClose,
+  onMerged,
+}: {
+  onClose: () => void;
+  onMerged: () => void;
+}) {
+  const [groups, setGroups] = useState<ColorDuplicateGroup[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [keepers, setKeepers] = useState<Record<string, number>>({}); // groupKey → keepId
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  const refresh = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const g = await colorApi.findDuplicates();
+      setGroups(g);
+      // Default each group's keeper to the linked row if any; else lowest id.
+      const next: Record<string, number> = {};
+      for (const grp of g) {
+        const key = `${grp.hex}|${grp.material ?? '∅'}`;
+        const linked = grp.rows.find((r) => r.bambuddyId !== null);
+        next[key] = linked ? linked.id : grp.rows[0].id;
+      }
+      setKeepers(next);
+    } catch (err: any) {
+      toast.error(`Failed to load duplicates: ${err.message || err}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => { refresh(); }, [refresh]);
+
+  const handleMerge = async (group: ColorDuplicateGroup) => {
+    const key = `${group.hex}|${group.material ?? '∅'}`;
+    const keepId = keepers[key];
+    if (!keepId) return;
+    const mergeIds = group.rows.filter((r) => r.id !== keepId).map((r) => r.id);
+    if (mergeIds.length === 0) return;
+    if (!confirm(
+      `Merge ${mergeIds.length} duplicate(s) of ${group.hex}${group.material ? ` ${group.material}` : ''} into color #${keepId}?\n\n` +
+      `Invoice references will be repointed and the dupe row(s) deleted. This cannot be undone (but won't change any invoice colors visually).`
+    )) return;
+    setBusyKey(key);
+    try {
+      const result = await colorApi.mergeDuplicates(keepId, mergeIds);
+      toast.success(
+        `Merged ${result.merged} into #${keepId}. ` +
+        `${result.lineItemColorsRepointed} invoice color(s), ${result.productColorsRepointed} product slot(s) repointed; ${result.productColorsMerged} overlapping product slot(s) merged.`,
+        { duration: 6000 },
+      );
+      onMerged();
+      await refresh();
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message || String(err);
+      toast.error(`Merge failed: ${msg}`, { duration: 8000 });
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.7)' }}
+      onClick={onClose}
+    >
+      <div
+        className="card max-w-5xl w-full max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold" style={{ color: '#ff9900' }}>
+            Duplicate Colors
+          </h3>
+          <button onClick={onClose} className="btn-secondary btn-sm">Close</button>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500" />
+          </div>
+        ) : !groups || groups.length === 0 ? (
+          <p className="text-sm text-iron-100 py-6 text-center">
+            No duplicates found — every color in the catalog is unique by hex + material.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs text-white/60">
+              Each group shares the same hex + material. Pick a keeper, hit Merge.
+              The keeper defaults to the row already linked to BamBuddy
+              (only one row per BB color can survive a sync).
+            </p>
+            {groups.map((group) => {
+              const key = `${group.hex}|${group.material ?? '∅'}`;
+              const isBusy = busyKey === key;
+              return (
+                <div
+                  key={key}
+                  className="rounded-lg p-3 space-y-2"
+                  style={{ background: '#1a1a1a', border: '1px solid #2d2d2d' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block w-5 h-5 rounded"
+                      style={{ background: group.hex, border: '1px solid rgba(255,255,255,0.15)' }}
+                    />
+                    <span className="font-mono text-xs text-white">{group.hex}</span>
+                    {group.material && (
+                      <span className="text-xs px-2 py-0.5 rounded" style={{ background: '#2d2d2d', color: '#d1d5db' }}>
+                        {group.material}
+                      </span>
+                    )}
+                    <span className="text-xs text-white/50">· {group.count} rows</span>
+                    <button
+                      className="ml-auto btn-primary btn-sm"
+                      onClick={() => handleMerge(group)}
+                      disabled={isBusy}
+                    >
+                      {isBusy ? 'Merging…' : `Merge → keep #${keepers[key]}`}
+                    </button>
+                  </div>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left" style={{ color: '#ff9900' }}>
+                        <th className="py-1 pr-2">Keep</th>
+                        <th className="py-1 pr-2">#ID</th>
+                        <th className="py-1 pr-2">Name</th>
+                        <th className="py-1 pr-2">Mfr</th>
+                        <th className="py-1 pr-2">BB</th>
+                        <th className="py-1 pr-2">Active</th>
+                        <th className="py-1 pr-2 text-right">Inv (g)</th>
+                        <th className="py-1 pr-2 text-right">Invoices</th>
+                        <th className="py-1 pr-2 text-right">Products</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.rows.map((row) => (
+                        <DedupeRow
+                          key={row.id}
+                          row={row}
+                          isKeeper={keepers[key] === row.id}
+                          onPick={() => setKeepers((p) => ({ ...p, [key]: row.id }))}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DedupeRow({
+  row,
+  isKeeper,
+  onPick,
+}: {
+  row: ColorDuplicateRow;
+  isKeeper: boolean;
+  onPick: () => void;
+}) {
+  const linked = row.bambuddyId !== null;
+  return (
+    <tr
+      style={{
+        background: isKeeper ? 'rgba(255, 153, 0, 0.08)' : 'transparent',
+      }}
+    >
+      <td className="py-1 pr-2">
+        <input
+          type="radio"
+          name={`keeper-${row.hex}-${row.material ?? 'null'}`}
+          checked={isKeeper}
+          onChange={onPick}
+          aria-label={`Keep color #${row.id}`}
+        />
+      </td>
+      <td className="py-1 pr-2 font-mono text-white">#{row.id}</td>
+      <td className="py-1 pr-2 text-white">{row.name}</td>
+      <td className="py-1 pr-2 text-white/70">{row.manufacturerName ?? '—'}</td>
+      <td className="py-1 pr-2">
+        {linked ? (
+          <span
+            className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+            style={{ background: '#15803d', color: '#ffffff' }}
+            title={`Linked to BamBuddy color ${row.bambuddyId}`}
+          >
+            BB:{row.bambuddyId}
+          </span>
+        ) : (
+          <span className="text-white/40 text-[10px]">unlinked</span>
+        )}
+      </td>
+      <td className="py-1 pr-2">
+        <span
+          className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+          style={row.active
+            ? { background: '#15803d', color: '#ffffff' }
+            : { background: '#6b7280', color: '#ffffff' }
+          }
+        >
+          {row.active ? 'Active' : 'Off'}
+        </span>
+      </td>
+      <td className="py-1 pr-2 text-right font-mono text-white">{row.inventoryGrams.toFixed(0)}</td>
+      <td className="py-1 pr-2 text-right font-mono text-white">{row.lineItemRefs}</td>
+      <td className="py-1 pr-2 text-right font-mono text-white">{row.productRefs}</td>
+    </tr>
+  );
+}

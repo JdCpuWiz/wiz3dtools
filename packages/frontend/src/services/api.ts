@@ -323,7 +323,52 @@ export const colorApi = {
     if (!response.data.data) throw new Error('Failed to sync from BamBuddy');
     return response.data.data;
   },
+
+  // Bug #66 — admin-only duplicate discovery + merge
+  findDuplicates: async (): Promise<ColorDuplicateGroup[]> => {
+    const response = await api.get<ApiResponse<ColorDuplicateGroup[]>>(`/colors/duplicates`);
+    return response.data.data || [];
+  },
+
+  mergeDuplicates: async (
+    keepId: number,
+    mergeIds: number[],
+  ): Promise<ColorMergeResult> => {
+    const response = await api.post<ApiResponse<ColorMergeResult>>(`/colors/merge`, { keepId, mergeIds });
+    if (!response.data.data) throw new Error('Failed to merge colors');
+    return response.data.data;
+  },
 };
+
+export interface ColorDuplicateRow {
+  id: number;
+  name: string;
+  hex: string;
+  material: string | null;
+  manufacturerId: number | null;
+  manufacturerName: string | null;
+  bambuddyId: number | null;
+  active: boolean;
+  inventoryGrams: number;
+  lineItemRefs: number;
+  productRefs: number;
+}
+
+export interface ColorDuplicateGroup {
+  hex: string;
+  material: string | null;
+  count: number;
+  rows: ColorDuplicateRow[];
+}
+
+export interface ColorMergeResult {
+  keepId: number;
+  merged: number;
+  lineItemColorsRepointed: number;
+  productColorsRepointed: number;
+  productColorsMerged: number;
+  colorsDeleted: number;
+}
 
 export interface BambuddySyncResult {
   catalog: { added: number; updated: number; untouched: number; manufacturerUnmatched: number; total: number };

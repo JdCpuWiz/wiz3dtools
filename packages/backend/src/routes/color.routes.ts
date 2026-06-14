@@ -8,6 +8,10 @@ const controller = new ColorController();
 // All authenticated users can read colors
 router.get('/', controller.getAll.bind(controller));
 
+// Bug #66 — admin-only duplicate discovery + merge
+router.get('/duplicates', requireAdmin, controller.duplicates.bind(controller));
+router.post('/merge', requireAdmin, controller.merge.bind(controller));
+
 // Only admins can manage colors
 router.post('/', requireAdmin, controller.create.bind(controller));
 router.put('/:id', requireAdmin, controller.update.bind(controller));
