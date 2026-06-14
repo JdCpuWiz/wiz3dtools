@@ -2,9 +2,15 @@ import { pool } from '../config/database.js';
 
 // Bug #66 — admin colors dedupe.
 //
-// Duplicates are identified by (UPPER(hex), material) — same physical
-// filament identity. Name + manufacturer + bambuddy_id may differ across
-// rows in a group; the admin picks which row to keep in the UI.
+// Duplicates are identified by the full filament identity tuple:
+//   (UPPER(hex), material, manufacturer_id, is_multi_color, UPPER-normalised additional_hexes)
+//
+// Same primary hex alone is not enough: a Bambu Dual-Color PLA Black/Pink
+// shares hex #000000 with solid Black PLA but is a distinct filament.
+// Same primary + multi-color flag + same secondary hex set + same
+// manufacturer + same material → same physical filament. Name and
+// bambuddy_id may still differ across the group (one row got synced,
+// others didn't).
 //
 // Color rows in the live DB are referenced by exactly two FK locations
 // after BuildPlan #6 Phase 3 dropped the queue subsystem:
@@ -24,6 +30,10 @@ import { pool } from '../config/database.js';
 export interface DuplicateGroup {
   hex: string;
   material: string | null;
+  manufacturerId: number | null;
+  manufacturerName: string | null;
+  isMultiColor: boolean;
+  additionalHexes: string[];
   count: number;
   rows: DuplicateRow[];
 }
@@ -35,6 +45,8 @@ export interface DuplicateRow {
   material: string | null;
   manufacturerId: number | null;
   manufacturerName: string | null;
+  isMultiColor: boolean;
+  additionalHexes: string[];
   bambuddyId: number | null;
   active: boolean;
   inventoryGrams: number;
@@ -42,10 +54,21 @@ export interface DuplicateRow {
   productRefs: number;
 }
 
+// Normalises additional_hexes to a stable comparable form: uppercased
+// + sorted (order doesn't matter for filament identity).
+function normaliseHexes(arr: string[] | null): string[] {
+  if (!arr) return [];
+  return [...arr].map((h) => h.toUpperCase()).sort();
+}
+
 export async function findDuplicates(): Promise<DuplicateGroup[]> {
-  // Single query that returns every color in a (UPPER(hex), material)
-  // group with count > 1, plus per-row FK usage counts so the UI can
-  // surface "keeping this id will preserve N invoice references."
+  // Single query that returns every color in a
+  //   (UPPER(hex), material, manufacturer_id, is_multi_color, sorted-UPPER(additional_hexes))
+  // group with count > 1, plus per-row FK usage counts.
+  //
+  // additional_hexes equality is tricky in SQL because Postgres TEXT[]
+  // ordering matters for `=`. We normalise on read (Array.sort + upper)
+  // and group in JS to keep the SQL readable.
   const rows = await pool.query<{
     id: number;
     name: string;
@@ -53,20 +76,15 @@ export async function findDuplicates(): Promise<DuplicateGroup[]> {
     material: string | null;
     manufacturer_id: number | null;
     manufacturer_name: string | null;
+    is_multi_color: boolean;
+    additional_hexes: string[] | null;
     bambuddy_id: number | null;
     active: boolean;
     inventory_grams: string;
     line_item_refs: string;
     product_refs: string;
-    group_key_hex: string;
   }>(`
-    WITH groups AS (
-      SELECT UPPER(hex) AS group_key_hex, material
-      FROM colors
-      GROUP BY UPPER(hex), material
-      HAVING COUNT(*) > 1
-    ),
-    line_refs AS (
+    WITH line_refs AS (
       SELECT color_id, COUNT(*)::int AS n FROM line_item_colors GROUP BY color_id
     ),
     product_refs AS (
@@ -79,30 +97,39 @@ export async function findDuplicates(): Promise<DuplicateGroup[]> {
       c.material,
       c.manufacturer_id,
       m.name AS manufacturer_name,
+      c.is_multi_color,
+      c.additional_hexes,
       c.bambuddy_id,
       c.active,
       c.inventory_grams,
       COALESCE(lr.n, 0) AS line_item_refs,
-      COALESCE(pr.n, 0) AS product_refs,
-      UPPER(c.hex) AS group_key_hex
+      COALESCE(pr.n, 0) AS product_refs
     FROM colors c
-    INNER JOIN groups g
-      ON UPPER(c.hex) = g.group_key_hex
-     AND c.material IS NOT DISTINCT FROM g.material
-    LEFT JOIN manufacturers m ON m.id = c.manufacturer_id
-    LEFT JOIN line_refs lr   ON lr.color_id = c.id
-    LEFT JOIN product_refs pr ON pr.color_id = c.id
-    ORDER BY UPPER(c.hex), c.material NULLS FIRST, c.id ASC
+    LEFT JOIN manufacturers m  ON m.id = c.manufacturer_id
+    LEFT JOIN line_refs lr     ON lr.color_id = c.id
+    LEFT JOIN product_refs pr  ON pr.color_id = c.id
+    ORDER BY UPPER(c.hex), c.material NULLS FIRST, c.manufacturer_id NULLS FIRST, c.id ASC
   `);
 
   const byKey = new Map<string, DuplicateGroup>();
   for (const r of rows.rows) {
-    const key = `${r.group_key_hex}|${r.material ?? '∅'}`;
+    const normalisedHexes = normaliseHexes(r.additional_hexes);
+    const key = [
+      r.hex.toUpperCase(),
+      r.material ?? '∅',
+      r.manufacturer_id ?? '∅',
+      r.is_multi_color ? 'M' : 'S',
+      normalisedHexes.join(','),
+    ].join('|');
     let group = byKey.get(key);
     if (!group) {
       group = {
-        hex: r.group_key_hex,
+        hex: r.hex.toUpperCase(),
         material: r.material,
+        manufacturerId: r.manufacturer_id,
+        manufacturerName: r.manufacturer_name,
+        isMultiColor: r.is_multi_color,
+        additionalHexes: normalisedHexes,
         count: 0,
         rows: [],
       };
@@ -115,6 +142,8 @@ export async function findDuplicates(): Promise<DuplicateGroup[]> {
       material: r.material,
       manufacturerId: r.manufacturer_id,
       manufacturerName: r.manufacturer_name,
+      isMultiColor: r.is_multi_color,
+      additionalHexes: r.additional_hexes ?? [],
       bambuddyId: r.bambuddy_id,
       active: r.active,
       inventoryGrams: parseFloat(r.inventory_grams),
@@ -124,7 +153,8 @@ export async function findDuplicates(): Promise<DuplicateGroup[]> {
     group.count = group.rows.length;
   }
 
-  return Array.from(byKey.values());
+  // Drop singleton groups — they're not duplicates.
+  return Array.from(byKey.values()).filter((g) => g.count > 1);
 }
 
 export interface MergeResult {
@@ -154,25 +184,29 @@ export async function mergeColors(
   try {
     await client.query('BEGIN');
 
-    // Sanity 1 — keeper + dupes must exist AND share the same (UPPER(hex), material).
-    // Refuse the merge otherwise — that protects against the admin picking
-    // unrelated rows from the UI (would change invoice colors silently).
+    // Sanity 1 — keeper + dupes must share the full filament identity
+    // tuple: (UPPER(hex), material, manufacturer_id, is_multi_color,
+    // sorted-upper additional_hexes). Refuse otherwise — protects against
+    // the admin picking unrelated rows (would change invoice colors).
     //
-    // Sanity 2 — refuse to delete any row whose bambuddy_id is set, because
-    // the next nightly BamBuddy sync would just INSERT a fresh dupe.
-    // (Sync's match logic: 1) bambuddy_id, 2) (UPPER(hex), material) ONLY
-    // when local bambuddy_id IS NULL. If the keeper has its own
-    // bambuddy_id ≠ the deleted dupe's, fallback clause 2 misses, and
-    // INSERT path runs. So: keeper must own the bambuddy_id if any
-    // dupe row has one. The UI defaults to the linked row as keeper;
-    // this gate is the belt-and-suspenders backstop.
+    // Sanity 2 — refuse to delete any row whose bambuddy_id is set,
+    // because the next nightly BamBuddy sync would just INSERT a fresh
+    // dupe. (Sync match logic: 1) bambuddy_id, 2) (UPPER(hex), material)
+    // ONLY when local bambuddy_id IS NULL. If the keeper has its own
+    // bambuddy_id ≠ the deleted dupe's, fallback clause 2 misses and
+    // INSERT runs.) The UI defaults to the linked row as keeper; this
+    // gate is the belt-and-suspenders backstop.
     const idsRes = await client.query<{
       id: number;
       hex: string;
       material: string | null;
+      manufacturer_id: number | null;
+      is_multi_color: boolean;
+      additional_hexes: string[] | null;
       bambuddy_id: number | null;
     }>(
-      `SELECT id, UPPER(hex) AS hex, material, bambuddy_id
+      `SELECT id, UPPER(hex) AS hex, material, manufacturer_id,
+              is_multi_color, additional_hexes, bambuddy_id
          FROM colors
         WHERE id = ANY($1::int[])
         FOR UPDATE`,
@@ -183,16 +217,30 @@ export async function mergeColors(
     if (!keeper) {
       throw Object.assign(new Error(`Keeper color ${keepId} not found`), { statusCode: 404 });
     }
+    const keeperHexes = normaliseHexes(keeper.additional_hexes);
     for (const mid of mergeIds) {
       const row = byId.get(mid);
       if (!row) {
         throw Object.assign(new Error(`Color ${mid} not found`), { statusCode: 404 });
       }
-      if (row.hex !== keeper.hex || (row.material ?? null) !== (keeper.material ?? null)) {
+      const rowHexes = normaliseHexes(row.additional_hexes);
+      const mismatches: string[] = [];
+      if (row.hex !== keeper.hex) mismatches.push(`hex ${row.hex} ≠ ${keeper.hex}`);
+      if ((row.material ?? null) !== (keeper.material ?? null)) {
+        mismatches.push(`material ${row.material ?? 'NULL'} ≠ ${keeper.material ?? 'NULL'}`);
+      }
+      if ((row.manufacturer_id ?? null) !== (keeper.manufacturer_id ?? null)) {
+        mismatches.push(`manufacturer ${row.manufacturer_id ?? 'NULL'} ≠ ${keeper.manufacturer_id ?? 'NULL'}`);
+      }
+      if (row.is_multi_color !== keeper.is_multi_color) {
+        mismatches.push(`is_multi_color ${row.is_multi_color} ≠ ${keeper.is_multi_color}`);
+      }
+      if (rowHexes.join(',') !== keeperHexes.join(',')) {
+        mismatches.push(`additional_hexes [${rowHexes.join(',')}] ≠ [${keeperHexes.join(',')}]`);
+      }
+      if (mismatches.length > 0) {
         throw Object.assign(
-          new Error(
-            `Color ${mid} has hex ${row.hex}/${row.material ?? 'NULL'} which doesn't match keeper ${keeper.hex}/${keeper.material ?? 'NULL'}. Refusing merge.`,
-          ),
+          new Error(`Color ${mid} identity mismatch with keeper: ${mismatches.join('; ')}. Refusing merge.`),
           { statusCode: 400 },
         );
       }

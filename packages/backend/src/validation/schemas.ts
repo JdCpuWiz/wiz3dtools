@@ -99,9 +99,14 @@ export const mergeColorsSchema = z.object({
 // Colors
 // ---------------------------------------------------------------------------
 
+const hexSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Hex color must be in format #RRGGBB');
+
 export const createColorSchema = z.object({
   name: z.string().min(1, 'Color name is required').max(100),
-  hex: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Hex color must be in format #RRGGBB'),
+  hex: hexSchema,
+  // Multi-color filament support (Bug #66 / migration 039).
+  isMultiColor: z.boolean().optional(),
+  additionalHexes: z.array(hexSchema).max(3).optional(),
   active: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
   manufacturerId: nullish(z.number().int().positive()),

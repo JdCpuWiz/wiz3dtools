@@ -3,6 +3,8 @@ import type { Color, CreateColorDto, UpdateColorDto } from '@wizqueue/shared';
 
 const SELECT_FIELDS = `
   c.id, c.name, c.hex, c.active,
+  c.is_multi_color as "isMultiColor",
+  c.additional_hexes as "additionalHexes",
   c.sort_order as "sortOrder",
   c.manufacturer_id as "manufacturerId",
   c.inventory_grams as "inventoryGrams",
@@ -26,6 +28,10 @@ function parseRow(row: Record<string, unknown>): Color {
   return {
     ...row,
     inventoryGrams: parseFloat(row.inventoryGrams as string ?? '0'),
+    isMultiColor: row.isMultiColor === true,
+    additionalHexes: Array.isArray(row.additionalHexes)
+      ? (row.additionalHexes as string[])
+      : [],
   } as Color;
 }
 
@@ -55,10 +61,21 @@ export class ColorModel {
 
   static async create(data: CreateColorDto): Promise<Color> {
     const result = await pool.query(
-      `INSERT INTO colors (name, hex, active, sort_order, manufacturer_id, inventory_grams)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO colors
+         (name, hex, active, sort_order, manufacturer_id, inventory_grams,
+          is_multi_color, additional_hexes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id`,
-      [data.name, data.hex, data.active ?? true, data.sortOrder ?? 0, data.manufacturerId ?? null, data.inventoryGrams ?? 0],
+      [
+        data.name,
+        data.hex,
+        data.active ?? true,
+        data.sortOrder ?? 0,
+        data.manufacturerId ?? null,
+        data.inventoryGrams ?? 0,
+        data.isMultiColor ?? false,
+        data.additionalHexes ?? [],
+      ],
     );
     return (await this.findById(result.rows[0].id))!;
   }
@@ -74,6 +91,8 @@ export class ColorModel {
     if (data.sortOrder !== undefined) { fields.push(`sort_order = $${i++}`); values.push(data.sortOrder); }
     if (data.manufacturerId !== undefined) { fields.push(`manufacturer_id = $${i++}`); values.push(data.manufacturerId ?? null); }
     if (data.inventoryGrams !== undefined) { fields.push(`inventory_grams = $${i++}`); values.push(data.inventoryGrams); }
+    if (data.isMultiColor !== undefined) { fields.push(`is_multi_color = $${i++}`); values.push(data.isMultiColor); }
+    if (data.additionalHexes !== undefined) { fields.push(`additional_hexes = $${i++}`); values.push(data.additionalHexes); }
 
     if (fields.length === 0) return this.findById(id);
 

@@ -347,6 +347,8 @@ export interface ColorDuplicateRow {
   material: string | null;
   manufacturerId: number | null;
   manufacturerName: string | null;
+  isMultiColor: boolean;
+  additionalHexes: string[];
   bambuddyId: number | null;
   active: boolean;
   inventoryGrams: number;
@@ -357,6 +359,10 @@ export interface ColorDuplicateRow {
 export interface ColorDuplicateGroup {
   hex: string;
   material: string | null;
+  manufacturerId: number | null;
+  manufacturerName: string | null;
+  isMultiColor: boolean;
+  additionalHexes: string[];
   count: number;
   rows: ColorDuplicateRow[];
 }

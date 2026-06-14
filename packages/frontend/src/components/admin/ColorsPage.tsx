@@ -20,6 +20,8 @@ function AddColorForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('');
   const [hex, setHex] = useState('#ff9900');
   const [manufacturerId, setManufacturerId] = useState<string>('');
+  const [isMultiColor, setIsMultiColor] = useState(false);
+  const [additionalHexes, setAdditionalHexes] = useState<string[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,10 +30,14 @@ function AddColorForm({ onDone }: { onDone: () => void }) {
       name: name.trim(),
       hex,
       manufacturerId: manufacturerId ? parseInt(manufacturerId) : null,
+      isMultiColor,
+      additionalHexes: isMultiColor ? additionalHexes : [],
     });
     setName('');
     setHex('#ff9900');
     setManufacturerId('');
+    setIsMultiColor(false);
+    setAdditionalHexes([]);
     onDone();
   };
 
@@ -91,7 +97,139 @@ function AddColorForm({ onDone }: { onDone: () => void }) {
           <button type="button" onClick={onDone} className="btn-secondary btn-sm">Cancel</button>
         </div>
       </div>
+      <div className="flex items-end gap-3 flex-wrap">
+        <label className="flex items-center gap-2 text-xs font-medium text-white cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isMultiColor}
+            onChange={(e) => {
+              setIsMultiColor(e.target.checked);
+              if (!e.target.checked) setAdditionalHexes([]);
+              else if (additionalHexes.length === 0) setAdditionalHexes(['#ffffff']);
+            }}
+          />
+          Multi-color filament
+        </label>
+        {isMultiColor && (
+          <MultiHexEditor hexes={additionalHexes} onChange={setAdditionalHexes} />
+        )}
+      </div>
     </form>
+  );
+}
+
+// Editor for the additional_hexes[] array on multi-color filaments.
+// Up to 3 secondaries (matches the backend cap). Each row is a color
+// input + hex string input. "+ Add another" appends; ✕ removes.
+function MultiHexEditor({
+  hexes,
+  onChange,
+}: {
+  hexes: string[];
+  onChange: (next: string[]) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium mb-1" style={{ color: '#ff9900' }}>
+        Additional colors
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        {hexes.map((h, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <input
+              type="color"
+              value={h}
+              onChange={(e) => {
+                const next = [...hexes];
+                next[i] = e.target.value;
+                onChange(next);
+              }}
+              className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
+            />
+            <input
+              value={h}
+              onChange={(e) => {
+                const next = [...hexes];
+                next[i] = e.target.value;
+                onChange(next);
+              }}
+              className="w-24 px-2 py-1 rounded text-iron-50 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary-500"
+              style={inputSt}
+            />
+            <button
+              type="button"
+              onClick={() => onChange(hexes.filter((_, j) => j !== i))}
+              className="text-white/60 hover:text-white text-xs px-1"
+              aria-label="Remove this color"
+              title="Remove"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        {hexes.length < 3 && (
+          <button
+            type="button"
+            onClick={() => onChange([...hexes, '#ffffff'])}
+            className="btn-secondary btn-sm text-xs"
+          >
+            + Add another
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Renders the primary hex plus any secondaries as a split circle/pill.
+// Single-color rows render unchanged. For multi-color, the swatch is
+// divided into N vertical bands so the customer/admin sees every hex
+// in the filament at a glance.
+function SplitSwatch({
+  primary,
+  additional,
+  size = 28,
+}: {
+  primary: string;
+  additional: string[];
+  size?: number;
+}) {
+  const all = [primary, ...additional];
+  if (all.length === 1) {
+    return (
+      <span
+        style={{
+          display: 'inline-block',
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          background: primary,
+          border: '1px solid rgba(255,255,255,0.15)',
+          flexShrink: 0,
+        }}
+        aria-hidden="true"
+      />
+    );
+  }
+  // CSS conic-gradient for N≥2 — equal slices, no math required.
+  const slice = 360 / all.length;
+  const stops = all
+    .map((hex, i) => `${hex} ${i * slice}deg ${(i + 1) * slice}deg`)
+    .join(', ');
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: `conic-gradient(${stops})`,
+        border: '1px solid rgba(255,255,255,0.15)',
+        flexShrink: 0,
+      }}
+      aria-hidden="true"
+      title={all.join(' / ')}
+    />
   );
 }
 
@@ -103,6 +241,8 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
   const [hex, setHex] = useState(color.hex);
   const [manufacturerId, setManufacturerId] = useState<string>(color.manufacturerId ? String(color.manufacturerId) : '');
   const [inventoryGrams, setInventoryGrams] = useState(color.inventoryGrams.toFixed(1));
+  const [isMultiColor, setIsMultiColor] = useState(color.isMultiColor);
+  const [additionalHexes, setAdditionalHexes] = useState<string[]>(color.additionalHexes ?? []);
   const [addingGrams, setAddingGrams] = useState(false);
   const [spoolGrams, setSpoolGrams] = useState('');
 
@@ -125,6 +265,8 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
       hex,
       manufacturerId: manufacturerId ? parseInt(manufacturerId) : null,
       inventoryGrams: isNaN(parsedGrams) ? color.inventoryGrams : parsedGrams,
+      isMultiColor,
+      additionalHexes: isMultiColor ? additionalHexes : [],
     });
     setEditing(false);
   };
@@ -137,10 +279,27 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
   if (editing) {
     return (
       <tr style={{ borderTop: '1px solid #2d2d2d', background: 'rgba(230,138,0,0.05)' }}>
-        <td className="px-4 py-2">
-          <div className="flex items-center gap-2">
-            <input type="color" value={hex} onChange={(e) => setHex(e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent" />
-            <input value={hex} onChange={(e) => setHex(e.target.value)} className="w-24 px-2 py-1 rounded text-iron-50 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
+        <td className="px-4 py-2 align-top">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <input type="color" value={hex} onChange={(e) => setHex(e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent" />
+              <input value={hex} onChange={(e) => setHex(e.target.value)} className="w-24 px-2 py-1 rounded text-iron-50 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
+            </div>
+            <label className="flex items-center gap-1.5 text-xs text-white cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isMultiColor}
+                onChange={(e) => {
+                  setIsMultiColor(e.target.checked);
+                  if (!e.target.checked) setAdditionalHexes([]);
+                  else if (additionalHexes.length === 0) setAdditionalHexes(['#ffffff']);
+                }}
+              />
+              Multi-color
+            </label>
+            {isMultiColor && (
+              <MultiHexEditor hexes={additionalHexes} onChange={setAdditionalHexes} />
+            )}
           </div>
         </td>
         <td className="px-4 py-2">
@@ -177,7 +336,19 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
         <td className="px-4 py-2">
           <div className="flex gap-1.5">
             <button onClick={save} className="btn-primary btn-sm text-xs">Save</button>
-            <button onClick={() => { setName(color.name); setHex(color.hex); setInventoryGrams(color.inventoryGrams.toFixed(1)); setEditing(false); }} className="btn-secondary btn-sm text-xs">Cancel</button>
+            <button
+              onClick={() => {
+                setName(color.name);
+                setHex(color.hex);
+                setInventoryGrams(color.inventoryGrams.toFixed(1));
+                setIsMultiColor(color.isMultiColor);
+                setAdditionalHexes(color.additionalHexes ?? []);
+                setEditing(false);
+              }}
+              className="btn-secondary btn-sm text-xs"
+            >
+              Cancel
+            </button>
           </div>
         </td>
       </tr>
@@ -190,18 +361,15 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
     <tr style={{ borderTop: '1px solid #2d2d2d', background: rowBg }} className="transition-colors hover:bg-iron-800/20">
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <span
-            style={{
-              display: 'inline-block',
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              background: color.hex,
-              border: `2px solid ${color.hex}`,
-              flexShrink: 0,
-            }}
-          />
-          <span className="font-mono text-xs text-white">{color.hex}</span>
+          <SplitSwatch primary={color.hex} additional={color.additionalHexes ?? []} />
+          <div className="flex flex-col">
+            <span className="font-mono text-xs text-white">{color.hex}</span>
+            {color.isMultiColor && color.additionalHexes && color.additionalHexes.length > 0 && (
+              <span className="font-mono text-[10px] text-white/60">
+                + {color.additionalHexes.join(' / ')}
+              </span>
+            )}
+          </div>
         </div>
       </td>
       <td className="px-4 py-3 text-sm font-medium text-white">{color.name}</td>
@@ -387,6 +555,16 @@ function DedupeModal({
   const [keepers, setKeepers] = useState<Record<string, number>>({}); // groupKey → keepId
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
+  // Match the backend's group key: same 5-tuple of identity dimensions.
+  const groupKey = (g: ColorDuplicateGroup): string =>
+    [
+      g.hex.toUpperCase(),
+      g.material ?? '∅',
+      g.manufacturerId ?? '∅',
+      g.isMultiColor ? 'M' : 'S',
+      [...g.additionalHexes].map((h) => h.toUpperCase()).sort().join(','),
+    ].join('|');
+
   const refresh = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -395,9 +573,8 @@ function DedupeModal({
       // Default each group's keeper to the linked row if any; else lowest id.
       const next: Record<string, number> = {};
       for (const grp of g) {
-        const key = `${grp.hex}|${grp.material ?? '∅'}`;
         const linked = grp.rows.find((r) => r.bambuddyId !== null);
-        next[key] = linked ? linked.id : grp.rows[0].id;
+        next[groupKey(grp)] = linked ? linked.id : grp.rows[0].id;
       }
       setKeepers(next);
     } catch (err: any) {
@@ -410,7 +587,7 @@ function DedupeModal({
   React.useEffect(() => { refresh(); }, [refresh]);
 
   const handleMerge = async (group: ColorDuplicateGroup) => {
-    const key = `${group.hex}|${group.material ?? '∅'}`;
+    const key = groupKey(group);
     const keepId = keepers[key];
     if (!keepId) return;
     const mergeIds = group.rows.filter((r) => r.id !== keepId).map((r) => r.id);
@@ -470,7 +647,7 @@ function DedupeModal({
               (only one row per BB color can survive a sync).
             </p>
             {groups.map((group) => {
-              const key = `${group.hex}|${group.material ?? '∅'}`;
+              const key = groupKey(group);
               const isBusy = busyKey === key;
               return (
                 <div
@@ -478,15 +655,34 @@ function DedupeModal({
                   className="rounded-lg p-3 space-y-2"
                   style={{ background: '#1a1a1a', border: '1px solid #2d2d2d' }}
                 >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-block w-5 h-5 rounded"
-                      style={{ background: group.hex, border: '1px solid rgba(255,255,255,0.15)' }}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <SplitSwatch
+                      primary={group.hex}
+                      additional={group.additionalHexes}
+                      size={20}
                     />
                     <span className="font-mono text-xs text-white">{group.hex}</span>
+                    {group.additionalHexes.length > 0 && (
+                      <span className="font-mono text-[10px] text-white/60">
+                        + {group.additionalHexes.join(' / ')}
+                      </span>
+                    )}
                     {group.material && (
                       <span className="text-xs px-2 py-0.5 rounded" style={{ background: '#2d2d2d', color: '#d1d5db' }}>
                         {group.material}
+                      </span>
+                    )}
+                    {group.manufacturerName && (
+                      <span className="text-xs px-2 py-0.5 rounded" style={{ background: '#2d2d2d', color: '#d1d5db' }}>
+                        {group.manufacturerName}
+                      </span>
+                    )}
+                    {group.isMultiColor && (
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded font-semibold"
+                        style={{ background: '#6d28d9', color: '#ffffff' }}
+                      >
+                        MULTI
                       </span>
                     )}
                     <span className="text-xs text-white/50">· {group.count} rows</span>

@@ -29,6 +29,11 @@ export interface Color {
   id: number;
   name: string;
   hex: string;
+  // Multi-color filament support (migration 039 / Bug #66 follow-up).
+  // `isMultiColor=true` rows carry their secondary hex(es) in
+  // `additionalHexes` (empty array for solid-color rows).
+  isMultiColor: boolean;
+  additionalHexes: string[];
   active: boolean;
   sortOrder: number;
   manufacturerId: number | null;
@@ -59,6 +64,8 @@ export interface ItemColorDto {
 export interface CreateColorDto {
   name: string;
   hex: string;
+  isMultiColor?: boolean;
+  additionalHexes?: string[];
   active?: boolean;
   sortOrder?: number;
   manufacturerId?: number | null;
@@ -68,6 +75,8 @@ export interface CreateColorDto {
 export interface UpdateColorDto {
   name?: string;
   hex?: string;
+  isMultiColor?: boolean;
+  additionalHexes?: string[];
   active?: boolean;
   sortOrder?: number;
   manufacturerId?: number | null;
