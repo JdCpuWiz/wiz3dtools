@@ -11,22 +11,29 @@ import { pool } from '../config/database.js';
 //   admin can see WHY rows look duplicated even when they aren't.
 //
 // SCOPE OF A MERGE (what's actually safe to fold into a keeper):
-//   Hex must match (the panel-grouping invariant). The bambuddy_id of
+//   Hex must match (the panel-grouping invariant). Material FAMILY
+//   must match (or be NULL on one side) — same hex + different family
+//   means physically distinct filaments (PLA vs ABS share #FF6A13 but
+//   one melts at 220°C and the other at 260°C). The bambuddy_id of
 //   any row being deleted must be NULL (otherwise the next sync would
-//   re-insert it). EVERYTHING ELSE — material / manufacturer_id /
-//   is_multi_color / additional_hexes — is an admin assertion: by
-//   picking a keeper, the admin is declaring "these rows ARE the same
-//   filament regardless of how the labels diverged." The keeper's
-//   values win for every dimension; the dupe rows' values are
-//   discarded along with the rows.
+//   re-insert it). EVERYTHING ELSE — material VARIANT within a
+//   family / manufacturer_id / is_multi_color / additional_hexes — is
+//   an admin assertion: by picking a keeper, the admin is declaring
+//   "these rows ARE the same filament regardless of how the labels
+//   diverged." The keeper's values win for every dimension; the dupe
+//   rows' values are discarded along with the rows.
 //
-//   Change #159 follow-up — strict identity used to be a hard refusal
-//   here, but that blocked legitimate cases like "PLA" vs "PLA Basic"
-//   (same Bambu filament, different label era). Frontend now warns
-//   about diffs in a confirm dialog before submitting so the assertion
-//   is explicit. Risk is bounded: line_item_colors snapshots its own
-//   unit_price per line so historical invoice math is invariant under
-//   color reference shifts.
+//   Change #159 evolution:
+//   - Original strict-identity refusal blocked legitimate cases like
+//     "PLA" vs "PLA Basic" (same Bambu filament, different label era).
+//   - First loosening (dropped ALL material checks) over-corrected and
+//     let PLA merge into ABS — actually distinct filaments.
+//   - Current: family-level check via materialFamily() helper below.
+//     Same family token → merge; different family → refuse.
+//
+//   Risk is bounded: line_item_colors snapshots its own unit_price
+//   per line so historical invoice math is invariant under color
+//   reference shifts.
 //
 // Color rows in the live DB are referenced by exactly two FK locations
 // after BuildPlan #6 Phase 3 dropped the queue subsystem:
@@ -75,6 +82,29 @@ export interface DuplicateRow {
 function normaliseHexes(arr: string[] | null): string[] {
   if (!arr) return [];
   return [...arr].map((h) => h.toUpperCase()).sort();
+}
+
+// Material FAMILY (Change #159 follow-up #2). Wiz reported merging
+// PLA into ABS via the loosened guard — same hex (#FF6A13) but
+// fundamentally different filaments (different temps, different
+// physical behavior). The fix: classify each material string into
+// its base family by taking the leading alphanumeric token. So:
+//   "PLA"        → "pla"
+//   "PLA Basic"  → "pla"
+//   "PLA Matte"  → "pla"
+//   "PLA-CF"     → "pla"
+//   "PLA+"       → "pla"
+//   "ABS"        → "abs"
+//   "ABS-GF"     → "abs"
+//   "PETG-CF"    → "petg"
+//   "TPU 95A"    → "tpu"
+// Variants within a family merge fine (admin asserts they're the same
+// Bambu filament with different label eras). Cross-family merges are
+// refused with a clear message.
+export function materialFamily(m: string | null): string | null {
+  if (!m) return null;
+  const match = m.trim().toLowerCase().match(/^[a-z0-9]+/);
+  return match ? match[0] : null;
 }
 
 export async function findDuplicates(): Promise<DuplicateGroup[]> {
@@ -206,26 +236,31 @@ export async function mergeColors(
     // dimension; allowing cross-hex merges would mean the admin clicked
     // through a wholly unrelated row. That's almost certainly a UI bug.
     //
-    // Sanity 2 — refuse to delete any row whose bambuddy_id is set
+    // Sanity 2 — material FAMILY must match (or be NULL on one side).
+    // Variants within a family merge fine ("PLA" vs "PLA Basic" vs
+    // "PLA-CF" all share the "pla" family token). Cross-family merges
+    // (PLA vs ABS, PLA vs PETG) are refused — those are different
+    // filaments that happen to share a hex.
+    //
+    // Sanity 3 — refuse to delete any row whose bambuddy_id is set
     // (the BamBuddy sync would re-insert a fresh dupe on next run).
     // See comment at the top of the file for the sync's match logic.
     //
-    // EVERYTHING ELSE goes through — material / manufacturer_id /
-    // is_multi_color / additional_hexes — was previously a hard refusal
-    // but it blocked legitimate dedup work like collapsing "PLA" rows
-    // into "PLA Basic" rows (same Bambu filament, different label era).
-    // The keeper's values for these dimensions WIN and the dupe rows'
-    // values get discarded along with the row. The frontend warns the
-    // admin about any identity diff before submitting so this is an
-    // explicit assertion, not a silent coalesce. The line_item_colors
-    // table stores its own unit_price snapshot per line so historical
-    // invoice math is unaffected by the reference shift.
+    // EVERYTHING ELSE goes through — manufacturer_id / is_multi_color /
+    // additional_hexes, and material VARIANTS within the same family.
+    // The keeper's values win and the dupe rows' values get discarded
+    // along with the rows. Frontend warns about identity diffs in a
+    // confirm dialog so this is an explicit admin assertion, not a
+    // silent coalesce. line_item_colors snapshots its own unit_price
+    // per line so historical invoice math is invariant under color
+    // reference shifts.
     const idsRes = await client.query<{
       id: number;
       hex: string;
+      material: string | null;
       bambuddy_id: number | null;
     }>(
-      `SELECT id, UPPER(hex) AS hex, bambuddy_id
+      `SELECT id, UPPER(hex) AS hex, material, bambuddy_id
          FROM colors
         WHERE id = ANY($1::int[])
         FOR UPDATE`,
@@ -236,6 +271,7 @@ export async function mergeColors(
     if (!keeper) {
       throw Object.assign(new Error(`Keeper color ${keepId} not found`), { statusCode: 404 });
     }
+    const keeperFamily = materialFamily(keeper.material);
     for (const mid of mergeIds) {
       const row = byId.get(mid);
       if (!row) {
@@ -244,6 +280,18 @@ export async function mergeColors(
       if (row.hex !== keeper.hex) {
         throw Object.assign(
           new Error(`Color ${mid} hex ${row.hex} doesn't match keeper hex ${keeper.hex}. Refusing merge across different hexes.`),
+          { statusCode: 400 },
+        );
+      }
+      const rowFamily = materialFamily(row.material);
+      // Both sides have known families AND they disagree → refuse.
+      // If either side is NULL we treat it as "unknown — admin assertion
+      // wins" since the row needs a material set anyway.
+      if (rowFamily && keeperFamily && rowFamily !== keeperFamily) {
+        throw Object.assign(
+          new Error(
+            `Color ${mid} material family "${row.material}" (${rowFamily}) is a different filament from keeper's "${keeper.material}" (${keeperFamily}). PLA and ABS (etc.) are physically distinct filaments — refusing merge across families.`,
+          ),
           { statusCode: 400 },
         );
       }

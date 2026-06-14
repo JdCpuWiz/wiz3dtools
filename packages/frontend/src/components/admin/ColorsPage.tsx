@@ -890,6 +890,16 @@ export const ColorsPage: React.FC = () => {
 // merge. Defaults the keeper to the row already linked to BamBuddy
 // (bambuddy_id IS NOT NULL) because deleting a BB-linked row would just
 // have the next sync re-insert it.
+// Extracts the material family token (matches the backend helper of
+// the same name). "PLA Basic" → "pla", "ABS-GF" → "abs", "PETG-CF" →
+// "petg", "TPU 95A" → "tpu". Used by the confirm dialog to block
+// cross-family submissions before they hit the network.
+function materialFamily(m: string | null | undefined): string | null {
+  if (!m) return null;
+  const match = m.trim().toLowerCase().match(/^[a-z0-9]+/);
+  return match ? match[0] : null;
+}
+
 function DedupeModal({
   onClose,
   onMerged,
@@ -900,6 +910,12 @@ function DedupeModal({
   const [groups, setGroups] = useState<ColorDuplicateGroup[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [keepers, setKeepers] = useState<Record<string, number>>({}); // groupKey → keepId
+  // Change #159 follow-up — per-row "include in merge" checkboxes so
+  // admin can hand-pick which rows participate when a group spans
+  // multiple filaments (e.g. 1 ABS + 2 PLA at the same hex). Map of
+  // groupKey → Set of row IDs marked for merge. Default state on first
+  // refresh: every row checked (matches the old "merge all" behavior).
+  const [selected, setSelected] = useState<Record<string, Set<number>>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
   // Change #159 — backend groups by UPPER(hex) only for visibility, so
@@ -912,19 +928,50 @@ function DedupeModal({
     try {
       const g = await colorApi.findDuplicates();
       setGroups(g);
-      // Default each group's keeper to the linked row if any; else lowest id.
-      const next: Record<string, number> = {};
+      // Default each group's keeper to the linked row if any; else
+      // lowest id. Default selection: every row in the group is checked
+      // (matches pre-#159-followup "merge all" behavior). Admin unchecks
+      // rows that shouldn't participate (e.g. the ABS in a PLA group).
+      const nextKeepers: Record<string, number> = {};
+      const nextSelected: Record<string, Set<number>> = {};
       for (const grp of g) {
+        const key = groupKey(grp);
         const linked = grp.rows.find((r) => r.bambuddyId !== null);
-        next[groupKey(grp)] = linked ? linked.id : grp.rows[0].id;
+        nextKeepers[key] = linked ? linked.id : grp.rows[0].id;
+        nextSelected[key] = new Set(grp.rows.map((r) => r.id));
       }
-      setKeepers(next);
+      setKeepers(nextKeepers);
+      setSelected(nextSelected);
     } catch (err: any) {
       toast.error(`Failed to load duplicates: ${err.message || err}`);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Toggle one row's checked state. If the row being unchecked is the
+  // current keeper, promote the next remaining checked row to keeper
+  // (or clear the keeper when nothing's left).
+  const toggleRow = (groupKeyStr: string, rowId: number, group: ColorDuplicateGroup) => {
+    setSelected((prev) => {
+      const cur = new Set(prev[groupKeyStr] ?? []);
+      if (cur.has(rowId)) cur.delete(rowId);
+      else cur.add(rowId);
+      return { ...prev, [groupKeyStr]: cur };
+    });
+    if (keepers[groupKeyStr] === rowId) {
+      // We're unchecking the keeper — find a replacement among the
+      // remaining checked rows.
+      const remaining = group.rows.filter(
+        (r) => r.id !== rowId && selected[groupKeyStr]?.has(r.id),
+      );
+      const linked = remaining.find((r) => r.bambuddyId !== null);
+      const nextKeeper = linked?.id ?? remaining[0]?.id ?? 0;
+      if (nextKeeper) {
+        setKeepers((prev) => ({ ...prev, [groupKeyStr]: nextKeeper }));
+      }
+    }
+  };
 
   React.useEffect(() => { refresh(); }, [refresh]);
 
@@ -933,15 +980,46 @@ function DedupeModal({
     const keepId = keepers[key];
     if (!keepId) return;
     const keeper = group.rows.find((r) => r.id === keepId);
-    const mergeRows = group.rows.filter((r) => r.id !== keepId);
-    if (mergeRows.length === 0 || !keeper) return;
+    if (!keeper) return;
+    // Only operate on rows the admin has explicitly checked. Excludes
+    // the keeper itself (already chosen via radio) so the same row
+    // isn't both keeper and merge-candidate.
+    const selectedIds = selected[key] ?? new Set<number>();
+    const mergeRows = group.rows.filter(
+      (r) => r.id !== keepId && selectedIds.has(r.id),
+    );
+    if (mergeRows.length === 0) {
+      alert('No rows selected to merge into the keeper. Check the boxes on the rows you want to absorb.');
+      return;
+    }
     const mergeIds = mergeRows.map((r) => r.id);
 
     // Surface any identity diffs to the admin BEFORE the merge runs.
-    // Change #159 follow-up — backend used to refuse cross-identity
-    // merges as a hard error; that was too strict (e.g. "PLA" vs "PLA
-    // Basic" are the same Bambu filament). Now the merge proceeds with
-    // the keeper's values winning, and the admin sees the spread here.
+    // Material-family mismatches are HARD-BLOCKED before the network
+    // call — backend would refuse anyway, but this gives a friendlier
+    // experience. Same-family variants (PLA vs PLA Basic vs PLA-CF)
+    // and other dimensions (manufacturer / multi / additional hexes)
+    // flow through with the keeper's values winning.
+    const keeperFamily = materialFamily(keeper.material);
+    const familyClashes: string[] = [];
+    for (const r of mergeRows) {
+      const rowFamily = materialFamily(r.material);
+      if (rowFamily && keeperFamily && rowFamily !== keeperFamily) {
+        familyClashes.push(
+          `  #${r.id} (${r.name}): "${r.material}" (${rowFamily}) ≠ keeper's "${keeper.material}" (${keeperFamily})`,
+        );
+      }
+    }
+    if (familyClashes.length > 0) {
+      alert(
+        `Can't merge across different filament families.\n\n` +
+        `These rows are physically distinct filaments from the keeper — same hex but different material family (PLA, ABS, PETG, etc.) means different melt temperatures and properties:\n\n` +
+        familyClashes.join('\n') +
+        `\n\nUncheck these rows OR pick a different keeper that matches their family.`,
+      );
+      return;
+    }
+
     const keeperHexes = [...keeper.additionalHexes].map((h) => h.toUpperCase()).sort().join(',');
     const diffNotes: string[] = [];
     for (const r of mergeRows) {
@@ -965,7 +1043,7 @@ function DedupeModal({
     }
 
     const lines = [
-      `Merge ${mergeRows.length} row(s) of ${group.hex} into color #${keepId} (${keeper.name})?`,
+      `Merge ${mergeRows.length} of ${group.rows.length} row(s) of ${group.hex} into color #${keepId} (${keeper.name})?`,
       '',
       'Invoice references will be repointed to the keeper. This cannot be undone (but historical invoice math is unaffected — line items snapshot their own prices).',
     ];
@@ -1023,13 +1101,20 @@ function DedupeModal({
         ) : (
           <div className="space-y-4">
             <p className="text-xs text-white/60">
-              Each group shares the same hex + material. Pick a keeper, hit Merge.
-              The keeper defaults to the row already linked to BamBuddy
-              (only one row per BB color can survive a sync).
+              Rows are grouped by hex. Check the boxes on the rows you
+              want to merge, then pick which one is the keeper. Cross-
+              filament-family merges (PLA vs ABS, etc.) are blocked — same
+              hex but different materials = physically distinct filaments.
             </p>
             {groups.map((group) => {
               const key = groupKey(group);
               const isBusy = busyKey === key;
+              const groupSelected = selected[key] ?? new Set<number>();
+              const allChecked = group.rows.every((r) => groupSelected.has(r.id));
+              const selectedCount = group.rows.filter((r) => groupSelected.has(r.id)).length;
+              const checkedExceptKeeper = group.rows.filter(
+                (r) => r.id !== keepers[key] && groupSelected.has(r.id),
+              ).length;
               return (
                 <div
                   key={key}
@@ -1042,24 +1127,33 @@ function DedupeModal({
                       style={{ background: group.hex, border: '1px solid rgba(255,255,255,0.15)' }}
                     />
                     <span className="font-mono text-xs text-white">{group.hex}</span>
-                    <span className="text-xs text-white/50">· {group.count} rows share this hex</span>
-                    <span
-                      className="text-[10px] text-white/40"
-                      title="The Merge button only succeeds when keeper + selected rows share material + manufacturer + multi-color + additional hexes. Cross-identity rows show here for visibility but won't auto-merge."
+                    <span className="text-xs text-white/50">· {selectedCount} of {group.count} selected</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelected((p) => ({
+                        ...p,
+                        [key]: allChecked ? new Set() : new Set(group.rows.map((r) => r.id)),
+                      }))}
+                      className="text-[10px] text-white/60 hover:text-white underline"
                     >
-                      ⓘ
-                    </span>
+                      {allChecked ? 'Clear all' : 'Select all'}
+                    </button>
                     <button
                       className="ml-auto btn-primary btn-sm"
                       onClick={() => handleMerge(group)}
-                      disabled={isBusy}
+                      disabled={isBusy || checkedExceptKeeper === 0}
+                      title={checkedExceptKeeper === 0
+                        ? 'Check at least one non-keeper row to merge'
+                        : `Merge ${checkedExceptKeeper} row(s) into keeper #${keepers[key]}`
+                      }
                     >
-                      {isBusy ? 'Merging…' : `Merge → keep #${keepers[key]}`}
+                      {isBusy ? 'Merging…' : `Merge ${checkedExceptKeeper} → keep #${keepers[key]}`}
                     </button>
                   </div>
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="text-left" style={{ color: '#ff9900' }}>
+                        <th className="py-1 pr-2">In</th>
                         <th className="py-1 pr-2">Keep</th>
                         <th className="py-1 pr-2">#ID</th>
                         <th className="py-1 pr-2">Name</th>
@@ -1079,7 +1173,9 @@ function DedupeModal({
                           key={row.id}
                           row={row}
                           isKeeper={keepers[key] === row.id}
+                          isChecked={groupSelected.has(row.id)}
                           onPick={() => setKeepers((p) => ({ ...p, [key]: row.id }))}
+                          onToggleCheck={() => toggleRow(key, row.id, group)}
                         />
                       ))}
                     </tbody>
@@ -1097,26 +1193,47 @@ function DedupeModal({
 function DedupeRow({
   row,
   isKeeper,
+  isChecked,
   onPick,
+  onToggleCheck,
 }: {
   row: ColorDuplicateRow;
   isKeeper: boolean;
+  isChecked: boolean;
   onPick: () => void;
+  onToggleCheck: () => void;
 }) {
   const linked = row.bambuddyId !== null;
   return (
     <tr
       style={{
-        background: isKeeper ? 'rgba(255, 153, 0, 0.08)' : 'transparent',
+        background: isKeeper
+          ? 'rgba(255, 153, 0, 0.08)'
+          : !isChecked ? 'rgba(0, 0, 0, 0.25)' : 'transparent',
+        opacity: !isChecked ? 0.55 : 1,
       }}
     >
       <td className="py-1 pr-2">
         <input
+          type="checkbox"
+          checked={isChecked}
+          onChange={onToggleCheck}
+          aria-label={`Include color #${row.id} in merge`}
+          title="Check to include this row in the merge; uncheck to leave it alone"
+        />
+      </td>
+      <td className="py-1 pr-2">
+        <input
           type="radio"
-          name={`keeper-${row.hex}-${row.material ?? 'null'}`}
+          name={`keeper-${row.hex}`}
           checked={isKeeper}
           onChange={onPick}
+          disabled={!isChecked}
           aria-label={`Keep color #${row.id}`}
+          title={isChecked
+            ? 'Mark this row as the keeper — others merge into it'
+            : 'Check the row first to make it eligible as keeper'
+          }
         />
       </td>
       <td className="py-1 pr-2 font-mono text-white">#{row.id}</td>
