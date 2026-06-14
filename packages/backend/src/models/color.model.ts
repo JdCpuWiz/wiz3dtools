@@ -3,6 +3,8 @@ import type { Color, CreateColorDto, UpdateColorDto } from '@wizqueue/shared';
 
 const SELECT_FIELDS = `
   c.id, c.name, c.hex, c.active,
+  c.material,
+  c.bambuddy_id as "bambuddyId",
   c.is_multi_color as "isMultiColor",
   c.additional_hexes as "additionalHexes",
   c.sort_order as "sortOrder",
@@ -87,6 +89,7 @@ export class ColorModel {
 
     if (data.name !== undefined) { fields.push(`name = $${i++}`); values.push(data.name); }
     if (data.hex !== undefined) { fields.push(`hex = $${i++}`); values.push(data.hex); }
+    if (data.material !== undefined) { fields.push(`material = $${i++}`); values.push(data.material ?? null); }
     if (data.active !== undefined) { fields.push(`active = $${i++}`); values.push(data.active); }
     if (data.sortOrder !== undefined) { fields.push(`sort_order = $${i++}`); values.push(data.sortOrder); }
     if (data.manufacturerId !== undefined) { fields.push(`manufacturer_id = $${i++}`); values.push(data.manufacturerId ?? null); }

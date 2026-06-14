@@ -311,6 +311,7 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(color.name);
   const [hex, setHex] = useState(color.hex);
+  const [material, setMaterial] = useState<string>(color.material ?? '');
   const [manufacturerId, setManufacturerId] = useState<string>(color.manufacturerId ? String(color.manufacturerId) : '');
   const [inventoryGrams, setInventoryGrams] = useState(color.inventoryGrams.toFixed(1));
   const [isMultiColor, setIsMultiColor] = useState(color.isMultiColor);
@@ -335,6 +336,7 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
     await update(color.id, {
       name: name.trim(),
       hex,
+      material: material.trim() === '' ? null : material.trim(),
       manufacturerId: manufacturerId ? parseInt(manufacturerId) : null,
       inventoryGrams: isNaN(parsedGrams) ? color.inventoryGrams : parsedGrams,
       isMultiColor,
@@ -378,6 +380,15 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
           <input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-2 py-1 rounded text-iron-50 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500" style={inputSt} />
         </td>
         <td className="px-4 py-2">
+          <input
+            value={material}
+            onChange={(e) => setMaterial(e.target.value)}
+            placeholder="e.g. PLA Basic"
+            className="w-full px-2 py-1 rounded text-iron-50 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+            style={inputSt}
+          />
+        </td>
+        <td className="px-4 py-2">
           <select
             value={manufacturerId}
             onChange={(e) => setManufacturerId(e.target.value)}
@@ -389,6 +400,16 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}
           </select>
+        </td>
+        <td className="px-4 py-2 text-xs">
+          {/* BB id is sync-managed — read-only display in edit mode. */}
+          {color.bambuddyId !== null ? (
+            <span className="font-mono text-white" title={`BamBuddy color id ${color.bambuddyId}`}>
+              #{color.bambuddyId}
+            </span>
+          ) : (
+            <span className="text-white/40">—</span>
+          )}
         </td>
         <td className="px-4 py-2">
           <div className="flex items-center gap-1">
@@ -405,6 +426,11 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
           </div>
         </td>
         <td className="px-4 py-2 text-sm text-white">{color.active ? 'Active' : 'Inactive'}</td>
+        <td className="px-4 py-2 text-xs text-white/60">
+          {/* Multi-color is toggled inside the Swatch column above
+              while in edit mode. This cell just holds the column. */}
+          {isMultiColor ? 'Multi' : 'Single'}
+        </td>
         <td className="px-4 py-2">
           <div className="flex gap-1.5">
             <button onClick={save} className="btn-primary btn-sm text-xs">Save</button>
@@ -412,6 +438,7 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
               onClick={() => {
                 setName(color.name);
                 setHex(color.hex);
+                setMaterial(color.material ?? '');
                 setInventoryGrams(color.inventoryGrams.toFixed(1));
                 setIsMultiColor(color.isMultiColor);
                 setAdditionalHexes(color.additionalHexes ?? []);
@@ -445,7 +472,17 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
         </div>
       </td>
       <td className="px-4 py-3 text-sm font-medium text-white">{color.name}</td>
+      <td className="px-4 py-3 text-xs text-white">{color.material ?? '—'}</td>
       <td className="px-4 py-3 text-xs text-white">{color.manufacturer?.name ?? '—'}</td>
+      <td className="px-4 py-3 text-xs">
+        {color.bambuddyId !== null ? (
+          <span className="font-mono text-white" title={`BamBuddy color id ${color.bambuddyId}`}>
+            #{color.bambuddyId}
+          </span>
+        ) : (
+          <span className="text-white/40">—</span>
+        )}
+      </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-3 flex-wrap">
           <InventoryReadout color={color} />
@@ -554,8 +591,9 @@ export const ColorsPage: React.FC = () => {
   // Phase 4 — manufacturer + active-state filters + sort. Component
   // state only (no URL persistence in v1; no shareable views yet).
   const [manufacturerFilter, setManufacturerFilter] = useState<'all' | 'unassigned' | number>('all');
+  const [materialFilter, setMaterialFilter] = useState<'all' | 'unassigned' | string>('all');
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'disabled'>('all');
-  type SortKey = 'name' | 'hex' | 'manufacturer' | 'inventory';
+  type SortKey = 'name' | 'hex' | 'material' | 'manufacturer' | 'inventory';
   const [sortBy, setSortBy] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
@@ -614,10 +652,30 @@ export const ColorsPage: React.FC = () => {
     };
   }, [colors]);
 
+  // Material filter — same shape as manufacturer. Lists every distinct
+  // material string with a count. "Unassigned" covers NULL or empty.
+  const materialOptions = React.useMemo(() => {
+    const byMaterial = new Map<string, number>();
+    let unassigned = 0;
+    for (const c of colors) {
+      const m = (c.material ?? '').trim();
+      if (m) byMaterial.set(m, (byMaterial.get(m) ?? 0) + 1);
+      else unassigned++;
+    }
+    return {
+      list: Array.from(byMaterial.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+      unassigned,
+    };
+  }, [colors]);
+
   // Filter chips narrow the VISIBLE rows. The dedupe button still
   // operates against the full `colors` array (it never reads `visible`),
   // so any combination of filters can't hide dupes from the dedupe modal.
   // Filters AND-combine; sort applies last.
+  // Re-derive visible whenever any filter (including the new material
+  // one) changes — keeps the React.useMemo dependency list explicit.
   const visible = React.useMemo(() => {
     let out = colors;
 
@@ -644,11 +702,23 @@ export const ColorsPage: React.FC = () => {
       out = out.filter((c) => c.manufacturerId === manufacturerFilter);
     }
 
+    // Material filter — exact string match. Family-level filtering
+    // would be a future enhancement; for now admin can pick "PLA Basic"
+    // separately from "PLA Matte" if they care to.
+    if (materialFilter === 'unassigned') {
+      out = out.filter((c) => !c.material || c.material.trim() === '');
+    } else if (typeof materialFilter === 'string' && materialFilter !== 'all') {
+      out = out.filter((c) => c.material === materialFilter);
+    }
+
     // Sort — return a fresh array so we never mutate the cache.
     const sorted = [...out].sort((a, b) => {
       let cmp = 0;
       if (sortBy === 'name') cmp = a.name.localeCompare(b.name);
       else if (sortBy === 'hex') cmp = a.hex.localeCompare(b.hex);
+      else if (sortBy === 'material') {
+        cmp = (a.material ?? '').localeCompare(b.material ?? '');
+      }
       else if (sortBy === 'manufacturer') {
         cmp = (a.manufacturer?.name ?? '').localeCompare(b.manufacturer?.name ?? '');
       } else if (sortBy === 'inventory') {
@@ -657,7 +727,7 @@ export const ColorsPage: React.FC = () => {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return sorted;
-  }, [colors, stockFilter, activeFilter, manufacturerFilter, sortBy, sortDir]);
+  }, [colors, stockFilter, activeFilter, manufacturerFilter, materialFilter, sortBy, sortDir]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -799,6 +869,24 @@ export const ColorsPage: React.FC = () => {
         </div>
 
         <div className="flex flex-col">
+          <label className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Material</label>
+          <select
+            value={materialFilter}
+            onChange={(e) => setMaterialFilter(e.target.value)}
+            className="px-3 py-1.5 rounded-md text-xs text-iron-50 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            style={inputSt}
+          >
+            <option value="all">All materials ({colors.length})</option>
+            {materialOptions.unassigned > 0 && (
+              <option value="unassigned">Unassigned ({materialOptions.unassigned})</option>
+            )}
+            {materialOptions.list.map((m) => (
+              <option key={m.name} value={m.name}>{m.name} ({m.count})</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col">
           <label className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Active state</label>
           <div className="inline-flex rounded-md overflow-hidden" style={{ background: '#2d2d2d' }}>
             {(['all', 'active', 'disabled'] as const).map((opt) => (
@@ -828,6 +916,7 @@ export const ColorsPage: React.FC = () => {
             >
               <option value="name">Name</option>
               <option value="hex">Hex</option>
+              <option value="material">Material</option>
               <option value="manufacturer">Manufacturer</option>
               <option value="inventory">Inventory (g)</option>
             </select>
@@ -854,7 +943,13 @@ export const ColorsPage: React.FC = () => {
             <tr style={{ background: 'linear-gradient(to bottom, #4a4a4a, #3a3a3a)' }}>
               <th className="text-left px-4 py-2.5 font-semibold w-40" style={{ color: '#ff9900' }}>Swatch</th>
               <th className="text-left px-4 py-2.5 font-semibold" style={{ color: '#ff9900' }}>Name</th>
+              {/* Material + BB number added so 8 Bambu "Black" rows
+                  stop looking identical — they're really PLA Basic
+                  Black / PLA Matte Black / PLA-CF Black / etc., each
+                  with its own BamBuddy id. */}
+              <th className="text-left px-4 py-2.5 font-semibold w-28" style={{ color: '#ff9900' }}>Material</th>
               <th className="text-left px-4 py-2.5 font-semibold w-32" style={{ color: '#ff9900' }}>Manufacturer</th>
+              <th className="text-left px-4 py-2.5 font-semibold w-20" style={{ color: '#ff9900' }}>BB</th>
               {/* Change #159 — widened from w-52 (208px) to w-72 (288px) so
                   the gram readout + progress bar + + Spool button stop
                   wrapping. */}
@@ -867,7 +962,7 @@ export const ColorsPage: React.FC = () => {
           <tbody>
             {visible.map((c, i) => <ColorRow key={c.id} color={c} index={i} isAdmin={isAdmin} />)}
             {visible.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-white text-sm">
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-white text-sm">
                 {stockFilter === 'all' ? 'No colors yet' : 'No colors in this category'}
               </td></tr>
             )}

@@ -104,6 +104,10 @@ const hexSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Hex color must be in fo
 export const createColorSchema = z.object({
   name: z.string().min(1, 'Color name is required').max(100),
   hex: hexSchema,
+  // Material label (e.g. "PLA Basic", "PETG-HF"). Free text — the
+  // dedupe family-extraction handles variants from a leading-token
+  // regex, so admin can type whatever Bambu / vendor labels these.
+  material: nullish(z.string().max(50)),
   // Multi-color filament support (Bug #66 / migration 039).
   isMultiColor: z.boolean().optional(),
   additionalHexes: z.array(hexSchema).max(3).optional(),
