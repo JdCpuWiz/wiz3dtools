@@ -36,12 +36,10 @@ export function stockStatus(color: Color): StockStatus {
   return 'ok';
 }
 
-const STOCK_STYLE: Record<StockStatus, { label: string; color: string; bg: string }> = {
-  ok:       { label: 'OK',       color: '#ffffff', bg: '#15803d' },
-  low:      { label: 'Low',      color: '#000000', bg: '#eab308' },
-  critical: { label: 'Critical', color: '#ffffff', bg: '#b91c1c' },
-  empty:    { label: 'Empty',    color: '#ffffff', bg: '#4b5563' },
-};
+// STOCK_STYLE removed in Change #159 — the stock-level pill was replaced
+// by a single Active/Inactive button in the Status column. The Low /
+// Critical / Empty signal still surfaces via the colored inventory
+// progress bar driven by STOCK_BAR_COLOR below.
 
 const STOCK_BAR_COLOR: Record<StockStatus, string> = {
   ok: '#4ade80',
@@ -84,30 +82,9 @@ function InventoryReadout({ color }: { color: Color }) {
   );
 }
 
-// Pill that renders the current stock status, or "Disabled" when the
-// color is inactive (matches the FilamentPage convention).
-function StockPill({ color }: { color: Color }) {
-  if (!color.active) {
-    return (
-      <span
-        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-        style={{ color: '#ffffff', background: '#6b7280' }}
-      >
-        Disabled
-      </span>
-    );
-  }
-  const status = stockStatus(color);
-  const style = STOCK_STYLE[status];
-  return (
-    <span
-      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ color: style.color, background: style.bg }}
-    >
-      {style.label}
-    </span>
-  );
-}
+// StockPill was removed in Change #159 — the single Active/Inactive
+// toggle button replaced it. The Low/Critical visibility still surfaces
+// via the colored inventory progress bar in InventoryReadout above.
 
 function AddColorForm({ onDone }: { onDone: () => void }) {
   const { create, isCreating } = useColors();
@@ -501,20 +478,53 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
           ))}
         </div>
       </td>
+      {/* Status — single button (Active green / Inactive grey), same
+          convention as /products. Change #159 dropped the separate
+          stock-level pill (OK/Low/Critical) from this column — the
+          colored inventory progress bar already conveys that signal. */}
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <StockPill color={color} />
-          {isAdmin && (
-            <button
-              onClick={() => update(color.id, { active: !color.active })}
-              className="text-xs px-2 py-0.5 rounded font-medium transition-colors"
-              style={{ background: '#3a3a3a', color: '#ffffff' }}
-              title={color.active ? 'Disable this color' : 'Enable this color'}
-            >
-              {color.active ? 'Disable' : 'Enable'}
-            </button>
-          )}
-        </div>
+        {isAdmin ? (
+          <button
+            onClick={() => update(color.id, { active: !color.active })}
+            className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+            style={color.active
+              ? { background: '#15803d', color: '#ffffff' }
+              : { background: '#6b7280', color: '#ffffff' }
+            }
+            title={color.active ? 'Disable this color' : 'Enable this color'}
+          >
+            {color.active ? 'Active' : 'Inactive'}
+          </button>
+        ) : (
+          <span className="text-xs text-white/60">{color.active ? 'Active' : 'Inactive'}</span>
+        )}
+      </td>
+      {/* Multi-color flag — Change #159 — surfaced as a dedicated column
+          with toggle button. Flipping off clears any stored additional
+          hexes so they don't dangle. Admin still uses the row's Edit
+          mode to manage the actual hex slots when multi-color is on. */}
+      <td className="px-4 py-3">
+        {isAdmin ? (
+          <button
+            onClick={() => update(color.id, {
+              isMultiColor: !color.isMultiColor,
+              additionalHexes: !color.isMultiColor ? (color.additionalHexes ?? []) : [],
+            })}
+            className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+            style={color.isMultiColor
+              ? { background: '#15803d', color: '#ffffff' }
+              : { background: '#6b7280', color: '#ffffff' }
+            }
+            title={color.isMultiColor
+              ? 'Click to mark as single-color (clears additional hexes)'
+              : 'Click to mark as multi-color, then Edit to add secondary hex(es)'
+            }
+          >
+            {color.isMultiColor ? 'Multi' : 'Single'}
+          </button>
+        ) : (
+          <span className="text-xs text-white/60">{color.isMultiColor ? 'Multi' : 'Single'}</span>
+        )}
       </td>
       <td className="px-4 py-3">
         <div className="flex gap-1.5">
@@ -845,15 +855,19 @@ export const ColorsPage: React.FC = () => {
               <th className="text-left px-4 py-2.5 font-semibold w-40" style={{ color: '#ff9900' }}>Swatch</th>
               <th className="text-left px-4 py-2.5 font-semibold" style={{ color: '#ff9900' }}>Name</th>
               <th className="text-left px-4 py-2.5 font-semibold w-32" style={{ color: '#ff9900' }}>Manufacturer</th>
-              <th className="text-right px-4 py-2.5 font-semibold w-52" style={{ color: '#ff9900' }}>Inventory</th>
-              <th className="text-left px-4 py-2.5 font-semibold w-32" style={{ color: '#ff9900' }}>Status</th>
+              {/* Change #159 — widened from w-52 (208px) to w-72 (288px) so
+                  the gram readout + progress bar + + Spool button stop
+                  wrapping. */}
+              <th className="text-right px-4 py-2.5 font-semibold w-72 whitespace-nowrap" style={{ color: '#ff9900' }}>Inventory</th>
+              <th className="text-left px-4 py-2.5 font-semibold w-28" style={{ color: '#ff9900' }}>Status</th>
+              <th className="text-left px-4 py-2.5 font-semibold w-28" style={{ color: '#ff9900' }}>Multi</th>
               <th className="px-4 py-2.5 w-32" />
             </tr>
           </thead>
           <tbody>
             {visible.map((c, i) => <ColorRow key={c.id} color={c} index={i} isAdmin={isAdmin} />)}
             {visible.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-white text-sm">
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-white text-sm">
                 {stockFilter === 'all' ? 'No colors yet' : 'No colors in this category'}
               </td></tr>
             )}
@@ -888,15 +902,10 @@ function DedupeModal({
   const [keepers, setKeepers] = useState<Record<string, number>>({}); // groupKey → keepId
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
-  // Match the backend's group key: same 5-tuple of identity dimensions.
-  const groupKey = (g: ColorDuplicateGroup): string =>
-    [
-      g.hex.toUpperCase(),
-      g.material ?? '∅',
-      g.manufacturerId ?? '∅',
-      g.isMultiColor ? 'M' : 'S',
-      [...g.additionalHexes].map((h) => h.toUpperCase()).sort().join(','),
-    ].join('|');
+  // Change #159 — backend groups by UPPER(hex) only for visibility, so
+  // the frontend key collapses to match. Per-row identity badges
+  // (material / manufacturer / multi-color) carry the real diffs.
+  const groupKey = (g: ColorDuplicateGroup): string => g.hex.toUpperCase();
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -989,36 +998,18 @@ function DedupeModal({
                   style={{ background: '#1a1a1a', border: '1px solid #2d2d2d' }}
                 >
                   <div className="flex items-center gap-2 flex-wrap">
-                    <SplitSwatch
-                      primary={group.hex}
-                      additional={group.additionalHexes}
-                      size={20}
+                    <span
+                      className="inline-block w-5 h-5 rounded"
+                      style={{ background: group.hex, border: '1px solid rgba(255,255,255,0.15)' }}
                     />
                     <span className="font-mono text-xs text-white">{group.hex}</span>
-                    {group.additionalHexes.length > 0 && (
-                      <span className="font-mono text-[10px] text-white/60">
-                        + {group.additionalHexes.join(' / ')}
-                      </span>
-                    )}
-                    {group.material && (
-                      <span className="text-xs px-2 py-0.5 rounded" style={{ background: '#2d2d2d', color: '#d1d5db' }}>
-                        {group.material}
-                      </span>
-                    )}
-                    {group.manufacturerName && (
-                      <span className="text-xs px-2 py-0.5 rounded" style={{ background: '#2d2d2d', color: '#d1d5db' }}>
-                        {group.manufacturerName}
-                      </span>
-                    )}
-                    {group.isMultiColor && (
-                      <span
-                        className="text-[10px] px-1.5 py-0.5 rounded font-semibold"
-                        style={{ background: '#6d28d9', color: '#ffffff' }}
-                      >
-                        MULTI
-                      </span>
-                    )}
-                    <span className="text-xs text-white/50">· {group.count} rows</span>
+                    <span className="text-xs text-white/50">· {group.count} rows share this hex</span>
+                    <span
+                      className="text-[10px] text-white/40"
+                      title="The Merge button only succeeds when keeper + selected rows share material + manufacturer + multi-color + additional hexes. Cross-identity rows show here for visibility but won't auto-merge."
+                    >
+                      ⓘ
+                    </span>
                     <button
                       className="ml-auto btn-primary btn-sm"
                       onClick={() => handleMerge(group)}
@@ -1034,6 +1025,8 @@ function DedupeModal({
                         <th className="py-1 pr-2">#ID</th>
                         <th className="py-1 pr-2">Name</th>
                         <th className="py-1 pr-2">Mfr</th>
+                        <th className="py-1 pr-2">Material</th>
+                        <th className="py-1 pr-2">Multi</th>
                         <th className="py-1 pr-2">BB</th>
                         <th className="py-1 pr-2">Active</th>
                         <th className="py-1 pr-2 text-right">Inv (g)</th>
@@ -1090,6 +1083,20 @@ function DedupeRow({
       <td className="py-1 pr-2 font-mono text-white">#{row.id}</td>
       <td className="py-1 pr-2 text-white">{row.name}</td>
       <td className="py-1 pr-2 text-white/70">{row.manufacturerName ?? '—'}</td>
+      <td className="py-1 pr-2 text-white/70">{row.material ?? '—'}</td>
+      <td className="py-1 pr-2">
+        {row.isMultiColor ? (
+          <span
+            className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+            style={{ background: '#6d28d9', color: '#ffffff' }}
+            title={`Additional hexes: ${row.additionalHexes.join(' / ') || '(none stored)'}`}
+          >
+            MULTI
+          </span>
+        ) : (
+          <span className="text-white/40 text-[10px]">—</span>
+        )}
+      </td>
       <td className="py-1 pr-2">
         {linked ? (
           <span

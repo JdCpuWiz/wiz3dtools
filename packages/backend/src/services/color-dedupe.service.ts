@@ -1,16 +1,25 @@
 import { pool } from '../config/database.js';
 
-// Bug #66 — admin colors dedupe.
+// Bug #66 + Change #159 — admin colors dedupe.
 //
-// Duplicates are identified by the full filament identity tuple:
-//   (UPPER(hex), material, manufacturer_id, is_multi_color, UPPER-normalised additional_hexes)
+// SCOPE OF A GROUP (what shows up together in the modal):
+//   UPPER(hex) only. Anything that shares a primary hex is grouped for
+//   ADMIN VISIBILITY so 9 "Bambu black" rows that span 3 materials all
+//   appear in the same panel instead of 3 silent subgroups Wiz never
+//   sees. Within the group, each row's material / manufacturer /
+//   multi-color flag / additional hexes are surfaced as badges so the
+//   admin can see WHY rows look duplicated even when they aren't.
 //
-// Same primary hex alone is not enough: a Bambu Dual-Color PLA Black/Pink
-// shares hex #000000 with solid Black PLA but is a distinct filament.
-// Same primary + multi-color flag + same secondary hex set + same
-// manufacturer + same material → same physical filament. Name and
-// bambuddy_id may still differ across the group (one row got synced,
-// others didn't).
+// SCOPE OF A MERGE (what's actually safe to fold into a keeper):
+//   The full filament identity tuple:
+//     (UPPER(hex), material, manufacturer_id, is_multi_color,
+//      UPPER-normalised sorted additional_hexes)
+//   The merge transaction below enforces this strictly — attempting to
+//   merge rows that disagree on any dimension throws a 400 with a clear
+//   per-dimension diff message. Bambu Dual-Color PLA Black/Pink (multi-
+//   color, secondaries=[#ffc0cb]) and solid Black PLA share hex
+//   #000000 but are distinct filaments; the merge guard refuses to
+//   collapse them even though they share a group panel.
 //
 // Color rows in the live DB are referenced by exactly two FK locations
 // after BuildPlan #6 Phase 3 dropped the queue subsystem:
@@ -62,13 +71,11 @@ function normaliseHexes(arr: string[] | null): string[] {
 }
 
 export async function findDuplicates(): Promise<DuplicateGroup[]> {
-  // Single query that returns every color in a
-  //   (UPPER(hex), material, manufacturer_id, is_multi_color, sorted-UPPER(additional_hexes))
-  // group with count > 1, plus per-row FK usage counts.
-  //
-  // additional_hexes equality is tricky in SQL because Postgres TEXT[]
-  // ordering matters for `=`. We normalise on read (Array.sort + upper)
-  // and group in JS to keep the SQL readable.
+  // Visibility-focused query: pull every row whose UPPER(hex) is shared
+  // by 2+ rows. Identity dimensions (material / manufacturer / multi-
+  // color / additional_hexes) come back as per-row badges so the UI can
+  // expose WHY rows that look duplicated don't auto-merge. Merge safety
+  // is enforced in mergeColors() below, not at the grouping level.
   const rows = await pool.query<{
     id: number;
     name: string;
@@ -84,7 +91,13 @@ export async function findDuplicates(): Promise<DuplicateGroup[]> {
     line_item_refs: string;
     product_refs: string;
   }>(`
-    WITH line_refs AS (
+    WITH hex_groups AS (
+      SELECT UPPER(hex) AS hex_upper
+      FROM colors
+      GROUP BY UPPER(hex)
+      HAVING COUNT(*) > 1
+    ),
+    line_refs AS (
       SELECT color_id, COUNT(*)::int AS n FROM line_item_colors GROUP BY color_id
     ),
     product_refs AS (
@@ -105,6 +118,7 @@ export async function findDuplicates(): Promise<DuplicateGroup[]> {
       COALESCE(lr.n, 0) AS line_item_refs,
       COALESCE(pr.n, 0) AS product_refs
     FROM colors c
+    INNER JOIN hex_groups hg ON UPPER(c.hex) = hg.hex_upper
     LEFT JOIN manufacturers m  ON m.id = c.manufacturer_id
     LEFT JOIN line_refs lr     ON lr.color_id = c.id
     LEFT JOIN product_refs pr  ON pr.color_id = c.id
@@ -114,13 +128,10 @@ export async function findDuplicates(): Promise<DuplicateGroup[]> {
   const byKey = new Map<string, DuplicateGroup>();
   for (const r of rows.rows) {
     const normalisedHexes = normaliseHexes(r.additional_hexes);
-    const key = [
-      r.hex.toUpperCase(),
-      r.material ?? '∅',
-      r.manufacturer_id ?? '∅',
-      r.is_multi_color ? 'M' : 'S',
-      normalisedHexes.join(','),
-    ].join('|');
+    // Group key is hex-only for visibility. The per-row identity
+    // dimensions stay on the row so the modal can render badges + the
+    // merge guard can reject cross-identity merges.
+    const key = r.hex.toUpperCase();
     let group = byKey.get(key);
     if (!group) {
       group = {
