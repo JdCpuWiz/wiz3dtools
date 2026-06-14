@@ -76,6 +76,7 @@ export const createProductSchema = z.object({
   active: z.boolean().optional(),
   // Store / wholesale fields
   publishedToStore: z.boolean().optional(),
+  publishedToWholesale: z.boolean().optional(),
   categoryId: nullish(z.number().int()),
   storeTitle: nullish(z.string().max(255)),
   storeDescription: nullish(z.string().max(2000)),
