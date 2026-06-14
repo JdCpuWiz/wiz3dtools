@@ -34,23 +34,35 @@ function parseRow(row: Record<string, unknown>): Color {
     additionalHexes: Array.isArray(row.additionalHexes)
       ? (row.additionalHexes as string[])
       : [],
+    invoiceNumbers: Array.isArray(row.invoiceNumbers)
+      ? (row.invoiceNumbers as string[])
+      : [],
   } as Color;
 }
 
 export class ColorModel {
   static async findAll(activeOnly = false): Promise<Color[]> {
     const where = activeOnly ? 'WHERE c.active = true' : '';
-    // LEFT JOIN a per-color invoice-reference count so the admin
-    // colors page can show how many invoices each color is locked
-    // into. Cheap on the catalog (~650 rows × 1 grouped subquery).
+    // LEFT JOIN per-color invoice-reference count + sorted list of
+    // distinct invoice numbers. Both feed the admin colors page —
+    // count drives the Invoices column, list drives its hover
+    // tooltip. line_item_colors → invoice_line_items → sales_invoices
+    // gets us the invoice_number. DISTINCT collapses repeats from
+    // multi-line invoices; DESC order so the most recent appear first.
     const result = await pool.query(
       `WITH line_refs AS (
-         SELECT color_id, COUNT(*)::int AS n
-         FROM line_item_colors
-         GROUP BY color_id
+         SELECT
+           lic.color_id,
+           COUNT(*)::int AS n,
+           array_agg(DISTINCT si.invoice_number ORDER BY si.invoice_number DESC) AS invoice_numbers
+         FROM line_item_colors lic
+         JOIN invoice_line_items ili ON ili.id = lic.line_item_id
+         JOIN sales_invoices     si  ON si.id  = ili.invoice_id
+         GROUP BY lic.color_id
        )
        SELECT ${SELECT_FIELDS},
-              COALESCE(lr.n, 0) AS "invoiceRefs"
+              COALESCE(lr.n, 0) AS "invoiceRefs",
+              COALESCE(lr.invoice_numbers, ARRAY[]::TEXT[]) AS "invoiceNumbers"
        FROM colors c
        LEFT JOIN manufacturers m ON m.id = c.manufacturer_id
        LEFT JOIN line_refs    lr ON lr.color_id = c.id

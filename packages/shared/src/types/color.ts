@@ -54,6 +54,11 @@ export interface Color {
   // see at a glance which rows are safe to hard-delete (0) vs which
   // should be Inactive (>0).
   invoiceRefs?: number;
+  // Distinct invoice numbers (e.g. "INV-0312") that reference this
+  // color, sorted descending so the most recent appear first. Loaded
+  // alongside invoiceRefs by ColorModel.findAll(); empty array when
+  // no references. Surfaces as the Invoices column's hover tooltip.
+  invoiceNumbers?: string[];
   createdAt: string;
   updatedAt: string;
 }

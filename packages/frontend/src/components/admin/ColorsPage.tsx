@@ -526,15 +526,18 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
           ))}
         </div>
       </td>
-      {/* Invoices reference count — tells admin at a glance whether
-          this color is safe to delete (0) or must be set Inactive
-          instead (>0). Backend pre-check blocks the delete in either
-          case so the count > 0 row simply won't accept a Delete. */}
+      {/* Invoices reference count + hover tooltip listing the actual
+          invoice numbers. Tells admin at a glance whether this color
+          is safe to delete (0) or must be set Inactive instead (>0). */}
       <td className="px-4 py-3 text-right font-mono tabular-nums text-xs">
         {(color.invoiceRefs ?? 0) > 0 ? (
           <span
-            className="text-white"
-            title={`${color.invoiceRefs} invoice line item${color.invoiceRefs === 1 ? '' : 's'} reference this color — cannot be deleted, only made inactive.`}
+            className="text-white cursor-help underline decoration-dotted underline-offset-2"
+            title={
+              (color.invoiceNumbers && color.invoiceNumbers.length > 0)
+                ? `${color.invoiceRefs} line item${color.invoiceRefs === 1 ? '' : 's'} across ${color.invoiceNumbers.length} invoice${color.invoiceNumbers.length === 1 ? '' : 's'}:\n\n${color.invoiceNumbers.join(', ')}\n\nCannot be deleted while referenced — set Inactive instead.`
+                : `${color.invoiceRefs} invoice line item${color.invoiceRefs === 1 ? '' : 's'} reference this color — cannot be deleted, only made inactive.`
+            }
           >
             {color.invoiceRefs}
           </span>
