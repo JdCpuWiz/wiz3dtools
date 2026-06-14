@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useColors } from '../../hooks/useColors';
 import { useManufacturers } from '../../hooks/useManufacturers';
+import { useAuth } from '../../context/AuthContext';
 import { PageIcon } from '../common/PageIcon';
 import { colorApi } from '../../services/api';
 import type { ColorDuplicateGroup, ColorDuplicateRow } from '../../services/api';
@@ -13,6 +14,100 @@ const inputSt: React.CSSProperties = {
   border: 'none',
   boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)',
 };
+
+// ── Stock-status helpers (ported from the retired FilamentPage during
+// BP #18 Phase 2). Net grams = stored inventory minus the empty spool
+// weight from the color's manufacturer. Thresholds default to 200g
+// critical / 500g low when no manufacturer is set.
+
+export function filamentGrams(color: Color): number {
+  return color.inventoryGrams - (color.manufacturer?.emptySpoolWeightG ?? 0);
+}
+
+export type StockStatus = 'ok' | 'low' | 'critical' | 'empty';
+
+export function stockStatus(color: Color): StockStatus {
+  const net = filamentGrams(color);
+  const critical = color.manufacturer?.criticalThresholdG ?? 200;
+  const low = color.manufacturer?.lowThresholdG ?? 500;
+  if (net <= 0) return 'empty';
+  if (net <= critical) return 'critical';
+  if (net <= low) return 'low';
+  return 'ok';
+}
+
+const STOCK_STYLE: Record<StockStatus, { label: string; color: string; bg: string }> = {
+  ok:       { label: 'OK',       color: '#ffffff', bg: '#15803d' },
+  low:      { label: 'Low',      color: '#000000', bg: '#eab308' },
+  critical: { label: 'Critical', color: '#ffffff', bg: '#b91c1c' },
+  empty:    { label: 'Empty',    color: '#ffffff', bg: '#4b5563' },
+};
+
+const STOCK_BAR_COLOR: Record<StockStatus, string> = {
+  ok: '#4ade80',
+  low: '#fb923c',
+  critical: '#ef4444',
+  empty: '#4b5563',
+};
+
+// Net grams + a slim progress bar that fills against the manufacturer's
+// full-spool net weight. When the color has no manufacturer the bar is
+// hidden (no scale to render against). Ported from FilamentPage.
+function InventoryReadout({ color }: { color: Color }) {
+  const net = filamentGrams(color);
+  const disabled = !color.active;
+  const status = stockStatus(color);
+  const pct = color.manufacturer
+    ? Math.min(100, Math.max(0, Math.round((net / color.manufacturer.fullSpoolNetWeightG) * 100)))
+    : null;
+  return (
+    <div className="flex items-center gap-2 min-w-[140px] justify-end">
+      <span
+        className="text-sm font-semibold tabular-nums"
+        style={{ color: disabled ? '#6b7280' : '#ffffff' }}
+      >
+        {Math.max(0, net).toFixed(0)}g
+      </span>
+      {pct !== null && !disabled && (
+        <div
+          className="h-1.5 w-20 rounded-full overflow-hidden"
+          style={{ background: '#2d2d2d' }}
+          title={`${pct}% of a full ${color.manufacturer?.fullSpoolNetWeightG}g spool`}
+        >
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${pct}%`, background: STOCK_BAR_COLOR[status] }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Pill that renders the current stock status, or "Disabled" when the
+// color is inactive (matches the FilamentPage convention).
+function StockPill({ color }: { color: Color }) {
+  if (!color.active) {
+    return (
+      <span
+        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+        style={{ color: '#ffffff', background: '#6b7280' }}
+      >
+        Disabled
+      </span>
+    );
+  }
+  const status = stockStatus(color);
+  const style = STOCK_STYLE[status];
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+      style={{ color: style.color, background: style.bg }}
+    >
+      {style.label}
+    </span>
+  );
+}
 
 function AddColorForm({ onDone }: { onDone: () => void }) {
   const { create, isCreating } = useColors();
@@ -233,7 +328,7 @@ function SplitSwatch({
   );
 }
 
-function ColorRow({ color, index }: { color: Color; index: number }) {
+function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAdmin: boolean }) {
   const { update, delete: deleteColor } = useColors();
   const { manufacturers } = useManufacturers();
   const [editing, setEditing] = useState(false);
@@ -375,9 +470,9 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
       <td className="px-4 py-3 text-sm font-medium text-white">{color.name}</td>
       <td className="px-4 py-3 text-xs text-white">{color.manufacturer?.name ?? '—'}</td>
       <td className="px-4 py-3">
-        <div className="flex items-center justify-end gap-4 flex-wrap">
-          <span className="text-sm text-white text-right">{color.inventoryGrams.toFixed(0)}g</span>
-          {addingGrams ? (
+        <div className="flex items-center justify-end gap-3 flex-wrap">
+          <InventoryReadout color={color} />
+          {isAdmin && (addingGrams ? (
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -403,26 +498,32 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
             >
               + Spool
             </button>
+          ))}
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <StockPill color={color} />
+          {isAdmin && (
+            <button
+              onClick={() => update(color.id, { active: !color.active })}
+              className="text-xs px-2 py-0.5 rounded font-medium transition-colors"
+              style={{ background: '#3a3a3a', color: '#ffffff' }}
+              title={color.active ? 'Disable this color' : 'Enable this color'}
+            >
+              {color.active ? 'Disable' : 'Enable'}
+            </button>
           )}
         </div>
       </td>
       <td className="px-4 py-3">
-        <button
-          onClick={() => update(color.id, { active: !color.active })}
-          className="text-xs px-2 py-0.5 rounded-full font-medium transition-colors"
-          style={
-            color.active
-              ? { background: '#15803d', color: '#ffffff' }
-              : { background: '#6b7280', color: '#ffffff' }
-          }
-        >
-          {color.active ? 'Active' : 'Inactive'}
-        </button>
-      </td>
-      <td className="px-4 py-3">
         <div className="flex gap-1.5">
-          <button onClick={() => setEditing(true)} className="btn-secondary btn-sm text-xs">Edit</button>
-          <button onClick={handleDelete} className="btn-danger btn-sm text-xs">Delete</button>
+          {isAdmin && (
+            <>
+              <button onClick={() => setEditing(true)} className="btn-secondary btn-sm text-xs">Edit</button>
+              <button onClick={handleDelete} className="btn-danger btn-sm text-xs">Delete</button>
+            </>
+          )}
         </div>
       </td>
     </tr>
@@ -431,13 +532,52 @@ function ColorRow({ color, index }: { color: Color; index: number }) {
 
 export const ColorsPage: React.FC = () => {
   const { colors, isLoading } = useColors();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [showAdd, setShowAdd] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(
     () => (typeof localStorage !== 'undefined' ? localStorage.getItem('bambuddy-last-sync') : null),
   );
   const [dedupeOpen, setDedupeOpen] = useState(false);
+  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'critical'>('all');
   const queryClient = useQueryClient();
+
+  // Summary stats + filter chip counts. Computed off the unfiltered
+  // catalog so the chips and header reflect reality regardless of the
+  // current filter selection. Net grams = stored grams − empty-spool
+  // weight (so the summary matches the dashboard pills).
+  const activeColors = React.useMemo(() => colors.filter((c) => c.active), [colors]);
+  const disabledCount = colors.length - activeColors.length;
+  const totalGrams = React.useMemo(
+    () => activeColors.reduce((s, c) => s + Math.max(0, filamentGrams(c)), 0),
+    [activeColors],
+  );
+  const lowCount = React.useMemo(
+    () => activeColors.filter((c) => stockStatus(c) === 'low').length,
+    [activeColors],
+  );
+  const criticalCount = React.useMemo(
+    () => activeColors.filter((c) => {
+      const s = stockStatus(c);
+      return s === 'critical' || s === 'empty';
+    }).length,
+    [activeColors],
+  );
+
+  // Filter chips narrow the VISIBLE rows. The dedupe button still
+  // operates against the full `colors` array (it never reads `visible`),
+  // so a Low-only filter selection doesn't accidentally hide dupes from
+  // the dedupe modal.
+  const visible = React.useMemo(() => {
+    if (stockFilter === 'all') return colors;
+    return activeColors.filter((c) => {
+      const s = stockStatus(c);
+      if (stockFilter === 'critical') return s === 'critical' || s === 'empty';
+      if (stockFilter === 'low') return s === 'low';
+      return true;
+    });
+  }, [colors, activeColors, stockFilter]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -470,42 +610,87 @@ export const ColorsPage: React.FC = () => {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-3">
             <PageIcon src="/icons/filament-color-administration.png" alt="Colors" />
             <div>
               <h2 className="text-xl font-semibold text-iron-50">Color Catalog</h2>
               <p className="text-sm text-white mt-0.5">
-                Manage print colors, manufacturers, and inventory
+                {totalGrams.toLocaleString(undefined, { maximumFractionDigits: 0 })}g total
+                {' · '}
+                {activeColors.length} active
+                {disabledCount > 0 ? `, ${disabledCount} disabled` : ''}
                 {lastSync && <span className="text-xs ml-2" style={{ color: '#9ca3af' }}>· Last BamBuddy sync: {lastSync}</span>}
               </p>
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setDedupeOpen(true)}
-            className="btn-secondary btn-sm"
-            title="Scan for colors that share the same hex + material. Bug #66."
-          >
-            Find Duplicates
-          </button>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="btn-secondary btn-sm"
-            title="Pull BamBuddy's filament catalog + per-color inventory. New colors arrive inactive."
-          >
-            {syncing ? 'Syncing…' : '⟳ Sync from BamBuddy'}
-          </button>
-          {!showAdd && (
-            <button onClick={() => setShowAdd(true)} className="btn-primary btn-sm">+ Add Color</button>
-          )}
-        </div>
+        {isAdmin && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setDedupeOpen(true)}
+              className="btn-secondary btn-sm"
+              title="Scan for colors that share the same hex + material. Bug #66."
+            >
+              Find Duplicates
+            </button>
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="btn-secondary btn-sm"
+              title="Pull BamBuddy's filament catalog + per-color inventory. New colors arrive inactive."
+            >
+              {syncing ? 'Syncing…' : '⟳ Sync from BamBuddy'}
+            </button>
+            {!showAdd && (
+              <button onClick={() => setShowAdd(true)} className="btn-primary btn-sm">+ Add Color</button>
+            )}
+          </div>
+        )}
       </div>
 
-      {showAdd && <AddColorForm onDone={() => setShowAdd(false)} />}
+      {showAdd && isAdmin && <AddColorForm onDone={() => setShowAdd(false)} />}
+
+      {/* Stock filter chips — hidden when there's nothing to highlight.
+          Dedupe button operates against the FULL `colors` array regardless
+          of the selected chip; see comment on the `visible` memo. */}
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setStockFilter('all')}
+          className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+          style={stockFilter === 'all'
+            ? { background: '#ff9900', color: '#0a0a0a' }
+            : { background: '#2d2d2d', color: '#ffffff' }
+          }
+        >
+          All ({colors.length})
+        </button>
+        {lowCount > 0 && (
+          <button
+            onClick={() => setStockFilter('low')}
+            className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+            style={stockFilter === 'low'
+              ? { background: '#eab308', color: '#000000' }
+              : { background: '#2d2d2d', color: '#ffffff' }
+            }
+          >
+            Low ({lowCount})
+          </button>
+        )}
+        {criticalCount > 0 && (
+          <button
+            onClick={() => setStockFilter('critical')}
+            className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+            style={stockFilter === 'critical'
+              ? { background: '#b91c1c', color: '#ffffff' }
+              : { background: '#2d2d2d', color: '#ffffff' }
+            }
+          >
+            Critical ({criticalCount})
+          </button>
+        )}
+      </div>
 
       <div className="card-surface overflow-x-auto">
         <table className="w-full text-sm">
@@ -514,15 +699,17 @@ export const ColorsPage: React.FC = () => {
               <th className="text-left px-4 py-2.5 font-semibold w-40" style={{ color: '#ff9900' }}>Swatch</th>
               <th className="text-left px-4 py-2.5 font-semibold" style={{ color: '#ff9900' }}>Name</th>
               <th className="text-left px-4 py-2.5 font-semibold w-32" style={{ color: '#ff9900' }}>Manufacturer</th>
-              <th className="text-right px-4 py-2.5 font-semibold w-40" style={{ color: '#ff9900' }}>Inventory</th>
-              <th className="text-left px-4 py-2.5 font-semibold w-24" style={{ color: '#ff9900' }}>Status</th>
+              <th className="text-right px-4 py-2.5 font-semibold w-52" style={{ color: '#ff9900' }}>Inventory</th>
+              <th className="text-left px-4 py-2.5 font-semibold w-32" style={{ color: '#ff9900' }}>Status</th>
               <th className="px-4 py-2.5 w-32" />
             </tr>
           </thead>
           <tbody>
-            {colors.map((c, i) => <ColorRow key={c.id} color={c} index={i} />)}
-            {colors.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-white text-sm">No colors yet</td></tr>
+            {visible.map((c, i) => <ColorRow key={c.id} color={c} index={i} isAdmin={isAdmin} />)}
+            {visible.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-white text-sm">
+                {stockFilter === 'all' ? 'No colors yet' : 'No colors in this category'}
+              </td></tr>
             )}
           </tbody>
         </table>
