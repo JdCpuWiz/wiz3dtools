@@ -541,6 +541,24 @@ export const ColorsPage: React.FC = () => {
   );
   const [dedupeOpen, setDedupeOpen] = useState(false);
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'critical'>('all');
+  // Phase 4 — manufacturer + active-state filters + sort. Component
+  // state only (no URL persistence in v1; no shareable views yet).
+  const [manufacturerFilter, setManufacturerFilter] = useState<'all' | 'unassigned' | number>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'disabled'>('all');
+  type SortKey = 'name' | 'hex' | 'manufacturer' | 'inventory';
+  const [sortBy, setSortBy] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  // When the user picks a sort column, default to that column's natural
+  // direction (asc for text, desc for inventory) on FIRST select; if
+  // they hit the same column again, the explicit ↑/↓ button takes over.
+  const handleSortByChange = (key: SortKey) => {
+    if (key !== sortBy) {
+      setSortBy(key);
+      setSortDir(key === 'inventory' ? 'desc' : 'asc');
+    }
+  };
+
   const queryClient = useQueryClient();
 
   // Summary stats + filter chip counts. Computed off the unfiltered
@@ -565,19 +583,71 @@ export const ColorsPage: React.FC = () => {
     [activeColors],
   );
 
+  // Manufacturer options for the dropdown — every distinct manufacturer
+  // in the catalog + an "Unassigned" bucket if any. Counts are computed
+  // off the unfiltered `colors` so the dropdown shows real totals.
+  const manufacturerOptions = React.useMemo(() => {
+    const byId = new Map<number, { id: number; name: string; count: number }>();
+    let unassigned = 0;
+    for (const c of colors) {
+      if (c.manufacturerId && c.manufacturer) {
+        const existing = byId.get(c.manufacturerId);
+        if (existing) existing.count++;
+        else byId.set(c.manufacturerId, { id: c.manufacturerId, name: c.manufacturer.name, count: 1 });
+      } else {
+        unassigned++;
+      }
+    }
+    return {
+      list: Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name)),
+      unassigned,
+    };
+  }, [colors]);
+
   // Filter chips narrow the VISIBLE rows. The dedupe button still
   // operates against the full `colors` array (it never reads `visible`),
-  // so a Low-only filter selection doesn't accidentally hide dupes from
-  // the dedupe modal.
+  // so any combination of filters can't hide dupes from the dedupe modal.
+  // Filters AND-combine; sort applies last.
   const visible = React.useMemo(() => {
-    if (stockFilter === 'all') return colors;
-    return activeColors.filter((c) => {
-      const s = stockStatus(c);
-      if (stockFilter === 'critical') return s === 'critical' || s === 'empty';
-      if (stockFilter === 'low') return s === 'low';
-      return true;
+    let out = colors;
+
+    // Stock-level filter (only applies to active colors — disabled rows
+    // don't carry a meaningful Low/Critical reading).
+    if (stockFilter !== 'all') {
+      out = out.filter((c) => {
+        if (!c.active) return false;
+        const s = stockStatus(c);
+        if (stockFilter === 'critical') return s === 'critical' || s === 'empty';
+        if (stockFilter === 'low') return s === 'low';
+        return true;
+      });
+    }
+
+    // Active/Disabled filter.
+    if (activeFilter === 'active') out = out.filter((c) => c.active);
+    else if (activeFilter === 'disabled') out = out.filter((c) => !c.active);
+
+    // Manufacturer filter.
+    if (manufacturerFilter === 'unassigned') {
+      out = out.filter((c) => !c.manufacturerId);
+    } else if (typeof manufacturerFilter === 'number') {
+      out = out.filter((c) => c.manufacturerId === manufacturerFilter);
+    }
+
+    // Sort — return a fresh array so we never mutate the cache.
+    const sorted = [...out].sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === 'name') cmp = a.name.localeCompare(b.name);
+      else if (sortBy === 'hex') cmp = a.hex.localeCompare(b.hex);
+      else if (sortBy === 'manufacturer') {
+        cmp = (a.manufacturer?.name ?? '').localeCompare(b.manufacturer?.name ?? '');
+      } else if (sortBy === 'inventory') {
+        cmp = filamentGrams(a) - filamentGrams(b);
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
     });
-  }, [colors, activeColors, stockFilter]);
+    return sorted;
+  }, [colors, stockFilter, activeFilter, manufacturerFilter, sortBy, sortDir]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -690,6 +760,82 @@ export const ColorsPage: React.FC = () => {
             Critical ({criticalCount})
           </button>
         )}
+      </div>
+
+      {/* Phase 4 — manufacturer + active filters + sort. Visible to all
+          authenticated users (read-only operations). AND-combines with
+          the stock-level chips above. */}
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+        <div className="flex flex-col">
+          <label className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Manufacturer</label>
+          <select
+            value={String(manufacturerFilter)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === 'all' || v === 'unassigned') setManufacturerFilter(v);
+              else setManufacturerFilter(parseInt(v, 10));
+            }}
+            className="px-3 py-1.5 rounded-md text-xs text-iron-50 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            style={inputSt}
+          >
+            <option value="all">All manufacturers ({colors.length})</option>
+            {manufacturerOptions.unassigned > 0 && (
+              <option value="unassigned">Unassigned ({manufacturerOptions.unassigned})</option>
+            )}
+            {manufacturerOptions.list.map((m) => (
+              <option key={m.id} value={m.id}>{m.name} ({m.count})</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col">
+          <label className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Active state</label>
+          <div className="inline-flex rounded-md overflow-hidden" style={{ background: '#2d2d2d' }}>
+            {(['all', 'active', 'disabled'] as const).map((opt) => (
+              <button
+                key={opt}
+                onClick={() => setActiveFilter(opt)}
+                className="px-3 py-1.5 text-xs font-semibold capitalize transition-colors"
+                style={activeFilter === opt
+                  ? { background: opt === 'active' ? '#15803d' : opt === 'disabled' ? '#6b7280' : '#ff9900', color: opt === 'all' ? '#0a0a0a' : '#ffffff' }
+                  : { background: 'transparent', color: '#ffffff' }
+                }
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col">
+          <label className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Sort by</label>
+          <div className="flex gap-1">
+            <select
+              value={sortBy}
+              onChange={(e) => handleSortByChange(e.target.value as SortKey)}
+              className="px-3 py-1.5 rounded-md text-xs text-iron-50 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              style={inputSt}
+            >
+              <option value="name">Name</option>
+              <option value="hex">Hex</option>
+              <option value="manufacturer">Manufacturer</option>
+              <option value="inventory">Inventory (g)</option>
+            </select>
+            <button
+              onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+              className="px-2 py-1.5 rounded-md text-xs font-semibold text-white"
+              style={{ background: '#3a3a3a' }}
+              title={`Sort ${sortDir === 'asc' ? 'ascending' : 'descending'} — click to flip`}
+              aria-label={`Sort direction: ${sortDir}`}
+            >
+              {sortDir === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
+        </div>
+
+        <div className="ml-auto text-[11px] font-mono tabular-nums text-white/60 pb-1">
+          Showing {visible.length} of {colors.length}
+        </div>
       </div>
 
       <div className="card-surface overflow-x-auto">
