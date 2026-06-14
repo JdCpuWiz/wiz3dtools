@@ -918,10 +918,13 @@ function DedupeModal({
   const [selected, setSelected] = useState<Record<string, Set<number>>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
-  // Change #159 — backend groups by UPPER(hex) only for visibility, so
-  // the frontend key collapses to match. Per-row identity badges
-  // (material / manufacturer / multi-color) carry the real diffs.
-  const groupKey = (g: ColorDuplicateGroup): string => g.hex.toUpperCase();
+  // Change #159 follow-up — backend groups by (UPPER(hex),
+  // material_family). PLA green and PETG-HF green at the same hex are
+  // physically distinct filaments and surface as separate groups
+  // (which means neither will appear as a duplicate when each is the
+  // sole row in its family).
+  const groupKey = (g: ColorDuplicateGroup): string =>
+    `${g.hex.toUpperCase()}|${g.materialFamily}`;
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -1101,10 +1104,12 @@ function DedupeModal({
         ) : (
           <div className="space-y-4">
             <p className="text-xs text-white/60">
-              Rows are grouped by hex. Check the boxes on the rows you
-              want to merge, then pick which one is the keeper. Cross-
-              filament-family merges (PLA vs ABS, etc.) are blocked — same
-              hex but different materials = physically distinct filaments.
+              Rows are grouped by hex + material family — PLA green and
+              PETG-HF green at the same hex are different filaments and
+              show as separate groups (or won't show at all if neither
+              has dupes). Check the rows you want to merge, pick a
+              keeper, hit Merge. Variants within a family (PLA / PLA
+              Basic / PLA-CF) merge fine; the keeper's label wins.
             </p>
             {groups.map((group) => {
               const key = groupKey(group);
@@ -1127,6 +1132,15 @@ function DedupeModal({
                       style={{ background: group.hex, border: '1px solid rgba(255,255,255,0.15)' }}
                     />
                     <span className="font-mono text-xs text-white">{group.hex}</span>
+                    {group.materialFamily && (
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-widest"
+                        style={{ background: '#3a3a3a', color: '#ffffff' }}
+                        title={`Material family — all rows in this group share "${group.materialFamily}" as their leading material token. Example label in this group: ${group.sampleMaterial ?? '(none)'}`}
+                      >
+                        {group.materialFamily}
+                      </span>
+                    )}
                     <span className="text-xs text-white/50">· {selectedCount} of {group.count} selected</span>
                     <button
                       type="button"

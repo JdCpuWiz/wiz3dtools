@@ -358,7 +358,12 @@ export interface ColorDuplicateRow {
 
 export interface ColorDuplicateGroup {
   hex: string;
-  material: string | null;
+  // Material family token shared by every row in this group (e.g. "pla",
+  // "abs", "petg"). Empty string when all rows have material=NULL.
+  materialFamily: string;
+  // Display hint from the first row's material (e.g. "PLA Basic").
+  // Per-row labels still vary within the group.
+  sampleMaterial: string | null;
   manufacturerId: number | null;
   manufacturerName: string | null;
   isMultiColor: boolean;

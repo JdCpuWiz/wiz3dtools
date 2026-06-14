@@ -3,12 +3,14 @@ import { pool } from '../config/database.js';
 // Bug #66 + Change #159 — admin colors dedupe.
 //
 // SCOPE OF A GROUP (what shows up together in the modal):
-//   UPPER(hex) only. Anything that shares a primary hex is grouped for
-//   ADMIN VISIBILITY so 9 "Bambu black" rows that span 3 materials all
-//   appear in the same panel instead of 3 silent subgroups Wiz never
-//   sees. Within the group, each row's material / manufacturer /
-//   multi-color flag / additional hexes are surfaced as badges so the
-//   admin can see WHY rows look duplicated even when they aren't.
+//   (UPPER(hex), material_family) — aligned with what the merge guard
+//   actually accepts. Variants within a family (PLA / PLA Basic /
+//   PLA-CF / PLA Matte) cluster together; cross-family rows at the
+//   same hex (PLA green vs PETG-HF green) DON'T appear as duplicates
+//   because they're different filaments. Within each group, per-row
+//   badges still surface manufacturer / multi-color flag /
+//   additional-hex diffs so the admin can see why rows differ on
+//   dimensions the merge guard doesn't strictly check.
 //
 // SCOPE OF A MERGE (what's actually safe to fold into a keeper):
 //   Hex must match (the panel-grouping invariant). Material FAMILY
@@ -52,7 +54,13 @@ import { pool } from '../config/database.js';
 
 export interface DuplicateGroup {
   hex: string;
-  material: string | null;
+  // Material family token (e.g. "pla", "abs", "petg") shared by every
+  // row in this group. Empty string when all rows in the group have
+  // material=NULL. Drives the (hex, family) grouping key.
+  materialFamily: string;
+  // First row's material as a display hint for the group header
+  // (e.g. "PLA Basic"). Per-row labels still vary within the group.
+  sampleMaterial: string | null;
   manufacturerId: number | null;
   manufacturerName: string | null;
   isMultiColor: boolean;
@@ -125,13 +133,23 @@ export async function findDuplicates(): Promise<DuplicateGroup[]> {
     bambuddy_id: number | null;
     active: boolean;
     inventory_grams: string;
+    family: string;
     line_item_refs: string;
     product_refs: string;
   }>(`
-    WITH hex_groups AS (
-      SELECT UPPER(hex) AS hex_upper
-      FROM colors
-      GROUP BY UPPER(hex)
+    WITH rows_with_family AS (
+      SELECT
+        c.*,
+        UPPER(c.hex) AS hex_upper,
+        -- Material family token, matching the JS helper in this file
+        -- and the frontend. NULL material → empty string.
+        LOWER(COALESCE((regexp_match(c.material, '^[A-Za-z0-9]+'))[1], '')) AS family
+      FROM colors c
+    ),
+    dup_keys AS (
+      SELECT hex_upper, family
+      FROM rows_with_family
+      GROUP BY hex_upper, family
       HAVING COUNT(*) > 1
     ),
     line_refs AS (
@@ -141,39 +159,43 @@ export async function findDuplicates(): Promise<DuplicateGroup[]> {
       SELECT color_id, COUNT(*)::int AS n FROM product_colors GROUP BY color_id
     )
     SELECT
-      c.id,
-      c.name,
-      c.hex,
-      c.material,
-      c.manufacturer_id,
+      r.id,
+      r.name,
+      r.hex,
+      r.material,
+      r.manufacturer_id,
       m.name AS manufacturer_name,
-      c.is_multi_color,
-      c.additional_hexes,
-      c.bambuddy_id,
-      c.active,
-      c.inventory_grams,
+      r.is_multi_color,
+      r.additional_hexes,
+      r.bambuddy_id,
+      r.active,
+      r.inventory_grams,
+      r.family,
       COALESCE(lr.n, 0) AS line_item_refs,
       COALESCE(pr.n, 0) AS product_refs
-    FROM colors c
-    INNER JOIN hex_groups hg ON UPPER(c.hex) = hg.hex_upper
-    LEFT JOIN manufacturers m  ON m.id = c.manufacturer_id
-    LEFT JOIN line_refs lr     ON lr.color_id = c.id
-    LEFT JOIN product_refs pr  ON pr.color_id = c.id
-    ORDER BY UPPER(c.hex), c.material NULLS FIRST, c.manufacturer_id NULLS FIRST, c.id ASC
+    FROM rows_with_family r
+    INNER JOIN dup_keys dk
+      ON r.hex_upper = dk.hex_upper AND r.family = dk.family
+    LEFT JOIN manufacturers m  ON m.id = r.manufacturer_id
+    LEFT JOIN line_refs lr     ON lr.color_id = r.id
+    LEFT JOIN product_refs pr  ON pr.color_id = r.id
+    ORDER BY UPPER(r.hex), r.family, r.material NULLS FIRST, r.manufacturer_id NULLS FIRST, r.id ASC
   `);
 
   const byKey = new Map<string, DuplicateGroup>();
   for (const r of rows.rows) {
     const normalisedHexes = normaliseHexes(r.additional_hexes);
-    // Group key is hex-only for visibility. The per-row identity
-    // dimensions stay on the row so the modal can render badges + the
-    // merge guard can reject cross-identity merges.
-    const key = r.hex.toUpperCase();
+    // Group key: (UPPER(hex), material_family). PLA green and PETG-HF
+    // green at the same hex go into separate groups — they're
+    // physically distinct filaments, not duplicates.
+    const family = r.family;
+    const key = `${r.hex.toUpperCase()}|${family}`;
     let group = byKey.get(key);
     if (!group) {
       group = {
         hex: r.hex.toUpperCase(),
-        material: r.material,
+        materialFamily: family,
+        sampleMaterial: r.material,
         manufacturerId: r.manufacturer_id,
         manufacturerName: r.manufacturer_name,
         isMultiColor: r.is_multi_color,
