@@ -52,6 +52,9 @@ export interface StoreOrderSummary {
   taxExempt: boolean;
   subtotal: number;
   total: number;
+  carrier: string | null;
+  trackingNumber: string | null;
+  shippedAt: string | null;
   notes: string | null;
   createdAt: string;
 }
@@ -245,6 +248,8 @@ export class StoreService {
       `SELECT
          si.id, si.invoice_number AS "invoiceNumber", si.status,
          si.tax_exempt AS "taxExempt", si.shipping_cost AS "shippingCost",
+         si.carrier, si.tracking_number AS "trackingNumber",
+         si.shipped_at AS "shippedAt",
          si.notes, si.created_at AS "createdAt",
          COALESCE(SUM(ili.quantity * ili.unit_price), 0) AS subtotal
        FROM sales_invoices si
@@ -265,6 +270,13 @@ export class StoreService {
         taxExempt: r.taxExempt as boolean,
         subtotal,
         total: subtotal + shipping,
+        carrier: (r.carrier as string | null) ?? null,
+        trackingNumber: (r.trackingNumber as string | null) ?? null,
+        shippedAt: r.shippedAt
+          ? (r.shippedAt instanceof Date
+              ? r.shippedAt.toISOString()
+              : (r.shippedAt as string))
+          : null,
         notes: r.notes as string | null,
         createdAt: r.createdAt as string,
       };

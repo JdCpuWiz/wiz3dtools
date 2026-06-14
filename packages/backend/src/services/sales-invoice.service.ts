@@ -112,6 +112,35 @@ export class SalesInvoiceService {
     await SalesInvoiceModel.markShipped(invoiceId, invoice.trackingNumber?.trim() || null);
     await sendShippingEmail(invoice.customer, invoice.invoiceNumber, invoice.carrier, invoice.trackingNumber?.trim() || null);
 
+    // BuildPlan #12 Phase 9 — fire a webhook back to wiz3d-prints so it can
+    // send a consumer-branded shipped email (the sendShippingEmail above is
+    // wiz3dtools-branded and stays for wholesale parity). wiz3d-prints
+    // decides whether to actually send anything based on whether the
+    // customer has a consumer User row. Fire-and-forget — a missing or
+    // misconfigured webhook URL must not block the ship action.
+    const webhookBase = process.env.WIZ3D_PRINTS_URL || 'https://wiz3dprints.com';
+    const adminToken = process.env.WIZ3D_PRINTS_ADMIN_TOKEN;
+    if (webhookBase && adminToken && invoice.customer) {
+      void fetch(`${webhookBase}/api/admin/orders/shipped`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Token': adminToken,
+        },
+        body: JSON.stringify({
+          orderId: invoiceId,
+          invoiceNumber: invoice.invoiceNumber,
+          customerId: invoice.customer.id,
+          customerEmail: invoice.customer.email,
+          customerName: invoice.customer.contactName,
+          carrier: invoice.carrier,
+          trackingNumber: invoice.trackingNumber?.trim() || null,
+        }),
+      }).catch((err) => {
+        console.warn('[sales-invoice/ship] wiz3d-prints webhook failed:', err?.message ?? err);
+      });
+    }
+
     // BuildPlan #6 Phase 3 (2026-06-04): queue_items table dropped. The
     // previous queue-cleanup query (DELETE FROM queue_items WHERE id IN
     // SELECT queue_item_id ...) is gone with it. Printing happens in
