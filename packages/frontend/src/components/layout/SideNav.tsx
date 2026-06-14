@@ -74,7 +74,6 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
 
   const [sections, setSections] = useState<Record<string, boolean>>({
     operations: true,
-    filament: true,
     showcase: true,
     admin: true,
   });
@@ -118,16 +117,6 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
               </>
             )}
 
-            <SectionHeader label="Filament" sectionKey="filament" open={sections.filament} onToggle={toggleSection} />
-            {sections.filament && (
-              <>
-                <NavItem to="/filament" label="Inventory" onClick={onClose} />
-                {isAdmin && (
-                  <NavItem to="/admin/manufacturers" label="Manufacturers" onClick={onClose} />
-                )}
-              </>
-            )}
-
             {isAdmin && (
               <>
                 <SectionHeader label="Showcase" sectionKey="showcase" open={sections.showcase} onToggle={toggleSection} />
@@ -145,6 +134,7 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
                   <>
                     <NavItem to="/admin/users" label="Users" onClick={onClose} />
                     <NavItem to="/admin/colors" label="Colors" onClick={onClose} />
+                    <NavItem to="/admin/manufacturers" label="Manufacturers" onClick={onClose} />
                     <NavItem to="/admin/categories" label="Categories" onClick={onClose} />
                   </>
                 )}

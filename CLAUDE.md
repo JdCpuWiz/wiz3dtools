@@ -246,10 +246,10 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 | `/invoices/new` | `InvoiceForm` | |
 | `/invoices/:id` | `InvoiceDetail` | |
 | `/admin/users` | `UsersPage` | Admin only — list/create/edit/delete users |
-| `/admin/colors` | `ColorsPage` | Admin only — manage print color catalog |
-| `/admin/printers` | `PrintersPage` | Admin only — manage printer list for queue assignment |
+| `/admin/colors` | `ColorsPage` | Unified color catalog + filament inventory dashboard (BP#18). Admin actions gated by role; non-admin sees a read-only inventory view. |
 | `/admin/manufacturers` | `ManufacturersPage` | Admin only — manage filament manufacturers |
-| `/filament` | `FilamentPage` | Filament inventory overview |
+| `/admin/categories` | `CategoriesPage` | Admin only — product categories |
+| `/filament` | — | Redirects to `/admin/colors` (BP#18 Phase 3) — old bookmarks survive |
 | `/login` | `LoginPage` | No Layout wrapper, full-page form |
 
 ### Navigation — left side nav (SideNav.tsx)
@@ -259,11 +259,13 @@ The app uses a **collapsible left sidebar** (`SideNav.tsx`), NOT a top header. `
 
 **Sidebar sections** (each collapsible):
 - *(top)* Dashboard
-- **Operations**: Queue, Customers, Products, Invoices
-- **Filament**: Inventory, Manufacturers (admin only)
-- **Admin** *(admin role only)*: Users, Colors, Printers
+- **Operations**: Customers, Products, Invoices
+- **Showcase** *(admin)*: Portfolio, Services, Materials, Testimonials, About
+- **Admin** *(admin role only)*: Users, Colors, Manufacturers, Categories
 
 To add a new nav item, edit `SideNav.tsx` — add a `<NavItem>` inside the appropriate section.
+
+BP#6 Phase 3 (2026-06-04) removed the Queue section; BamBuddy now owns the print queue. BP#18 Phase 3 (2026-06-14) removed the Filament section — `/admin/colors` carries the inventory dashboard, Manufacturers moved under Admin.
 
 ### Key files
 ```
