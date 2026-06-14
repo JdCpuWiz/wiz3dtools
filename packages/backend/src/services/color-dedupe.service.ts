@@ -11,15 +11,22 @@ import { pool } from '../config/database.js';
 //   admin can see WHY rows look duplicated even when they aren't.
 //
 // SCOPE OF A MERGE (what's actually safe to fold into a keeper):
-//   The full filament identity tuple:
-//     (UPPER(hex), material, manufacturer_id, is_multi_color,
-//      UPPER-normalised sorted additional_hexes)
-//   The merge transaction below enforces this strictly — attempting to
-//   merge rows that disagree on any dimension throws a 400 with a clear
-//   per-dimension diff message. Bambu Dual-Color PLA Black/Pink (multi-
-//   color, secondaries=[#ffc0cb]) and solid Black PLA share hex
-//   #000000 but are distinct filaments; the merge guard refuses to
-//   collapse them even though they share a group panel.
+//   Hex must match (the panel-grouping invariant). The bambuddy_id of
+//   any row being deleted must be NULL (otherwise the next sync would
+//   re-insert it). EVERYTHING ELSE — material / manufacturer_id /
+//   is_multi_color / additional_hexes — is an admin assertion: by
+//   picking a keeper, the admin is declaring "these rows ARE the same
+//   filament regardless of how the labels diverged." The keeper's
+//   values win for every dimension; the dupe rows' values are
+//   discarded along with the rows.
+//
+//   Change #159 follow-up — strict identity used to be a hard refusal
+//   here, but that blocked legitimate cases like "PLA" vs "PLA Basic"
+//   (same Bambu filament, different label era). Frontend now warns
+//   about diffs in a confirm dialog before submitting so the assertion
+//   is explicit. Risk is bounded: line_item_colors snapshots its own
+//   unit_price per line so historical invoice math is invariant under
+//   color reference shifts.
 //
 // Color rows in the live DB are referenced by exactly two FK locations
 // after BuildPlan #6 Phase 3 dropped the queue subsystem:
@@ -195,29 +202,30 @@ export async function mergeColors(
   try {
     await client.query('BEGIN');
 
-    // Sanity 1 — keeper + dupes must share the full filament identity
-    // tuple: (UPPER(hex), material, manufacturer_id, is_multi_color,
-    // sorted-upper additional_hexes). Refuse otherwise — protects against
-    // the admin picking unrelated rows (would change invoice colors).
+    // Sanity 1 — hex must match. Hex is the dedupe panel's grouping
+    // dimension; allowing cross-hex merges would mean the admin clicked
+    // through a wholly unrelated row. That's almost certainly a UI bug.
     //
-    // Sanity 2 — refuse to delete any row whose bambuddy_id is set,
-    // because the next nightly BamBuddy sync would just INSERT a fresh
-    // dupe. (Sync match logic: 1) bambuddy_id, 2) (UPPER(hex), material)
-    // ONLY when local bambuddy_id IS NULL. If the keeper has its own
-    // bambuddy_id ≠ the deleted dupe's, fallback clause 2 misses and
-    // INSERT runs.) The UI defaults to the linked row as keeper; this
-    // gate is the belt-and-suspenders backstop.
+    // Sanity 2 — refuse to delete any row whose bambuddy_id is set
+    // (the BamBuddy sync would re-insert a fresh dupe on next run).
+    // See comment at the top of the file for the sync's match logic.
+    //
+    // EVERYTHING ELSE goes through — material / manufacturer_id /
+    // is_multi_color / additional_hexes — was previously a hard refusal
+    // but it blocked legitimate dedup work like collapsing "PLA" rows
+    // into "PLA Basic" rows (same Bambu filament, different label era).
+    // The keeper's values for these dimensions WIN and the dupe rows'
+    // values get discarded along with the row. The frontend warns the
+    // admin about any identity diff before submitting so this is an
+    // explicit assertion, not a silent coalesce. The line_item_colors
+    // table stores its own unit_price snapshot per line so historical
+    // invoice math is unaffected by the reference shift.
     const idsRes = await client.query<{
       id: number;
       hex: string;
-      material: string | null;
-      manufacturer_id: number | null;
-      is_multi_color: boolean;
-      additional_hexes: string[] | null;
       bambuddy_id: number | null;
     }>(
-      `SELECT id, UPPER(hex) AS hex, material, manufacturer_id,
-              is_multi_color, additional_hexes, bambuddy_id
+      `SELECT id, UPPER(hex) AS hex, bambuddy_id
          FROM colors
         WHERE id = ANY($1::int[])
         FOR UPDATE`,
@@ -228,30 +236,14 @@ export async function mergeColors(
     if (!keeper) {
       throw Object.assign(new Error(`Keeper color ${keepId} not found`), { statusCode: 404 });
     }
-    const keeperHexes = normaliseHexes(keeper.additional_hexes);
     for (const mid of mergeIds) {
       const row = byId.get(mid);
       if (!row) {
         throw Object.assign(new Error(`Color ${mid} not found`), { statusCode: 404 });
       }
-      const rowHexes = normaliseHexes(row.additional_hexes);
-      const mismatches: string[] = [];
-      if (row.hex !== keeper.hex) mismatches.push(`hex ${row.hex} ≠ ${keeper.hex}`);
-      if ((row.material ?? null) !== (keeper.material ?? null)) {
-        mismatches.push(`material ${row.material ?? 'NULL'} ≠ ${keeper.material ?? 'NULL'}`);
-      }
-      if ((row.manufacturer_id ?? null) !== (keeper.manufacturer_id ?? null)) {
-        mismatches.push(`manufacturer ${row.manufacturer_id ?? 'NULL'} ≠ ${keeper.manufacturer_id ?? 'NULL'}`);
-      }
-      if (row.is_multi_color !== keeper.is_multi_color) {
-        mismatches.push(`is_multi_color ${row.is_multi_color} ≠ ${keeper.is_multi_color}`);
-      }
-      if (rowHexes.join(',') !== keeperHexes.join(',')) {
-        mismatches.push(`additional_hexes [${rowHexes.join(',')}] ≠ [${keeperHexes.join(',')}]`);
-      }
-      if (mismatches.length > 0) {
+      if (row.hex !== keeper.hex) {
         throw Object.assign(
-          new Error(`Color ${mid} identity mismatch with keeper: ${mismatches.join('; ')}. Refusing merge.`),
+          new Error(`Color ${mid} hex ${row.hex} doesn't match keeper hex ${keeper.hex}. Refusing merge across different hexes.`),
           { statusCode: 400 },
         );
       }

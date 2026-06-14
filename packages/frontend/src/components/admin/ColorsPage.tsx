@@ -932,12 +932,51 @@ function DedupeModal({
     const key = groupKey(group);
     const keepId = keepers[key];
     if (!keepId) return;
-    const mergeIds = group.rows.filter((r) => r.id !== keepId).map((r) => r.id);
-    if (mergeIds.length === 0) return;
-    if (!confirm(
-      `Merge ${mergeIds.length} duplicate(s) of ${group.hex}${group.material ? ` ${group.material}` : ''} into color #${keepId}?\n\n` +
-      `Invoice references will be repointed and the dupe row(s) deleted. This cannot be undone (but won't change any invoice colors visually).`
-    )) return;
+    const keeper = group.rows.find((r) => r.id === keepId);
+    const mergeRows = group.rows.filter((r) => r.id !== keepId);
+    if (mergeRows.length === 0 || !keeper) return;
+    const mergeIds = mergeRows.map((r) => r.id);
+
+    // Surface any identity diffs to the admin BEFORE the merge runs.
+    // Change #159 follow-up — backend used to refuse cross-identity
+    // merges as a hard error; that was too strict (e.g. "PLA" vs "PLA
+    // Basic" are the same Bambu filament). Now the merge proceeds with
+    // the keeper's values winning, and the admin sees the spread here.
+    const keeperHexes = [...keeper.additionalHexes].map((h) => h.toUpperCase()).sort().join(',');
+    const diffNotes: string[] = [];
+    for (const r of mergeRows) {
+      const rowHexes = [...r.additionalHexes].map((h) => h.toUpperCase()).sort().join(',');
+      const diffs: string[] = [];
+      if ((r.material ?? null) !== (keeper.material ?? null)) {
+        diffs.push(`material ${r.material ?? '∅'} → keeper's ${keeper.material ?? '∅'}`);
+      }
+      if ((r.manufacturerId ?? null) !== (keeper.manufacturerId ?? null)) {
+        diffs.push(`manufacturer ${r.manufacturerName ?? '∅'} → keeper's ${keeper.manufacturerName ?? '∅'}`);
+      }
+      if (r.isMultiColor !== keeper.isMultiColor) {
+        diffs.push(`multi-color ${r.isMultiColor ? 'on' : 'off'} → keeper's ${keeper.isMultiColor ? 'on' : 'off'}`);
+      }
+      if (rowHexes !== keeperHexes) {
+        diffs.push(`additional hexes [${rowHexes || '∅'}] → keeper's [${keeperHexes || '∅'}]`);
+      }
+      if (diffs.length > 0) {
+        diffNotes.push(`  #${r.id} (${r.name}): ${diffs.join(', ')}`);
+      }
+    }
+
+    const lines = [
+      `Merge ${mergeRows.length} row(s) of ${group.hex} into color #${keepId} (${keeper.name})?`,
+      '',
+      'Invoice references will be repointed to the keeper. This cannot be undone (but historical invoice math is unaffected — line items snapshot their own prices).',
+    ];
+    if (diffNotes.length > 0) {
+      lines.push(
+        '',
+        'Identity diffs being absorbed (keeper\'s values win):',
+        ...diffNotes,
+      );
+    }
+    if (!confirm(lines.join('\n'))) return;
     setBusyKey(key);
     try {
       const result = await colorApi.mergeDuplicates(keepId, mergeIds);
