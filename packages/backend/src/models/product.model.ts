@@ -10,6 +10,7 @@ const SELECT = `
   category_id as "categoryId",
   wholesale_price as "wholesalePrice",
   retail_price as "retailPrice",
+  allowed_materials as "allowedMaterials",
   created_at as "createdAt", updated_at as "updatedAt"
 `;
 
@@ -45,6 +46,7 @@ async function attachColors(rows: Record<string, unknown>[]): Promise<Product[]>
         ...r,
         wholesalePrice: parseFloat(r.wholesalePrice as string),
         retailPrice: parseFloat(r.retailPrice as string),
+        allowedMaterials: Array.isArray(r.allowedMaterials) ? (r.allowedMaterials as string[]) : [],
         colors,
         totalWeightGrams,
         images,
@@ -97,6 +99,7 @@ export class ProductModel {
         ...r,
         wholesalePrice: parseFloat(r.wholesalePrice as string),
         retailPrice: parseFloat(r.retailPrice as string),
+        allowedMaterials: Array.isArray(r.allowedMaterials) ? (r.allowedMaterials as string[]) : [],
         colors,
         totalWeightGrams: colors.reduce((sum, c) => sum + c.weightGrams, 0),
         images: imageMap.get(r.id as number) ?? [],
@@ -116,8 +119,9 @@ export class ProductModel {
     const result = await pool.query(
       `INSERT INTO products
          (name, description, sku, wholesale_price, retail_price, active,
-          published_to_store, published_to_wholesale, category_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          published_to_store, published_to_wholesale, category_id,
+          allowed_materials)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING ${SELECT}`,
       [
         data.name,
@@ -129,6 +133,7 @@ export class ProductModel {
         data.publishedToStore ?? false,
         data.publishedToWholesale ?? false,
         data.categoryId ?? null,
+        data.allowedMaterials ?? [],
       ],
     );
     const [product] = await attachColors([result.rows[0]]);
@@ -149,6 +154,7 @@ export class ProductModel {
     if (data.categoryId !== undefined) { fields.push(`category_id = $${i++}`); values.push(data.categoryId ?? null); }
     if (data.wholesalePrice !== undefined) { fields.push(`wholesale_price = $${i++}`); values.push(data.wholesalePrice); }
     if (data.retailPrice !== undefined) { fields.push(`retail_price = $${i++}`); values.push(data.retailPrice); }
+    if (data.allowedMaterials !== undefined) { fields.push(`allowed_materials = $${i++}`); values.push(data.allowedMaterials); }
 
     if (fields.length === 0) return this.findById(id);
 

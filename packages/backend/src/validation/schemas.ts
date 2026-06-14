@@ -82,6 +82,10 @@ export const createProductSchema = z.object({
   publishedToStore: z.boolean().optional(),
   publishedToWholesale: z.boolean().optional(),
   categoryId: nullish(z.number().int()),
+  // Per-product material allowlist for the storefront picker. Each
+  // entry is a family token like "pla", "abs", "petg" (lowercase,
+  // alphanumeric). Empty list = no constraint.
+  allowedMaterials: z.array(z.string().regex(/^[a-z0-9]+$/, 'Material family tokens must be lowercase alphanumeric').max(20)).max(20).optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();

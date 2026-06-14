@@ -37,6 +37,14 @@ export interface Product {
   category: Category | null;
   wholesalePrice: number;
   retailPrice: number;
+  // Allowed material family tokens for the storefront color picker
+  // (e.g. ['pla'], ['pla', 'petg']). Empty array = no constraint, all
+  // materials allowed. Picker UI restricts the material dropdown to
+  // these; backend `POST /api/store/orders` rejects line items whose
+  // picked color's material family isn't in this list. Mirrors the
+  // dedupe-tool's family extraction so "PLA Basic" / "PLA-CF" both
+  // satisfy 'pla'.
+  allowedMaterials: string[];
   images: ProductImage[];
   createdAt: string;
   updatedAt: string;
@@ -55,6 +63,7 @@ export interface CreateProductDto {
   publishedToStore?: boolean;
   publishedToWholesale?: boolean;
   categoryId?: number | null;
+  allowedMaterials?: string[];
 }
 
 export interface UpdateProductDto {
@@ -67,4 +76,5 @@ export interface UpdateProductDto {
   categoryId?: number | null;
   wholesalePrice?: number;
   retailPrice?: number;
+  allowedMaterials?: string[];
 }

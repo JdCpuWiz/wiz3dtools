@@ -21,6 +21,13 @@ export interface StoreProduct {
   images: { id: number; url: string; sortOrder: number; isPrimary: boolean }[];
   /** Product recipe — default colors with per-slot weights. Pickers use these as defaults. */
   colors: ProductColor[];
+  /**
+   * Material family allowlist for the storefront color picker. Each
+   * entry is a family token like "pla", "abs", "petg". Empty list
+   * means no constraint — picker shows every material. Order creation
+   * rejects line items whose picked color isn't in this list.
+   */
+  allowedMaterials: string[];
 }
 
 export interface StoreOrderLineItem {
@@ -84,6 +91,7 @@ export class StoreService {
         p.wholesale_price  AS "wholesalePrice",
         p.retail_price     AS "retailPrice",
         p.category_id      AS "categoryId",
+        p.allowed_materials AS "allowedMaterials",
         c.id               AS "cat_id",
         c.name             AS "cat_name",
         c.slug             AS "cat_slug"
@@ -127,6 +135,7 @@ export class StoreService {
         : null,
       images: imageMap.get(r.id as number) ?? [],
       colors: colorMap.get(r.id as number) ?? [],
+      allowedMaterials: Array.isArray(r.allowedMaterials) ? (r.allowedMaterials as string[]) : [],
     }));
   }
 
@@ -144,14 +153,20 @@ export class StoreService {
     const resolved: { item: StoreOrderLineItem; productName: string; productSku: string | null; colors: ItemColorDto[] }[] = [];
 
     for (const item of data.lineItems) {
-      const productResult = await pool.query(
-        `SELECT id, name, sku FROM products WHERE id = $1 AND ${pubCol} = TRUE AND active = TRUE`,
+      const productResult = await pool.query<{
+        id: number;
+        name: string;
+        sku: string | null;
+        allowed_materials: string[] | null;
+      }>(
+        `SELECT id, name, sku, allowed_materials FROM products WHERE id = $1 AND ${pubCol} = TRUE AND active = TRUE`,
         [item.productId],
       );
       const product = productResult.rows[0];
       if (!product) {
         throw Object.assign(new Error(`Product ${item.productId} is not available in the store`), { statusCode: 400 });
       }
+      const allowedMaterials = Array.isArray(product.allowed_materials) ? product.allowed_materials : [];
 
       const recipe = await ProductColorModel.findByProduct(item.productId);
       if (recipe.length === 0) {
@@ -178,16 +193,33 @@ export class StoreService {
             { statusCode: 400 },
           );
         }
-        // Validate every colorId is active
+        // Validate every colorId is active AND material family is in
+        // the product's allowed list (Change #160). Fetch color rows
+        // with material so we can do both checks in one query.
         const colorIds = item.colors.map((c) => c.colorId);
-        const activeResult = await pool.query(
-          `SELECT id FROM colors WHERE id = ANY($1) AND active = TRUE`,
+        const colorRows = await pool.query<{ id: number; material: string | null }>(
+          `SELECT id, material FROM colors WHERE id = ANY($1) AND active = TRUE`,
           [colorIds],
         );
-        const activeSet = new Set(activeResult.rows.map((r) => r.id as number));
+        const colorById = new Map(colorRows.rows.map((r) => [r.id, r]));
         for (const c of item.colors) {
-          if (!activeSet.has(c.colorId)) {
+          const row = colorById.get(c.colorId);
+          if (!row) {
             throw Object.assign(new Error(`Color ${c.colorId} is not active or does not exist`), { statusCode: 400 });
+          }
+          // Material-family allowlist check. Empty allowedMaterials =
+          // no constraint (back-compat for products that haven't been
+          // marked yet). Same family extraction as color-dedupe.
+          if (allowedMaterials.length > 0) {
+            const family = (row.material ?? '').trim().toLowerCase().match(/^[a-z0-9]+/)?.[0] ?? '';
+            if (!family || !allowedMaterials.includes(family)) {
+              throw Object.assign(
+                new Error(
+                  `Color ${c.colorId} (${row.material ?? 'unknown material'}) is not allowed for product ${item.productId} (${product.name}). Allowed materials: ${allowedMaterials.join(', ')}.`,
+                ),
+                { statusCode: 400 },
+              );
+            }
           }
         }
         // Apply recipe weights positionally — server is the source of truth

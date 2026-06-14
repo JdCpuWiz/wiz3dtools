@@ -146,6 +146,28 @@ export const ProductForm: React.FC = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  // Change #160 — allowed material families for this product's color
+  // picker (and order validation). Empty = no constraint.
+  const [allowedMaterials, setAllowedMaterials] = useState<string[]>([]);
+
+  // Available material families derived from the live color catalog.
+  // Each material string ("PLA Basic", "PETG-HF") collapses to its
+  // family token via the same regex the dedupe service uses.
+  const materialFamilies = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const c of availableColors) {
+      const fam = (c.material ?? '').trim().toLowerCase().match(/^[a-z0-9]+/)?.[0];
+      if (fam) set.add(fam);
+    }
+    return Array.from(set).sort();
+  }, [availableColors]);
+
+  const toggleMaterial = (fam: string) => {
+    setAllowedMaterials((prev) =>
+      prev.includes(fam) ? prev.filter((f) => f !== fam) : [...prev, fam],
+    );
+  };
+
   const watchedName = watch('name', '');
 
   useEffect(() => {
@@ -175,6 +197,7 @@ export const ProductForm: React.FC = () => {
       if (existing.images) {
         setImages(existing.images);
       }
+      setAllowedMaterials(existing.allowedMaterials ?? []);
     }
   }, [existing, reset]);
 
@@ -253,7 +276,7 @@ export const ProductForm: React.FC = () => {
       // invariant check (which reads product_colors) sees the new recipe
       // state when validating the publish toggle.
       await productApi.setColors(productId, colorDtos);
-      await update(productId, data);
+      await update(productId, { ...data, allowedMaterials });
     } else {
       // Create is always unpublished server-side (ProductModel.create
       // doesn't insert published_to_store). Set colors next, then — if the
@@ -267,6 +290,7 @@ export const ProductForm: React.FC = () => {
         ...createData,
         wholesalePrice: createData.wholesalePrice ?? 0,
         retailPrice: createData.retailPrice ?? 0,
+        allowedMaterials,
       });
       await productApi.setColors(created.id, colorDtos);
       if (publishedToStore === true || publishedToWholesale === true) {
@@ -459,6 +483,51 @@ export const ProductForm: React.FC = () => {
               A recipe with at least one color slot is required before publishing to either channel. Add a color in the section above, or uncheck both publish toggles.
             </p>
           )}
+
+          {/* Change #160 — Allowed materials. Storefront PDP picker
+              restricts the material dropdown to this set. Empty = no
+              constraint (customer can pick any material). Backend
+              POST /api/store/orders enforces this server-side too. */}
+          <div>
+            <label className={labelClass}>Allowed materials</label>
+            <p className="text-xs text-white/50 mb-2">
+              Which filament types this product can be printed in. The
+              storefront picker hides other materials. Leave empty to
+              allow any material.
+            </p>
+            {materialFamilies.length === 0 ? (
+              <p className="text-xs text-white/40">
+                No materials in the color catalog yet — add a color with a material first.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {materialFamilies.map((fam) => {
+                  const on = allowedMaterials.includes(fam);
+                  return (
+                    <button
+                      type="button"
+                      key={fam}
+                      onClick={() => toggleMaterial(fam)}
+                      className="px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-widest transition-colors"
+                      style={on
+                        ? { background: '#15803d', color: '#ffffff' }
+                        : { background: '#2d2d2d', color: '#ffffff' }
+                      }
+                      title={on ? `${fam.toUpperCase()} is allowed — click to remove` : `Click to allow ${fam.toUpperCase()}`}
+                    >
+                      {fam}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {allowedMaterials.length === 0 && materialFamilies.length > 0 && (
+              <p className="text-[11px] text-white/40 mt-2">
+                ⚠ No materials selected — customers can pick any filament type.
+              </p>
+            )}
+          </div>
+
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>

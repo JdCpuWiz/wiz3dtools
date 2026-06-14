@@ -73,7 +73,7 @@ Snailslap / Pawdio / other homelab apps are unrelated — out of scope here.
 
 | Domain entity         | Canonical owner | Mirrored to / read by         | How it flows                                        |
 |-----------------------|-----------------|--------------------------------|-----------------------------------------------------|
-| Products              | wiz3dtools      | wiz3d-prints (read-only)       | `GET /api/store/products` per request, 60s cache    |
+| Products              | wiz3dtools      | wiz3d-prints (read-only)       | `GET /api/store/products` per request, 60s cache. Payload includes `allowedMaterials: string[]` (Change #160) which drives the storefront picker filter + server-side order validation.    |
 | Categories            | wiz3dtools      | wiz3d-prints (read-only)       | bundled into product payload                        |
 | Product images        | wiz3dtools      | wiz3d-prints (URL refs only)   | URLs served from wiz3d-prints' R2 bucket; metadata on wiz3dtools |
 | Product colors (recipe slots) | wiz3dtools | wiz3d-prints (read-only) | bundled into product payload                        |
