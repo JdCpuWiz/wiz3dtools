@@ -204,16 +204,30 @@ export const ProductList: React.FC = () => {
                     </button>
                   </td>
                   <td className="hidden md:table-cell">
-                    <button
-                      onClick={() => update(product.id, { publishedToStore: !product.publishedToStore })}
-                      className="px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors"
-                      style={product.publishedToStore
-                        ? { background: '#1d4ed8', color: '#ffffff' }
-                        : { background: '#4b5563', color: '#ffffff' }
-                      }
-                    >
-                      {product.publishedToStore ? 'Live' : 'Off'}
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => update(product.id, { publishedToStore: !product.publishedToStore })}
+                        className="px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors"
+                        style={product.publishedToStore
+                          ? { background: '#1d4ed8', color: '#ffffff' }
+                          : { background: '#4b5563', color: '#ffffff' }
+                        }
+                        title={product.publishedToStore ? 'Visible on /shop' : 'Hidden from /shop'}
+                      >
+                        {product.publishedToStore ? 'Web' : 'Web off'}
+                      </button>
+                      <button
+                        onClick={() => update(product.id, { publishedToWholesale: !product.publishedToWholesale })}
+                        className="px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors"
+                        style={product.publishedToWholesale
+                          ? { background: '#6d28d9', color: '#ffffff' }
+                          : { background: '#4b5563', color: '#ffffff' }
+                        }
+                        title={product.publishedToWholesale ? 'Visible on /wholesale' : 'Hidden from /wholesale'}
+                      >
+                        {product.publishedToWholesale ? 'WS' : 'WS off'}
+                      </button>
+                    </div>
                   </td>
                   <td>
                     <div className="flex items-center gap-2 justify-end">

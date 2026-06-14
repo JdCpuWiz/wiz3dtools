@@ -59,8 +59,23 @@ export interface StoreOrderSummary {
   createdAt: string;
 }
 
+/**
+ * Channel a store-API client is reading for. Picks the WHERE column in
+ * getProducts and the product-validation gate in createOrder.
+ *   webstore  → published_to_store      (the consumer /shop on wiz3dprints.com)
+ *   wholesale → published_to_wholesale  (the wholesale portal under /wholesale)
+ * Defaults to `webstore` for backwards compatibility with any caller that
+ * doesn't supply the param.
+ */
+export type StoreAudience = 'webstore' | 'wholesale';
+
+function publishedColumn(audience: StoreAudience): string {
+  return audience === 'wholesale' ? 'published_to_wholesale' : 'published_to_store';
+}
+
 export class StoreService {
-  async getProducts(): Promise<StoreProduct[]> {
+  async getProducts(audience: StoreAudience = 'webstore'): Promise<StoreProduct[]> {
+    const pubCol = publishedColumn(audience);
     const result = await pool.query(`
       SELECT
         p.id, p.name, p.sku,
@@ -74,7 +89,7 @@ export class StoreService {
         c.slug             AS "cat_slug"
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
-      WHERE p.published_to_store = TRUE AND p.active = TRUE
+      WHERE p.${pubCol} = TRUE AND p.active = TRUE
       ORDER BY COALESCE(c.sort_order, 999) ASC, p.name ASC
     `);
 
@@ -120,15 +135,18 @@ export class StoreService {
     return ColorModel.findAll(true);
   }
 
-  async createOrder(data: CreateStoreOrderDto): Promise<SalesInvoice> {
+  async createOrder(data: CreateStoreOrderDto, audience: StoreAudience = 'webstore'): Promise<SalesInvoice> {
     // Pre-validate each line item: product is available AND has a color recipe.
     // We also resolve the final colors[] per item up-front so we either succeed
-    // atomically or fail before mutating any state.
+    // atomically or fail before mutating any state. The audience gate matches
+    // the channel the order is being placed through — a webstore order can
+    // only contain webstore-published products and vice versa.
+    const pubCol = publishedColumn(audience);
     const resolved: { item: StoreOrderLineItem; productName: string; productSku: string | null; colors: ItemColorDto[] }[] = [];
 
     for (const item of data.lineItems) {
       const productResult = await pool.query(
-        `SELECT id, name, sku FROM products WHERE id = $1 AND published_to_store = TRUE AND active = TRUE`,
+        `SELECT id, name, sku FROM products WHERE id = $1 AND ${pubCol} = TRUE AND active = TRUE`,
         [item.productId],
       );
       const product = productResult.rows[0];

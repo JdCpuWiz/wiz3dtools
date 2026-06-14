@@ -6,6 +6,7 @@ const SELECT = `
   id, name, description, sku, unit_price as "unitPrice",
   units_sold as "unitsSold", active,
   published_to_store as "publishedToStore",
+  published_to_wholesale as "publishedToWholesale",
   category_id as "categoryId",
   store_title as "storeTitle",
   store_description as "storeDescription",
@@ -137,6 +138,7 @@ export class ProductModel {
     if (data.unitPrice !== undefined) { fields.push(`unit_price = $${i++}`); values.push(data.unitPrice); }
     if (data.active !== undefined) { fields.push(`active = $${i++}`); values.push(data.active); }
     if (data.publishedToStore !== undefined) { fields.push(`published_to_store = $${i++}`); values.push(data.publishedToStore); }
+    if (data.publishedToWholesale !== undefined) { fields.push(`published_to_wholesale = $${i++}`); values.push(data.publishedToWholesale); }
     if (data.categoryId !== undefined) { fields.push(`category_id = $${i++}`); values.push(data.categoryId ?? null); }
     if (data.storeTitle !== undefined) { fields.push(`store_title = $${i++}`); values.push(data.storeTitle ?? null); }
     if (data.storeDescription !== undefined) { fields.push(`store_description = $${i++}`); values.push(data.storeDescription ?? null); }

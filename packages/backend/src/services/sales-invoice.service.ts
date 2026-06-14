@@ -3,7 +3,6 @@ import { InvoiceLineItemModel } from '../models/invoice-line-item.model.js';
 import { ProductModel } from '../models/product.model.js';
 import { ProductColorModel } from '../models/product-color.model.js';
 import { LineItemColorModel } from '../models/item-color.model.js';
-import { sendShippingEmail } from './email.service.js';
 import type {
   SalesInvoice,
   CreateSalesInvoiceDto,
@@ -110,15 +109,14 @@ export class SalesInvoiceService {
     }
 
     await SalesInvoiceModel.markShipped(invoiceId, invoice.trackingNumber?.trim() || null);
-    await sendShippingEmail(invoice.customer, invoice.invoiceNumber, invoice.carrier, invoice.trackingNumber?.trim() || null);
 
-    // BuildPlan #12 Phase 9 — fire a webhook back to wiz3d-prints so it can
-    // send a consumer-branded shipped email (the sendShippingEmail above is
-    // wiz3dtools-branded and stays for wholesale parity). wiz3d-prints
-    // decides whether to actually send anything based on whether the
-    // customer has a consumer User row. Fire-and-forget — a missing or
-    // misconfigured webhook URL must not block the ship action.
-    const webhookBase = process.env.WIZ3D_PRINTS_URL || 'https://wiz3dprints.com';
+    // BuildPlan #12 Phase 9 — single source of truth for the shipped
+    // notification: wiz3d-prints sends the email for both consumer AND
+    // wholesale customers (its receiver no longer gates on whether a
+    // consumer User exists). The previous wiz3dtools-side sendShippingEmail
+    // is gone; this webhook is fire-and-forget and a missing URL silently
+    // skips so the Ship action itself never fails on a notify error.
+    const webhookBase = process.env.WIZ3D_PRINTS_URL;
     const adminToken = process.env.WIZ3D_PRINTS_ADMIN_TOKEN;
     if (webhookBase && adminToken && invoice.customer) {
       void fetch(`${webhookBase}/api/admin/orders/shipped`, {

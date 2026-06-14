@@ -31,6 +31,7 @@ export interface Product {
   colors: ProductColor[];
   // Store fields
   publishedToStore: boolean;
+  publishedToWholesale: boolean;
   categoryId: number | null;
   category: Category | null;
   storeTitle: string | null;
@@ -57,6 +58,7 @@ export interface UpdateProductDto {
   unitPrice?: number;
   active?: boolean;
   publishedToStore?: boolean;
+  publishedToWholesale?: boolean;
   categoryId?: number | null;
   storeTitle?: string | null;
   storeDescription?: string | null;

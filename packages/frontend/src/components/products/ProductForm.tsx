@@ -11,6 +11,7 @@ import type { Color, CreateProductDto, ProductColorDto, ProductImage } from '@wi
 interface ProductFormFields extends CreateProductDto {
   sku?: string;
   publishedToStore?: boolean;
+  publishedToWholesale?: boolean;
   categoryId?: number | null;
   storeTitle?: string;
   storeDescription?: string;
@@ -153,6 +154,7 @@ export const ProductForm: React.FC = () => {
         unitPrice: existing.unitPrice,
         active: existing.active,
         publishedToStore: existing.publishedToStore,
+        publishedToWholesale: existing.publishedToWholesale,
         categoryId: existing.categoryId ?? null,
         storeTitle: existing.storeTitle || '',
         storeDescription: existing.storeDescription || '',
@@ -256,11 +258,14 @@ export const ProductForm: React.FC = () => {
       // user wanted this product published — run a follow-up update with
       // the publish flag, which will pass the invariant check now that the
       // recipe exists.
-      const { publishedToStore, ...createData } = data;
+      const { publishedToStore, publishedToWholesale, ...createData } = data;
       const created = await create(createData);
       await productApi.setColors(created.id, colorDtos);
-      if (publishedToStore === true) {
-        await update(created.id, { publishedToStore: true });
+      if (publishedToStore === true || publishedToWholesale === true) {
+        await update(created.id, {
+          publishedToStore: publishedToStore === true,
+          publishedToWholesale: publishedToWholesale === true,
+        });
       }
     }
 
@@ -427,21 +432,31 @@ export const ProductForm: React.FC = () => {
 
         {/* Store Listing */}
         <div className="card space-y-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
             <h3 className="text-sm font-semibold" style={{ color: '#ff9900' }}>Store Listing</h3>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                {...register('publishedToStore')}
-                className="h-4 w-4 rounded accent-primary-500"
-              />
-              <span className="text-sm font-medium" style={{ color: '#ff9900' }}>Published to store</span>
-            </label>
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  {...register('publishedToStore')}
+                  className="h-4 w-4 rounded accent-primary-500"
+                />
+                <span className="text-sm font-medium" style={{ color: '#ff9900' }}>Show in webstore (wiz3dprints.com/shop)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  {...register('publishedToWholesale')}
+                  className="h-4 w-4 rounded accent-primary-500"
+                />
+                <span className="text-sm font-medium" style={{ color: '#ff9900' }}>Show in wholesale portal</span>
+              </label>
+            </div>
           </div>
 
-          {watch('publishedToStore') && colorWeights.length === 0 && (
+          {(watch('publishedToStore') || watch('publishedToWholesale')) && colorWeights.length === 0 && (
             <p className="text-xs text-red-400">
-              A recipe with at least one color slot is required before publishing. Add a color in the section above, or uncheck "Published to store".
+              A recipe with at least one color slot is required before publishing to either channel. Add a color in the section above, or uncheck both publish toggles.
             </p>
           )}
 

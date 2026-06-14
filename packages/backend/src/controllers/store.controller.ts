@@ -214,9 +214,10 @@ export class StoreController {
     } catch (error) { next(error); }
   }
 
-  async getProducts(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getProducts(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const products = await service.getProducts();
+      const audience = (req.query.audience as string) === 'wholesale' ? 'wholesale' : 'webstore';
+      const products = await service.getProducts(audience);
       res.json({ success: true, data: products });
     } catch (error) { next(error); }
   }
@@ -275,7 +276,8 @@ export class StoreController {
         }
       }
 
-      const invoice = await service.createOrder({ customerId, notes, lineItems, taxExempt, taxRate });
+      const audience = (req.query.audience as string) === 'wholesale' ? 'wholesale' : 'webstore';
+      const invoice = await service.createOrder({ customerId, notes, lineItems, taxExempt, taxRate }, audience);
       const itemsTotal = lineItems.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
       await writeAuditLog(
         STORE_ACTOR,
