@@ -57,6 +57,7 @@ export const CustomerForm: React.FC = () => {
         postalCode: existing.postalCode || '',
         country: existing.country || 'New Zealand',
         notes: existing.notes || '',
+        isWholesale: existing.isWholesale ?? false,
       });
     }
   }, [existing, reset]);
@@ -128,6 +129,25 @@ export const CustomerForm: React.FC = () => {
         <div>
           <label className={labelClass}>Notes</label>
           <textarea {...register('notes')} rows={3} className="input resize-none" placeholder="Any additional notes..." />
+        </div>
+
+        {/* BP #19 — wholesale flag mirrors wiz3d-prints User.role.
+            Flip here to manually mark/unmark a customer; flips here
+            override wiz3d-prints until the Phase 2 role-change hook
+            ships and starts writing this column automatically. */}
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="isWholesale"
+            {...register('isWholesale')}
+            className="h-4 w-4 rounded accent-primary-500"
+          />
+          <label htmlFor="isWholesale" className="text-sm font-medium text-primary-400">
+            Wholesale customer
+            <span className="ml-2 font-normal text-xs text-white/60">
+              Invoice line items default to the product's wholesale price.
+            </span>
+          </label>
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

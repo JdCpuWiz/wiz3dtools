@@ -4,7 +4,7 @@ import { useProducts } from '../../hooks/useProducts';
 import { PageIcon } from '../common/PageIcon';
 
 type FilterTab = 'all' | 'active' | 'inactive' | 'webstore';
-type SortKey = 'name' | 'unitPrice' | 'unitsSold' | 'revenue';
+type SortKey = 'name' | 'retailPrice' | 'unitsSold' | 'revenue';
 type SortDir = 'asc' | 'desc';
 
 const TABS: { key: FilterTab; label: string }[] = [
@@ -47,9 +47,11 @@ export const ProductList: React.FC = () => {
       let av: number | string = 0;
       let bv: number | string = 0;
       if (sortKey === 'name') { av = a.name.toLowerCase(); bv = b.name.toLowerCase(); }
-      else if (sortKey === 'unitPrice') { av = a.unitPrice; bv = b.unitPrice; }
+      else if (sortKey === 'retailPrice') { av = a.retailPrice; bv = b.retailPrice; }
       else if (sortKey === 'unitsSold') { av = a.unitsSold; bv = b.unitsSold; }
-      else if (sortKey === 'revenue') { av = a.unitsSold * a.unitPrice; bv = b.unitsSold * b.unitPrice; }
+      // Revenue uses retail price as a proxy. A future enhancement could
+      // join invoice_line_items snapshots for exact sold-at totals.
+      else if (sortKey === 'revenue') { av = a.unitsSold * a.retailPrice; bv = b.unitsSold * b.retailPrice; }
 
       if (av < bv) return sortDir === 'asc' ? -1 : 1;
       if (av > bv) return sortDir === 'asc' ? 1 : -1;
@@ -133,8 +135,8 @@ export const ProductList: React.FC = () => {
                 <th className="hidden sm:table-cell whitespace-nowrap">SKU</th>
                 <th className="hidden sm:table-cell whitespace-nowrap">Description</th>
                 <th className="whitespace-nowrap">
-                  <button onClick={() => handleSort('unitPrice')} className="hover:text-white transition-colors whitespace-nowrap">
-                    Unit Price{sortIcon('unitPrice')}
+                  <button onClick={() => handleSort('retailPrice')} className="hover:text-white transition-colors whitespace-nowrap">
+                    Price (W / R){sortIcon('retailPrice')}
                   </button>
                 </th>
                 <th className="whitespace-nowrap">
@@ -185,12 +187,12 @@ export const ProductList: React.FC = () => {
                         : product.description
                       : '—'}
                   </td>
-                  <td className="font-medium" style={{ color: '#ff9900' }}>
-                    ${product.unitPrice.toFixed(2)}
+                  <td className="font-medium whitespace-nowrap" style={{ color: '#ff9900' }}>
+                    ${product.wholesalePrice.toFixed(2)} / ${product.retailPrice.toFixed(2)}
                   </td>
                   <td className="text-white">{product.unitsSold}</td>
                   <td className="hidden md:table-cell font-medium" style={{ color: '#ff9900' }}>
-                    {product.unitsSold > 0 ? `$${(product.unitsSold * product.unitPrice).toFixed(2)}` : '—'}
+                    {product.unitsSold > 0 ? `$${(product.unitsSold * product.retailPrice).toFixed(2)}` : '—'}
                   </td>
                   <td>
                     <button

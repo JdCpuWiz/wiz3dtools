@@ -63,7 +63,8 @@ export class ProductService {
       name: copyName,
       description: original.description ?? undefined,
       sku: newSku,
-      unitPrice: original.unitPrice,
+      wholesalePrice: original.wholesalePrice,
+      retailPrice: original.retailPrice,
       active: false,
     });
 

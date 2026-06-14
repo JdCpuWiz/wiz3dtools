@@ -23,7 +23,7 @@ export const InvoiceForm: React.FC = () => {
   const { products } = useProducts(true);
   const { colors: availableColors } = useColors();
 
-  const { register, handleSubmit } = useForm<{
+  const { register, handleSubmit, watch } = useForm<{
     customerId: string;
     taxRate: string;
     taxExempt: boolean;
@@ -55,6 +55,18 @@ export const InvoiceForm: React.FC = () => {
     setLineItems((prev) => prev.map((li) => li._key === key ? { ...li, _showColors: !li._showColors } : li));
   };
 
+  // BP #19 — the selected customer's is_wholesale flag drives the
+  // default unit_price for any product added as a line item. Wholesale
+  // customer → wholesalePrice, otherwise → retailPrice. Admin can still
+  // override per line via the unit price input.
+  const selectedCustomerId = watch('customerId');
+  const selectedCustomer = customers.find(
+    (c) => selectedCustomerId && c.id === parseInt(selectedCustomerId),
+  );
+  const isWholesaleInvoice = selectedCustomer?.isWholesale ?? false;
+  const priceForCustomer = (p: { wholesalePrice: number; retailPrice: number }) =>
+    isWholesaleInvoice ? p.wholesalePrice : p.retailPrice;
+
   const applyProduct = (key: number, productId: number) => {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
@@ -63,7 +75,7 @@ export const InvoiceForm: React.FC = () => {
       .map((pc, idx) => ({ colorId: pc.colorId, isPrimary: idx === 0, note: null, sortOrder: idx }));
     setLineItems((prev) => prev.map((li) =>
       li._key === key
-        ? { ...li, productId: product.id, productName: product.name, sku: product.sku || undefined, unitPrice: product.unitPrice, details: product.description || li.details, _weightGrams: product.totalWeightGrams || 0, _colors: autoColors }
+        ? { ...li, productId: product.id, productName: product.name, sku: product.sku || undefined, unitPrice: priceForCustomer(product), details: product.description || li.details, _weightGrams: product.totalWeightGrams || 0, _colors: autoColors }
         : li,
     ));
   };

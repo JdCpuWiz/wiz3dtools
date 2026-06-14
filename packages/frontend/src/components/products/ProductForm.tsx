@@ -6,17 +6,22 @@ import { productApi } from '../../services/api';
 import { useColors } from '../../hooks/useColors';
 import { useCategories } from '../../hooks/useCategories';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Color, CreateProductDto, ProductColorDto, ProductImage } from '@wizqueue/shared';
+import type { Color, ProductColorDto, ProductImage } from '@wizqueue/shared';
 
-interface ProductFormFields extends CreateProductDto {
+// All fields RHF wires to inputs — wholesalePrice + retailPrice are
+// optional in the form binding (RHF gives `number | undefined` from
+// `valueAsNumber` on empty), but they're required at submit (validated
+// before calling create). Matches CreateProductDto shape after BP #19.
+interface ProductFormFields {
+  name: string;
+  description?: string;
   sku?: string;
+  wholesalePrice?: number;
+  retailPrice?: number;
+  active?: boolean;
   publishedToStore?: boolean;
   publishedToWholesale?: boolean;
   categoryId?: number | null;
-  storeTitle?: string;
-  storeDescription?: string;
-  wholesalePrice?: number;
-  retailPrice?: number;
 }
 
 interface ColorWeightEntry {
@@ -151,13 +156,10 @@ export const ProductForm: React.FC = () => {
         name: existing.name,
         description: existing.description || '',
         sku: isCopy ? '' : (existing.sku || ''),
-        unitPrice: existing.unitPrice,
         active: existing.active,
         publishedToStore: existing.publishedToStore,
         publishedToWholesale: existing.publishedToWholesale,
         categoryId: existing.categoryId ?? null,
-        storeTitle: existing.storeTitle || '',
-        storeDescription: existing.storeDescription || '',
         wholesalePrice: existing.wholesalePrice ?? 0,
         retailPrice: existing.retailPrice ?? 0,
       });
@@ -259,7 +261,13 @@ export const ProductForm: React.FC = () => {
       // the publish flag, which will pass the invariant check now that the
       // recipe exists.
       const { publishedToStore, publishedToWholesale, ...createData } = data;
-      const created = await create(createData);
+      // Coerce the two prices to numbers — RHF's `valueAsNumber` returns
+      // `undefined` for an empty input, but the backend requires both.
+      const created = await create({
+        ...createData,
+        wholesalePrice: createData.wholesalePrice ?? 0,
+        retailPrice: createData.retailPrice ?? 0,
+      });
       await productApi.setColors(created.id, colorDtos);
       if (publishedToStore === true || publishedToWholesale === true) {
         await update(created.id, {
@@ -332,18 +340,10 @@ export const ProductForm: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label className={labelClass}>Unit Price ($) *</label>
-            <input
-              type="number"
-              min={0}
-              step={0.01}
-              {...register('unitPrice', { required: 'Required', valueAsNumber: true, min: 0 })}
-              className={fieldClass}
-              placeholder="0.00"
-            />
-            {errors.unitPrice && <p className="text-red-400 text-xs mt-1">{errors.unitPrice.message}</p>}
-          </div>
+          {/* BP #19 — Unit Price input removed. The two real prices live
+              in the Store section below (Wholesale + Retail). Invoice line
+              items default to whichever matches the customer's
+              is_wholesale flag. */}
 
           <div className="flex items-center gap-3">
             <input
@@ -499,24 +499,9 @@ export const ProductForm: React.FC = () => {
             </select>
           </div>
 
-          <div>
-            <label className={labelClass}>Store Title</label>
-            <input
-              {...register('storeTitle')}
-              className={fieldClass}
-              placeholder="Public display name (leave blank to use product name)"
-            />
-          </div>
-
-          <div>
-            <label className={labelClass}>Store Description</label>
-            <textarea
-              {...register('storeDescription')}
-              rows={4}
-              className={`${fieldClass} resize-none`}
-              placeholder="Public-facing description shown to customers…"
-            />
-          </div>
+          {/* BP #19 — Store Title and Store Description removed. The
+              storefront now reads from `name` and `description` directly
+              (single source). Edit those in the main section above. */}
         </div>
 
         {/* Product Images — edit mode only */}

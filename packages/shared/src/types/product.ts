@@ -24,18 +24,17 @@ export interface Product {
   name: string;
   description: string | null;
   sku: string | null;
-  unitPrice: number;
   unitsSold: number;
   active: boolean;
   totalWeightGrams: number;
   colors: ProductColor[];
-  // Store fields
+  // Publishing flags + audience-segmented pricing (BP #19 consolidated
+  // these from the old name/storeTitle, description/storeDescription,
+  // unitPrice/wholesalePrice/retailPrice trio — single source per piece).
   publishedToStore: boolean;
   publishedToWholesale: boolean;
   categoryId: number | null;
   category: Category | null;
-  storeTitle: string | null;
-  storeDescription: string | null;
   wholesalePrice: number;
   retailPrice: number;
   images: ProductImage[];
@@ -47,21 +46,25 @@ export interface CreateProductDto {
   name: string;
   description?: string;
   sku?: string;
-  unitPrice: number;
+  // Both prices required for new products — wholesale + retail are the
+  // two distinct audiences. Use the same value for both if you don't
+  // distinguish (e.g. retail-only catalog).
+  wholesalePrice: number;
+  retailPrice: number;
   active?: boolean;
+  publishedToStore?: boolean;
+  publishedToWholesale?: boolean;
+  categoryId?: number | null;
 }
 
 export interface UpdateProductDto {
   name?: string;
   description?: string;
   sku?: string;
-  unitPrice?: number;
   active?: boolean;
   publishedToStore?: boolean;
   publishedToWholesale?: boolean;
   categoryId?: number | null;
-  storeTitle?: string | null;
-  storeDescription?: string | null;
   wholesalePrice?: number;
   retailPrice?: number;
 }

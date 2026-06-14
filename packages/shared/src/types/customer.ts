@@ -11,6 +11,12 @@ export interface Customer {
   postalCode: string | null;
   country: string;
   notes: string | null;
+  // BP #19 — true when this customer is a wholesale account
+  // (wiz3d-prints User.role === 'wholesaler'). Mirrored from
+  // wiz3d-prints' role-change hook; wiz3dtools admin can also flip it
+  // directly on the customer edit page. Drives invoice line-item
+  // default pricing (wholesale → wholesalePrice; retail → retailPrice).
+  isWholesale: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +33,7 @@ export interface CreateCustomerDto {
   postalCode?: string;
   country?: string;
   notes?: string;
+  isWholesale?: boolean;
 }
 
 export interface UpdateCustomerDto {
@@ -41,4 +48,5 @@ export interface UpdateCustomerDto {
   postalCode?: string;
   country?: string;
   notes?: string;
+  isWholesale?: boolean;
 }

@@ -9,8 +9,10 @@ import type { SalesInvoice, Color, ProductColor, ItemColorDto } from '@wizqueue/
 export interface StoreProduct {
   id: number;
   name: string;
-  storeTitle: string | null;
-  storeDescription: string | null;
+  // BP #19 — single source per field. Old `storeTitle` / `storeDescription`
+  // dropped. wiz3d-prints' existing `storeTitle ?? name` fallback handles
+  // the missing field cleanly; Phase 2 removes the fallback pattern.
+  description: string | null;
   sku: string | null;
   wholesalePrice: number;
   retailPrice: number;
@@ -78,9 +80,7 @@ export class StoreService {
     const pubCol = publishedColumn(audience);
     const result = await pool.query(`
       SELECT
-        p.id, p.name, p.sku,
-        p.store_title      AS "storeTitle",
-        p.store_description AS "storeDescription",
+        p.id, p.name, p.description, p.sku,
         p.wholesale_price  AS "wholesalePrice",
         p.retail_price     AS "retailPrice",
         p.category_id      AS "categoryId",
@@ -117,8 +117,7 @@ export class StoreService {
     return result.rows.map((r) => ({
       id: r.id as number,
       name: r.name as string,
-      storeTitle: r.storeTitle as string | null,
-      storeDescription: r.storeDescription as string | null,
+      description: r.description as string | null,
       sku: r.sku as string | null,
       wholesalePrice: parseFloat(r.wholesalePrice as string),
       retailPrice: parseFloat(r.retailPrice as string),

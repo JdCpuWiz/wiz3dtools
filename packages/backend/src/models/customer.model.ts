@@ -5,7 +5,9 @@ const SELECT_FIELDS = `
   id, business_name as "businessName", contact_name as "contactName",
   email, phone, address_line1 as "addressLine1", address_line2 as "addressLine2",
   city, state_province as "stateProvince", postal_code as "postalCode",
-  country, notes, created_at as "createdAt", updated_at as "updatedAt"
+  country, notes,
+  is_wholesale as "isWholesale",
+  created_at as "createdAt", updated_at as "updatedAt"
 `;
 
 export class CustomerModel {
@@ -24,9 +26,9 @@ export class CustomerModel {
       INSERT INTO customers (
         business_name, contact_name, email, phone,
         address_line1, address_line2, city, state_province,
-        postal_code, country, notes
+        postal_code, country, notes, is_wholesale
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING ${SELECT_FIELDS}
     `;
     const values = [
@@ -41,6 +43,7 @@ export class CustomerModel {
       data.postalCode || null,
       data.country || 'New Zealand',
       data.notes || null,
+      data.isWholesale ?? false,
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -63,6 +66,7 @@ export class CustomerModel {
       ['postalCode', 'postal_code'],
       ['country', 'country'],
       ['notes', 'notes'],
+      ['isWholesale', 'is_wholesale'],
     ];
 
     for (const [key, col] of map) {

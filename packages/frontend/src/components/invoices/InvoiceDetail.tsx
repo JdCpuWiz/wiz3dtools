@@ -106,10 +106,17 @@ export const InvoiceDetail: React.FC = () => {
     return window.confirm('This invoice is marked as Paid. Are you sure you want to make changes?');
   };
 
+  // BP #19 — invoice's customer.isWholesale drives the default unit
+  // price for newly added line items. Falls back to retail when no
+  // customer is set or when the wholesale flag is false.
+  const isWholesaleInvoice = invoice?.customer?.isWholesale ?? false;
+  const priceForCustomer = (p: { wholesalePrice: number; retailPrice: number }) =>
+    isWholesaleInvoice ? p.wholesalePrice : p.retailPrice;
+
   const applyProduct = (productId: number) => {
     const p = products.find((pr) => pr.id === productId);
     if (!p) return;
-    setNewItem({ productId: p.id, productName: p.name, sku: p.sku || undefined, unitPrice: p.unitPrice, details: p.description || '', quantity: newItem.quantity });
+    setNewItem({ productId: p.id, productName: p.name, sku: p.sku || undefined, unitPrice: priceForCustomer(p), details: p.description || '', quantity: newItem.quantity });
     const autoColors = [...(p.colors || [])]
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((pc, idx) => ({ colorId: pc.colorId, isPrimary: idx === 0, note: null, sortOrder: idx }));
@@ -396,6 +403,7 @@ export const InvoiceDetail: React.FC = () => {
                 <LineItemRow
                   key={item.id}
                   item={item}
+                  isWholesaleInvoice={isWholesaleInvoice}
                   onUpdate={(itemId, data) => { if (confirmIfPaid()) updateLineItem(itemId, data); }}
                   onUpdateColors={(itemId, colors) => { if (confirmIfPaid()) updateLineItemColors(itemId, colors); }}
                   onUpdateStatus={(itemId, status) => { if (!isShipped) updateLineItemStatus(itemId, status); }}
@@ -416,7 +424,7 @@ export const InvoiceDetail: React.FC = () => {
                           onChange={(e) => e.target.value && applyProduct(parseInt(e.target.value))}
                         >
                           <option value="">— pick product —</option>
-                          {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${p.unitPrice.toFixed(2)})</option>)}
+                          {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${priceForCustomer(p).toFixed(2)})</option>)}
                         </select>
                       )}
                       <input

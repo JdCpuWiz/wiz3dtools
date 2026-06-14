@@ -79,7 +79,8 @@ Snailslap / Pawdio / other homelab apps are unrelated — out of scope here.
 | Product colors (recipe slots) | wiz3dtools | wiz3d-prints (read-only) | bundled into product payload                        |
 | Customers (people/businesses) | wiz3dtools | wiz3d-prints (via `User.wiz3dtoolsCustomerId` FK) | wiz3d-prints signup calls `POST /api/store/customers` |
 | Customer auth password hash | wiz3dtools (`customers.password_hash`) | wiz3d-prints verifies via store-api | bcrypt hash written on signup; consumer login on wiz3d-prints checks via store-API |
-| Consumer accounts + roles (admin / wholesaler / customer) | **wiz3d-prints** (`User.role`) | wiz3dtools doesn't see this today | one-way: wholesale promotion lives on wiz3d-prints |
+| **Customer wholesale flag** (`customers.is_wholesale`) | wiz3dtools (BP #19) | mirrored by wiz3d-prints on User.role change | wiz3d-prints PATCHes the customer when admin promotes/demotes a User between `wholesaler` ↔ `customer`. wiz3dtools admin can also flip directly on the Customer edit page. Drives invoice line-item pricing default. |
+| Consumer accounts + roles (admin / wholesaler / customer) | **wiz3d-prints** (`User.role`) | wiz3dtools sees the flag mirrored as `is_wholesale` | wiz3d-prints owns the role; the wholesale slice gets mirrored. Admin role is wiz3d-prints-only. |
 | Admin auth (wiz3dtools-frontend login) | wiz3dtools (`users`) | — | local cookie session, not shared |
 | Sales invoices        | wiz3dtools      | —                              | admin-only; PDFs emailed to customer                |
 | Invoice line items    | wiz3dtools      | —                              | snapshot per sale (own `unit_price`)                |
@@ -111,7 +112,7 @@ will be overwritten on next sync) or you're missing context.
 | A color's inventory grams                       | **BamBuddy** (adjust the spool there); wiz3dtools just shows what the next sync pulls. The "+ Spool" admin button on wiz3dtools is a manual override for one-off corrections. |
 | A customer's contact info                       | wiz3dtools admin → `/customers/:id`    |
 | Whether a customer can log in to the store      | wiz3dtools admin → `/customers/:id` (sets password_hash via "Send invite") OR wiz3d-prints `/signup` form |
-| A customer's wholesale-vs-retail role           | **wiz3d-prints** admin pages (User.role). NOT visible from wiz3dtools today — this is a known gap (see Open Architecture Questions below). |
+| A customer's wholesale-vs-retail role           | **wiz3d-prints** admin pages (User.role) — primary. wiz3dtools `/customers/:id` also has an `is_wholesale` toggle that flows back to the invoice unit-price default (BP #19). The two sides stay in sync via wiz3d-prints' role-change hook. |
 | Storefront showcase content (portfolio, services, etc.) | wiz3dtools admin → `/admin/showcase/*` (proxies to wiz3d-prints' schema) |
 | Manufacturer spool weights / thresholds         | wiz3dtools admin → `/admin/manufacturers` |
 | The print queue / live print state              | **BamBuddy** (https://bambuddy.deckerzoo.com) |
@@ -309,14 +310,15 @@ work is visible on the dashboard.
 |------|----------|----------------------------------------------------------------------------------------------------------------|
 | #17  | PLANNING | Should the wiz3d-prints PDP recolor product photos dynamically (alpha-mask compositing)?                       |
 | #18  | DONE     | `/admin/colors` + `/filament` were two pages editing the same `colors` table — collapsed into one.             |
-| #19  | PLANNING | Drop `storeTitle`, `storeDescription`, `unitPrice` from `products` (Wiz picked Option A). Adds is_wholesale to customers (this doc nudged the design). |
+| #19  | Phase 1 DONE / Phase 2 PENDING | Phase 1 (this commit) dropped `storeTitle`, `storeDescription`, `unitPrice` from `products` and added `is_wholesale` to `customers`. Phase 2 cleans up wiz3d-prints' now-dead `storeTitle ?? name` fallback patterns. |
 
-**Standing gap** (not a BP yet): wholesale role lives on `wiz3d-prints.User.role`,
-not on `wiz3dtools.customers`. Result: wiz3dtools' InvoiceForm can't auto-pick
-wholesale-vs-retail unit price from the customer record alone. BP #19 will
-either add a mirrored `is_wholesale` column on `wiz3dtools.customers`
-(write path: wiz3d-prints sets it on role promotion) OR keep a manual
-"Pricing tier" selector on the invoice header.
+**Resolved gap** (BP #19 Phase 1): the wholesale flag is now mirrored
+onto `wiz3dtools.customers.is_wholesale`. wiz3d-prints' role-promotion
+hook needs to PATCH the customer so the mirror stays in sync — that
+write path lands in **BP #19 Phase 2 — wiz3d-prints role hook + fallback
+cleanup** (currently the wiz3dtools side is ready to receive but
+wiz3d-prints isn't sending yet; until Phase 2, flip the flag manually
+from `/customers/:id`).
 
 **Standing gap**: BamBuddy ↔ wiz3dtools color drift is mitigated by
 the v1.13.0/v1.14.0 dedupe (Bug #66) but not architecturally solved.

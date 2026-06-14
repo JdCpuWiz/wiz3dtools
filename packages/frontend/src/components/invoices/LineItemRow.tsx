@@ -6,6 +6,10 @@ import { ColorPicker, ColorSwatch } from '../common/ColorPicker';
 
 interface LineItemRowProps {
   item: InvoiceLineItem;
+  // BP #19 — passed from InvoiceDetail so the inline product picker can
+  // default the unit price from wholesale vs retail based on the
+  // invoice's customer. Defaults to retail when undefined.
+  isWholesaleInvoice?: boolean;
   onUpdate: (itemId: number, data: Partial<{ productId: number; productName: string; sku: string; details: string; quantity: number; unitPrice: number }>) => void;
   onUpdateColors?: (itemId: number, colors: ItemColorDto[]) => void;
   onUpdateStatus?: (itemId: number, status: LineItemStatus) => void;
@@ -19,7 +23,9 @@ const inputSt: React.CSSProperties = {
   boxShadow: 'inset 0 2px 4px rgb(0 0 0 / 0.4)',
 };
 
-export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpdateColors, onUpdateStatus, onDelete, readOnly }) => {
+export const LineItemRow: React.FC<LineItemRowProps> = ({ item, isWholesaleInvoice = false, onUpdate, onUpdateColors, onUpdateStatus, onDelete, readOnly }) => {
+  const priceForCustomer = (p: { wholesalePrice: number; retailPrice: number }) =>
+    isWholesaleInvoice ? p.wholesalePrice : p.retailPrice;
   const { colors: availableColors } = useColors();
   const { products } = useProducts(true);
   const [editing, setEditing] = useState(false);
@@ -57,7 +63,7 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
     setProductId(p.id);
     setProductName(p.name);
     setSku(p.sku || '');
-    setUnitPrice(p.unitPrice);
+    setUnitPrice(priceForCustomer(p));
     if (p.description) setDetails(p.description);
     const autoColors = [...(p.colors || [])]
       .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -88,7 +94,7 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({ item, onUpdate, onUpda
                 onChange={(e) => e.target.value ? applyProduct(parseInt(e.target.value)) : undefined}
               >
                 <option value="">— change product —</option>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${p.unitPrice.toFixed(2)})</option>)}
+                {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${priceForCustomer(p).toFixed(2)})</option>)}
               </select>
             )}
             <input value={productName} onChange={(e) => setProductName(e.target.value)} className={cellInputClass} style={inputSt} placeholder="Product name" />

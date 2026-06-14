@@ -60,6 +60,8 @@ export const createCustomerSchema = z.object({
   postalCode: nullish(z.string().max(20)),
   country: z.string().max(100).optional(),
   notes: nullish(z.string().max(2000)),
+  // BP #19 — mirror of wiz3d-prints' User.role === 'wholesaler'.
+  isWholesale: z.boolean().optional(),
 });
 
 export const updateCustomerSchema = createCustomerSchema.partial();
@@ -72,16 +74,14 @@ export const createProductSchema = z.object({
   name: z.string().min(1, 'Product name is required').max(200),
   description: nullish(z.string().max(2000)),
   sku: nullish(z.string().max(50)),
-  unitPrice: z.number().min(0, 'Unit price must be non-negative'),
   active: z.boolean().optional(),
-  // Store / wholesale fields
+  // BP #19 — one price per audience. Both required for new products;
+  // use the same value for both if the catalog doesn't distinguish.
+  wholesalePrice: z.number().min(0, 'Wholesale price must be non-negative'),
+  retailPrice: z.number().min(0, 'Retail price must be non-negative'),
   publishedToStore: z.boolean().optional(),
   publishedToWholesale: z.boolean().optional(),
   categoryId: nullish(z.number().int()),
-  storeTitle: nullish(z.string().max(255)),
-  storeDescription: nullish(z.string().max(2000)),
-  wholesalePrice: nullish(z.number().min(0)),
-  retailPrice: nullish(z.number().min(0)),
 });
 
 export const updateProductSchema = createProductSchema.partial();

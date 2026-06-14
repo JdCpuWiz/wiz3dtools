@@ -17,7 +17,9 @@ const CUSTOMER_SELECT = `
   c.address_line1 as "c_addressLine1", c.address_line2 as "c_addressLine2",
   c.city as "c_city", c.state_province as "c_stateProvince",
   c.postal_code as "c_postalCode", c.country as "c_country",
-  c.notes as "c_notes", c.created_at as "c_createdAt", c.updated_at as "c_updatedAt"
+  c.notes as "c_notes",
+  c.is_wholesale as "c_isWholesale",
+  c.created_at as "c_createdAt", c.updated_at as "c_updatedAt"
 `;
 
 function mapRow(row: Record<string, unknown>): Omit<SalesInvoice, 'lineItems'> {
@@ -51,6 +53,7 @@ function mapRow(row: Record<string, unknown>): Omit<SalesInvoice, 'lineItems'> {
           postalCode: row.c_postalCode as string | null,
           country: row.c_country as string,
           notes: row.c_notes as string | null,
+          isWholesale: (row.c_isWholesale as boolean | null) ?? false,
           createdAt: row.c_createdAt as string,
           updatedAt: row.c_updatedAt as string,
         }

@@ -3,13 +3,11 @@ import type { Product, CreateProductDto, UpdateProductDto, ProductImage, Categor
 import { ProductColorModel } from './product-color.model.js';
 
 const SELECT = `
-  id, name, description, sku, unit_price as "unitPrice",
+  id, name, description, sku,
   units_sold as "unitsSold", active,
   published_to_store as "publishedToStore",
   published_to_wholesale as "publishedToWholesale",
   category_id as "categoryId",
-  store_title as "storeTitle",
-  store_description as "storeDescription",
   wholesale_price as "wholesalePrice",
   retail_price as "retailPrice",
   created_at as "createdAt", updated_at as "updatedAt"
@@ -45,7 +43,6 @@ async function attachColors(rows: Record<string, unknown>[]): Promise<Product[]>
       const category = await attachCategory(r.categoryId as number | null);
       return {
         ...r,
-        unitPrice: parseFloat(r.unitPrice as string),
         wholesalePrice: parseFloat(r.wholesalePrice as string),
         retailPrice: parseFloat(r.retailPrice as string),
         colors,
@@ -98,7 +95,6 @@ export class ProductModel {
       const colors = colorMap.get(r.id as number) ?? [];
       return {
         ...r,
-        unitPrice: parseFloat(r.unitPrice as string),
         wholesalePrice: parseFloat(r.wholesalePrice as string),
         retailPrice: parseFloat(r.retailPrice as string),
         colors,
@@ -118,10 +114,22 @@ export class ProductModel {
 
   static async create(data: CreateProductDto): Promise<Product> {
     const result = await pool.query(
-      `INSERT INTO products (name, description, sku, unit_price, active)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO products
+         (name, description, sku, wholesale_price, retail_price, active,
+          published_to_store, published_to_wholesale, category_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING ${SELECT}`,
-      [data.name, data.description || null, data.sku || null, data.unitPrice, data.active ?? true],
+      [
+        data.name,
+        data.description || null,
+        data.sku || null,
+        data.wholesalePrice,
+        data.retailPrice,
+        data.active ?? true,
+        data.publishedToStore ?? false,
+        data.publishedToWholesale ?? false,
+        data.categoryId ?? null,
+      ],
     );
     const [product] = await attachColors([result.rows[0]]);
     return product;
@@ -135,13 +143,10 @@ export class ProductModel {
     if (data.name !== undefined) { fields.push(`name = $${i++}`); values.push(data.name); }
     if (data.description !== undefined) { fields.push(`description = $${i++}`); values.push(data.description ?? null); }
     if (data.sku !== undefined) { fields.push(`sku = $${i++}`); values.push(data.sku || null); }
-    if (data.unitPrice !== undefined) { fields.push(`unit_price = $${i++}`); values.push(data.unitPrice); }
     if (data.active !== undefined) { fields.push(`active = $${i++}`); values.push(data.active); }
     if (data.publishedToStore !== undefined) { fields.push(`published_to_store = $${i++}`); values.push(data.publishedToStore); }
     if (data.publishedToWholesale !== undefined) { fields.push(`published_to_wholesale = $${i++}`); values.push(data.publishedToWholesale); }
     if (data.categoryId !== undefined) { fields.push(`category_id = $${i++}`); values.push(data.categoryId ?? null); }
-    if (data.storeTitle !== undefined) { fields.push(`store_title = $${i++}`); values.push(data.storeTitle ?? null); }
-    if (data.storeDescription !== undefined) { fields.push(`store_description = $${i++}`); values.push(data.storeDescription ?? null); }
     if (data.wholesalePrice !== undefined) { fields.push(`wholesale_price = $${i++}`); values.push(data.wholesalePrice); }
     if (data.retailPrice !== undefined) { fields.push(`retail_price = $${i++}`); values.push(data.retailPrice); }
 
