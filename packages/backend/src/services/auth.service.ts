@@ -77,7 +77,15 @@ export async function register(data: RegisterDto): Promise<AuthResult> {
 // fields we don't use, no signing-algo confusion attacks. Single secret in
 // the env that signs + verifies.
 
-const STORE_TOKEN_TTL_SEC = 30 * 60; // 30 min
+// BuildPlan #12 Phase 9 follow-up — bumped from 30min → 24h. The original
+// 30-min TTL was conservative-by-default but matches none of the consumer-
+// session reality: NextAuth sessions are 30 days, so a customer browsing
+// the site at hour 1 then placing an order at hour 2 would 401 at
+// /api/store/orders with no obvious recovery path beyond sign-out / sign-in.
+// 24h is a reasonable compromise — covers normal browsing patterns,
+// and the token is still HMAC-scoped to a single customerId so a leak
+// is bounded to one account.
+const STORE_TOKEN_TTL_SEC = 24 * 60 * 60; // 24h
 
 export interface StoreCustomerTokenPayload {
   customerId: number;
