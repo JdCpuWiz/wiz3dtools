@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 // full content width. Add an entry here when a list/dashboard page
 // benefits from edge-to-edge layout on big monitors. List pages only —
 // detail/edit forms should stay narrow for readability.
-const WIDE_ROUTES = new Set(['/products']);
+const WIDE_ROUTES = new Set(['/products', '/admin/colors']);
 
 interface LayoutProps {
   children: React.ReactNode;
