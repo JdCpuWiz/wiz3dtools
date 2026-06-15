@@ -94,6 +94,14 @@ PostgreSQL. Migrations live in `packages/backend/migrations/` and are applied in
 | `016`–`032` | various | Tracking, audit logs, manufacturers, filament fields on colors, product colors, categories, store fields on products, printers (later dropped), filament jobs (later dropped), in-house queue (later dropped), printer badge colors (later dropped), product images, backfill recipes |
 | `033_drop_queue_subsystem.sql` | drop | **BuildPlan #6 Phase 3** — drops `queue_items`, `queue_item_colors`, `filament_jobs`, `printers`; drops `invoice_line_items.queue_item_id` |
 | `034_add_bambuddy_link_to_colors.sql` | `colors` | **BuildPlan #6 Phase 4** — adds `bambuddy_id` (partial unique) + `material` (varchar, defaulted to PLA on existing rows) so the BamBuddy sync can link rows precisely |
+| `035` | `sales_invoices` | Payment fields (provider, ref, paid_at) |
+| `036` | `customers` | password_hash for consumer auth via store API |
+| `037` | `invoice_line_items` | status column (pending / completed / backordered) |
+| `038` | `products` | `published_to_wholesale` split from `published_to_store` |
+| `039` | `colors` | Bug #66 — `is_multi_color` + `additional_hexes[]` for multi-color filaments |
+| `040_consolidate_product_details.sql` | `products` | **BP #19** — drops `store_title`/`store_description`/`unit_price` (backfilled first); adds `customers.is_wholesale` |
+| `041_add_allowed_materials_to_products.sql` | `products` | **Change #160** — `allowed_materials TEXT[]` allowlist for storefront picker + order validation |
+| `042_default_existing_products_to_pla.sql` | `products` | **Change #160 follow-up** — backfills empty `allowed_materials` to `['pla']` (one-shot; idempotent) |
 
 ---
 
