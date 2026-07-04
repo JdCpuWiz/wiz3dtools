@@ -34,8 +34,9 @@ COPY --from=builder /app/packages/frontend/dist /usr/share/nginx/html
 # Expose port
 EXPOSE 80
 
-# Health check
+# Health check — 127.0.0.1, not localhost: busybox wget prefers ::1 and
+# nginx here listens IPv4-only
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
