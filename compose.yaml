@@ -91,23 +91,9 @@ services:
     depends_on:
       - backend
 
-  mcp:
-    build:
-      context: ./mcp
-      dockerfile: Dockerfile
-      args:
-        - GIT_SHA=${GIT_SHA:-unknown}
-    container_name: wiz3dtools-mcp
-    restart: unless-stopped
-    ports:
-      - "8014:8014"
-    environment:
-      - WIZ3DTOOLS_URL=${WIZ3DTOOLS_URL:-http://backend:3000}
-      - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
-    networks:
-      - wiz3dtools
-    depends_on:
-      - backend
+  # 2026-07-04 (Bug #97): wiz3dtools-mcp service (jarvis bridge, :8014)
+  # removed entirely — it had been down and Wiz chose to retire it rather
+  # than revive it. jarvis-ai dropped the client entry in its v1.6.3.
 
   # BuildPlan #6 Phase 3 (2026-06-04): wiz3dtools-bambu-monitor service
   # removed entirely. Phase 2 cut it over from MQTT to BamBuddy REST;

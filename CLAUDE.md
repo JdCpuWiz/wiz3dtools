@@ -394,7 +394,6 @@ Default tax rate: **7%** (Iowa sales tax). Shipping is not taxed.
 | `COMPANY_EMAIL` | — | Appears on PDF invoices |
 | `COMPANY_PHONE` | — | Appears on PDF invoices |
 | `COMPANY_ADDRESS` | — | Appears on PDF invoices |
-| `MCP_SERVICE_TOKEN` | — | Bearer token used by `wiz3dtools-mcp` (Jarvis bridge, port 8014) for service-account auth |
 | `STORE_API_KEY` | — | API-key auth for `/api/store/*` (wiz3d-prints customer site) |
 | `BAMBUDDY_URL` | `http://192.168.7.147:8000` | BamBuddy base URL (used by `bambuddy-sync.service.ts`) |
 | `BAMBUDDY_API_KEY` | — | `X-API-Key` value for BamBuddy. Same key shared with the bambuddy-mcp bridge on CT 106 |
@@ -403,7 +402,7 @@ Default tax rate: **7%** (Iowa sales tax). Shipping is not taxed.
 
 ## Deployment
 
-Docker Compose (`compose.yaml`) — four containers (BuildPlan #6 Phase 3 removed `wiz3dtools-bambu-monitor`):
+Docker Compose (`compose.yaml`) — three containers (BP #6 P3 removed `wiz3dtools-bambu-monitor`; 2026-07-04 / Bug #97 removed `wiz3dtools-mcp`, the retired jarvis bridge on :8014):
 - `wiz3dtools-backend` → port 3000
 - `wizqueue-frontend` → nginx on port 8080 (`VITE_API_URL=/api`, proxied to backend)
 - `wizqueue-ollama` → port 11434 (or Ollama runs natively on host — accessed via `host.docker.internal`)
