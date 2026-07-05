@@ -54,6 +54,10 @@ services:
       - WIZ3D_PRINTS_API_URL=${WIZ3D_PRINTS_API_URL:-http://192.168.7.245:3000}
       - WIZ3D_PRINTS_ADMIN_TOKEN=${WIZ3D_PRINTS_ADMIN_TOKEN}
       - REMBG_URL=http://rembg:7000
+      # BP38 P7 — Zoo-Notifier push hub. Blank ZOO_NOTIFIER_KEY = silent
+      # no-op (order/payment flow never breaks if the hub is un-provisioned).
+      - ZOO_NOTIFIER_URL=${ZOO_NOTIFIER_URL:-http://192.168.7.84:3030}
+      - ZOO_NOTIFIER_KEY=${ZOO_NOTIFIER_KEY}
     volumes:
       - ${UPLOADS_PATH:-./uploads}:/app/uploads
     networks:

@@ -5,6 +5,18 @@ import { CustomerModel } from '../models/customer.model.js';
 import { pool } from '../config/database.js';
 import { writeAuditLog } from '../models/audit-log.model.js';
 import { signStoreCustomerToken } from '../services/auth.service.js';
+import { notifyAsync } from '../services/notify.service.js';
+
+// Public tools UI base — deep-link target for order push notifications.
+const TOOLS_BASE_URL = (process.env.CORS_ORIGIN?.split(',')[0].trim()) || 'https://tools.wiz3dprints.com';
+
+function invoiceCustomerName(invoice: { customer: { businessName: string | null; contactName: string } | null }): string {
+  return invoice.customer?.businessName || invoice.customer?.contactName || 'Customer';
+}
+
+function invoiceTotal(invoice: { lineItems: { quantity: number; unitPrice: number }[] }): number {
+  return invoice.lineItems.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+}
 
 // Bug #60 F1: store routes had no audit trail — invoices and customers
 // could be created via the store API with no record of who/where. Every
@@ -285,6 +297,18 @@ export class StoreController {
         `invoice:${invoice.invoiceNumber}`,
         `ip=${clientIp(req)} customerId=${customerId} items=${lineItems.length} itemsSubtotal=${itemsTotal.toFixed(2)}`,
       );
+      // BP38 P7: fire-and-forget push to the Zoo-Notifier hub. Never awaited
+      // — a down hub must not fail the order.
+      const customerName = invoiceCustomerName(invoice);
+      const firstProduct = invoice.lineItems[0]?.productName;
+      notifyAsync({
+        title: `🛒 New order: ${customerName}`,
+        body: `${lineItems.length} item${lineItems.length === 1 ? '' : 's'} · $${itemsTotal.toFixed(2)}${firstProduct ? ` · ${firstProduct}` : ''}`,
+        category: 'orders',
+        priority: 'active',
+        deepLink: `${TOOLS_BASE_URL}/invoices/${invoice.id}`,
+        dedupeKey: `order-${invoice.id}`,
+      });
       res.status(201).json({ success: true, data: invoice });
     } catch (error: any) {
       if (error.statusCode) {
@@ -346,6 +370,18 @@ export class StoreController {
           `invoice:${result.invoice.invoiceNumber}`,
           `ip=${clientIp(req)} customerId=${customerId} provider=${paymentProvider.trim()} ref=${paymentRef.trim()}`,
         );
+        // BP38 P7: fire-and-forget paid-order push. Inside the transitioned
+        // guard so it fires exactly once per payment. Never awaited.
+        const customerName = invoiceCustomerName(result.invoice);
+        const paidTotal = invoiceTotal(result.invoice);
+        notifyAsync({
+          title: `💰 Order paid: ${customerName}`,
+          body: `${result.invoice.invoiceNumber} · $${paidTotal.toFixed(2)}`,
+          category: 'orders',
+          priority: 'active',
+          deepLink: `${TOOLS_BASE_URL}/invoices/${result.invoice.id}`,
+          dedupeKey: `paid-${result.invoice.id}`,
+        });
       }
       res.json({ success: true, data: result.invoice, transitioned: result.transitioned });
     } catch (error) { next(error); }
