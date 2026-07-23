@@ -1,5 +1,5 @@
 ---
-name: wiz3dtools-expert
+name: project-expert
 description: >
   Use when working on the wiz3dtools project — for deep questions about its
   architecture, database schema, API endpoints, frontend components, services,
