@@ -3,6 +3,14 @@ import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import App from './App';
+
+// Self-hosted Poppins — replaces the runtime Google Fonts <link> (BP#57 P5)
+import '@fontsource/poppins/300.css';
+import '@fontsource/poppins/400.css';
+import '@fontsource/poppins/500.css';
+import '@fontsource/poppins/600.css';
+import '@fontsource/poppins/700.css';
+
 import './styles/globals.css';
 
 // Always dark — matches wiz3dprints.com
