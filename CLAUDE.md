@@ -358,9 +358,11 @@ Matches wiz3dprints.com exactly:
 - **Primary buttons**: gradient `#ff9900 → #e68a00`, border-radius 0.75rem, depth shadows + hover lift
 - **Secondary buttons**: gradient `#4a4a4a → #3a3a3a`
 - **Inputs**: dark sunken, orange focus ring (`#e68a00`)
-- **Text**: `#e5e5e5` primary, `#d1d5db` secondary
+- **Text**: flat `#f0f1f4` for all reading text (fleet standard, BP#57 P6) — hierarchy
+  from size/weight only, no opacity ramp
 - **Orange accent**: `#ff9900` / `#e68a00` (primary-400/500/600 all point to these)
-- **Font**: Poppins (Google Fonts, loaded in `index.html`)
+- **Font**: Poppins, self-hosted via `@fontsource` (BP#57 P5) — the runtime Google
+  Fonts `<link>` in `index.html` is gone
 - CSS classes: `.btn-primary`, `.btn-secondary`, `.btn-danger`, `.btn-sm`, `.input`, `.card`, `.card-surface`, `.wiz-table`, `.nav-tab-active`, `.nav-tab-inactive`
 
 ### Totals calculation (client-side only — no extra DB field)
