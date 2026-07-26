@@ -490,13 +490,13 @@ export const ProductForm: React.FC = () => {
               POST /api/store/orders enforces this server-side too. */}
           <div>
             <label className={labelClass}>Allowed materials</label>
-            <p className="text-xs text-white/50 mb-2">
+            <p className="text-xs text-[#f0f1f4] mb-2">
               Which filament types this product can be printed in. The
               storefront picker hides other materials. Leave empty to
               allow any material.
             </p>
             {materialFamilies.length === 0 ? (
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-[#f0f1f4]">
                 No materials in the color catalog yet — add a color with a material first.
               </p>
             ) : (
@@ -522,7 +522,7 @@ export const ProductForm: React.FC = () => {
               </div>
             )}
             {allowedMaterials.length === 0 && materialFamilies.length > 0 && (
-              <p className="text-[11px] text-white/40 mt-2">
+              <p className="text-[11px] text-[#f0f1f4] mt-2">
                 ⚠ No materials selected — customers can pick any filament type.
               </p>
             )}

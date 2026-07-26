@@ -8,7 +8,7 @@
    if ever used. */
 :root {
   --hl-sidebar-width: 16rem;
-  --hl-title: #ffffff;
+  --hl-title: #f0f1f4;
 }
 
 @layer base {
@@ -19,7 +19,7 @@
 
   body {
     background-color: #0a0a0a;
-    color: #ffffff;
+    color: #f0f1f4;
     @apply antialiased font-sans;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

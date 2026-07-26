@@ -38,7 +38,7 @@ export default {
           300: '#8a8a8a',
           200: '#9a9a9a',
           100: '#ffffff',  // white
-          50:  '#ffffff',  // white (primary text)
+          50:  '#f0f1f4',  // BP#57 fleet flat foreground (primary text)
         },
       },
       fontFamily: {

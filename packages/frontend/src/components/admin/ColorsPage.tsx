@@ -231,7 +231,7 @@ function MultiHexEditor({
             <button
               type="button"
               onClick={() => onChange(hexes.filter((_, j) => j !== i))}
-              className="text-white/60 hover:text-white text-xs px-1"
+              className="text-[#f0f1f4] hover:text-white text-xs px-1"
               aria-label="Remove this color"
               title="Remove"
             >
@@ -416,7 +416,7 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
               #{color.bambuddyId}
             </span>
           ) : (
-            <span className="text-white/40">—</span>
+            <span className="text-[#f0f1f4]">—</span>
           )}
         </td>
         <td className="px-4 py-2">
@@ -433,11 +433,11 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
             <span className="text-xs text-white">g</span>
           </div>
         </td>
-        <td className="px-4 py-2 text-right font-mono tabular-nums text-xs text-white/60">
+        <td className="px-4 py-2 text-right font-mono tabular-nums text-xs text-[#f0f1f4]">
           {color.invoiceRefs ?? 0}
         </td>
         <td className="px-4 py-2 text-sm text-white">{color.active ? 'Active' : 'Inactive'}</td>
-        <td className="px-4 py-2 text-xs text-white/60">
+        <td className="px-4 py-2 text-xs text-[#f0f1f4]">
           {/* Multi-color is toggled inside the Swatch column above
               while in edit mode. This cell just holds the column. */}
           {isMultiColor ? 'Multi' : 'Single'}
@@ -475,7 +475,7 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
           <div className="flex flex-col">
             <span className="font-mono text-xs text-white">{color.hex}</span>
             {color.isMultiColor && color.additionalHexes && color.additionalHexes.length > 0 && (
-              <span className="font-mono text-[10px] text-white/60">
+              <span className="font-mono text-[10px] text-[#f0f1f4]">
                 + {color.additionalHexes.join(' / ')}
               </span>
             )}
@@ -491,7 +491,7 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
             #{color.bambuddyId}
           </span>
         ) : (
-          <span className="text-white/40">—</span>
+          <span className="text-[#f0f1f4]">—</span>
         )}
       </td>
       <td className="px-4 py-3">
@@ -542,7 +542,7 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
             {color.invoiceRefs}
           </span>
         ) : (
-          <span className="text-white/40" title="No invoice references — safe to delete.">0</span>
+          <span className="text-[#f0f1f4]" title="No invoice references — safe to delete.">0</span>
         )}
       </td>
       {/* Status — single button (Active green / Inactive grey), same
@@ -563,7 +563,7 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
             {color.active ? 'Active' : 'Inactive'}
           </button>
         ) : (
-          <span className="text-xs text-white/60">{color.active ? 'Active' : 'Inactive'}</span>
+          <span className="text-xs text-[#f0f1f4]">{color.active ? 'Active' : 'Inactive'}</span>
         )}
       </td>
       {/* Multi-color flag — Change #159 — surfaced as a dedicated column
@@ -590,7 +590,7 @@ function ColorRow({ color, index, isAdmin }: { color: Color; index: number; isAd
             {color.isMultiColor ? 'Multi' : 'Single'}
           </button>
         ) : (
-          <span className="text-xs text-white/60">{color.isMultiColor ? 'Multi' : 'Single'}</span>
+          <span className="text-xs text-[#f0f1f4]">{color.isMultiColor ? 'Multi' : 'Single'}</span>
         )}
       </td>
       <td className="px-4 py-3">
@@ -877,7 +877,7 @@ export const ColorsPage: React.FC = () => {
           the stock-level chips above. */}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
         <div className="flex flex-col">
-          <label className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Manufacturer</label>
+          <label className="text-[10px] uppercase tracking-widest text-[#f0f1f4] mb-1">Manufacturer</label>
           <select
             value={String(manufacturerFilter)}
             onChange={(e) => {
@@ -899,7 +899,7 @@ export const ColorsPage: React.FC = () => {
         </div>
 
         <div className="flex flex-col">
-          <label className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Material</label>
+          <label className="text-[10px] uppercase tracking-widest text-[#f0f1f4] mb-1">Material</label>
           <select
             value={materialFilter}
             onChange={(e) => setMaterialFilter(e.target.value)}
@@ -917,7 +917,7 @@ export const ColorsPage: React.FC = () => {
         </div>
 
         <div className="flex flex-col">
-          <label className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Active state</label>
+          <label className="text-[10px] uppercase tracking-widest text-[#f0f1f4] mb-1">Active state</label>
           <div className="inline-flex rounded-md overflow-hidden" style={{ background: '#2d2d2d' }}>
             {(['all', 'active', 'disabled'] as const).map((opt) => (
               <button
@@ -936,7 +936,7 @@ export const ColorsPage: React.FC = () => {
         </div>
 
         <div className="flex flex-col">
-          <label className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Sort by</label>
+          <label className="text-[10px] uppercase tracking-widest text-[#f0f1f4] mb-1">Sort by</label>
           <div className="flex gap-1">
             <select
               value={sortBy}
@@ -962,7 +962,7 @@ export const ColorsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="ml-auto text-[11px] font-mono tabular-nums text-white/60 pb-1">
+        <div className="ml-auto text-[11px] font-mono tabular-nums text-[#f0f1f4] pb-1">
           Showing {visible.length} of {colors.length}
         </div>
       </div>
@@ -1229,7 +1229,7 @@ function DedupeModal({
           </p>
         ) : (
           <div className="space-y-4">
-            <p className="text-xs text-white/60">
+            <p className="text-xs text-[#f0f1f4]">
               Rows are grouped by hex + material family — PLA green and
               PETG-HF green at the same hex are different filaments and
               show as separate groups (or won't show at all if neither
@@ -1267,14 +1267,14 @@ function DedupeModal({
                         {group.materialFamily}
                       </span>
                     )}
-                    <span className="text-xs text-white/50">· {selectedCount} of {group.count} selected</span>
+                    <span className="text-xs text-[#f0f1f4]">· {selectedCount} of {group.count} selected</span>
                     <button
                       type="button"
                       onClick={() => setSelected((p) => ({
                         ...p,
                         [key]: allChecked ? new Set() : new Set(group.rows.map((r) => r.id)),
                       }))}
-                      className="text-[10px] text-white/60 hover:text-white underline"
+                      className="text-[10px] text-[#f0f1f4] hover:text-white underline"
                     >
                       {allChecked ? 'Clear all' : 'Select all'}
                     </button>
@@ -1378,8 +1378,8 @@ function DedupeRow({
       </td>
       <td className="py-1 pr-2 font-mono text-white">#{row.id}</td>
       <td className="py-1 pr-2 text-white">{row.name}</td>
-      <td className="py-1 pr-2 text-white/70">{row.manufacturerName ?? '—'}</td>
-      <td className="py-1 pr-2 text-white/70">{row.material ?? '—'}</td>
+      <td className="py-1 pr-2 text-[#f0f1f4]">{row.manufacturerName ?? '—'}</td>
+      <td className="py-1 pr-2 text-[#f0f1f4]">{row.material ?? '—'}</td>
       <td className="py-1 pr-2">
         {row.isMultiColor ? (
           <span
@@ -1390,7 +1390,7 @@ function DedupeRow({
             MULTI
           </span>
         ) : (
-          <span className="text-white/40 text-[10px]">—</span>
+          <span className="text-[#f0f1f4] text-[10px]">—</span>
         )}
       </td>
       <td className="py-1 pr-2">
@@ -1403,7 +1403,7 @@ function DedupeRow({
             BB:{row.bambuddyId}
           </span>
         ) : (
-          <span className="text-white/40 text-[10px]">unlinked</span>
+          <span className="text-[#f0f1f4] text-[10px]">unlinked</span>
         )}
       </td>
       <td className="py-1 pr-2">

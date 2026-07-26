@@ -146,7 +146,7 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
           <div className="shrink-0 px-3 py-3" style={{ borderTop: '1px solid #2d2d2d' }}>
             {user && (
               <>
-                <div className="text-[10px] uppercase tracking-widest text-white/40">
+                <div className="text-[10px] uppercase tracking-widest text-[#f0f1f4]">
                   Signed in as
                 </div>
                 <div className="text-xs text-white truncate mt-0.5 font-medium">
@@ -161,7 +161,7 @@ export const SideNav: React.FC<Props> = ({ open, onClose }) => {
             >
               Sign Out
             </button>
-            <div className="mt-3 pt-2 border-t text-[10px] font-mono tabular-nums text-white/30 flex items-center justify-between" style={{ borderColor: '#2d2d2d' }}>
+            <div className="mt-3 pt-2 border-t text-[10px] font-mono tabular-nums text-[#f0f1f4] flex items-center justify-between" style={{ borderColor: '#2d2d2d' }}>
               <span className="uppercase tracking-widest">Version</span>
               <span style={{ color: '#ff9900' }}>v{__APP_VERSION__}</span>
             </div>

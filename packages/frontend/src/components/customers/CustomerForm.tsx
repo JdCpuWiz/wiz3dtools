@@ -144,7 +144,7 @@ export const CustomerForm: React.FC = () => {
           />
           <label htmlFor="isWholesale" className="text-sm font-medium text-primary-400">
             Wholesale customer
-            <span className="ml-2 font-normal text-xs text-white/60">
+            <span className="ml-2 font-normal text-xs text-[#f0f1f4]">
               Invoice line items default to the product's wholesale price.
             </span>
           </label>
