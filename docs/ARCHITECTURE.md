@@ -75,7 +75,8 @@ Snailslap / Pawdio / other homelab apps are unrelated — out of scope here.
 |-----------------------|-----------------|--------------------------------|-----------------------------------------------------|
 | Products              | wiz3dtools      | wiz3d-prints (read-only)       | `GET /api/store/products` per request, 60s cache. Payload includes `allowedMaterials: string[]` (Change #160) which drives the storefront picker filter + server-side order validation.    |
 | Categories            | wiz3dtools      | wiz3d-prints (read-only)       | bundled into product payload                        |
-| Product images        | wiz3dtools      | wiz3d-prints (URL refs only)   | URLs served from wiz3d-prints' R2 bucket; metadata on wiz3dtools |
+| Product images        | wiz3dtools      | wiz3d-prints (URL refs only)   | Files live on CT 114 `uploads/store/`, served by the wiz3dtools nginx at `tools.wiz3dprints.com/uploads/store/` (public, `Access-Control-Allow-Origin: *`); metadata on wiz3dtools. (An older revision of this row claimed an R2 bucket — that was never how it shipped.) |
+| Image color masks (BP17) | wiz3dtools   | wiz3d-prints (read-only)       | `product_image_masks` (migration 043), one alpha-PNG per (image, recipe slot) under `uploads/store/masks/`; bundled into the product payload as `images[].masks[{slotIndex,url}]`. wiz3d-prints' `<ProductRenderer>` composites them client-side (multiply) for the live color preview. Generation: rembg sidecar (auto, single-color) or admin upload (multi-color). Process doc: `docs/ADDING_PRODUCTS.md`. |
 | Product colors (recipe slots) | wiz3dtools | wiz3d-prints (read-only) | bundled into product payload                        |
 | Customers (people/businesses) | wiz3dtools | wiz3d-prints (via `User.wiz3dtoolsCustomerId` FK) | wiz3d-prints signup calls `POST /api/store/customers` |
 | Customer auth password hash | wiz3dtools (`customers.password_hash`) | wiz3d-prints verifies via store-api | bcrypt hash written on signup; consumer login on wiz3d-prints checks via store-API |
@@ -284,7 +285,7 @@ All on wiz3dtools backend, all under `/api/store/*`. Two auth modes:
 
 | Endpoint                              | Method | Auth                  | What it does                                        |
 |---------------------------------------|--------|-----------------------|-----------------------------------------------------|
-| `/api/store/products`                 | GET    | API-key               | Product catalog with colors + images + categories   |
+| `/api/store/products`                 | GET    | API-key               | Product catalog with colors + images (incl. per-image `masks[]`, BP17) + categories |
 | `/api/store/colors`                   | GET    | API-key               | Active color list for the customer color picker     |
 | `/api/store/customers`                | POST   | API-key               | Create a customer during wiz3d-prints signup        |
 | `/api/store/customers/:id`            | GET    | API-key + token       | Customer profile (account page)                     |
