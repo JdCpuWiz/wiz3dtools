@@ -14,6 +14,8 @@ import type {
   ProductColor,
   ProductColorDto,
   ProductImage,
+  ProductImageMask,
+  BulkMaskJob,
   CreateProductDto,
   UpdateProductDto,
   Category,
@@ -253,6 +255,25 @@ export const productApi = {
 
   deleteImage: async (id: number, imageId: number): Promise<void> => {
     await api.delete(`/products/${id}/images/${imageId}`);
+  },
+
+  // BP17 Phase 3 — silhouette masks for the dynamic color preview
+  generateImageMask: async (id: number, imageId: number): Promise<ProductImageMask> => {
+    const response = await api.post<ApiResponse<ProductImageMask>>(`/products/${id}/images/${imageId}/mask`);
+    if (!response.data.data) throw new Error('Failed to generate mask');
+    return response.data.data;
+  },
+
+  bulkGenerateMasks: async (): Promise<BulkMaskJob> => {
+    const response = await api.post<ApiResponse<BulkMaskJob>>('/products/bulk-generate-masks');
+    if (!response.data.data) throw new Error('Failed to start bulk mask job');
+    return response.data.data;
+  },
+
+  getMaskJob: async (jobId: string): Promise<BulkMaskJob> => {
+    const response = await api.get<ApiResponse<BulkMaskJob>>(`/products/mask-jobs/${jobId}`);
+    if (!response.data.data) throw new Error('Mask job not found');
+    return response.data.data;
   },
 };
 

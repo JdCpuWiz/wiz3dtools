@@ -34,6 +34,8 @@ export type {
 // Product image types
 export type {
   ProductImage,
+  ProductImageMask,
+  BulkMaskJob,
 } from './types/product-image';
 
 // Customer types

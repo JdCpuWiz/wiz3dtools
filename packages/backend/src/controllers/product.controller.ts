@@ -5,6 +5,14 @@ import { ProductService } from '../services/product.service.js';
 import { ProductColorModel } from '../models/product-color.model.js';
 import { ProductImageModel } from '../models/product-image.model.js';
 import { processProductImage } from '../services/image-processing.service.js';
+import {
+  saveMask,
+  generateMaskForImage,
+  deleteMaskFiles,
+  isSingleColorProduct,
+  startBulkMaskJob,
+  getBulkJob,
+} from '../services/mask-generator.service.js';
 import { parseBody, createProductSchema, updateProductSchema, setProductColorsSchema } from '../validation/schemas.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
@@ -115,9 +123,11 @@ export class ProductController {
       // Process image: remove background, crop, resize, composite onto dark heathered background.
       // Falls back to original if processing fails so uploads never get silently blocked.
       let finalFilename = req.file.filename;
+      let maskPng: Buffer | null = null;
       try {
-        const processedPath = await processProductImage(req.file.path);
-        finalFilename = path.basename(processedPath);
+        const processed = await processProductImage(req.file.path);
+        finalFilename = path.basename(processed.processedPath);
+        maskPng = processed.maskPng;
         // Remove original now that we have the processed version
         await fsPromises.unlink(req.file.path).catch(() => {});
       } catch (err) {
@@ -126,6 +136,18 @@ export class ProductController {
 
       const url = `${baseUrl}/${finalFilename}`;
       const image = await ProductImageModel.create(id, url);
+
+      // BP17 Phase 3 — the pipeline already computed the silhouette, so a
+      // single-color product gets its slot-0 mask for free at upload time.
+      // Failure here never fails the upload; the admin can generate on demand.
+      if (maskPng && (await isSingleColorProduct(id))) {
+        try {
+          image.masks = [await saveMask(image.id, 0, maskPng, 'AUTO_REMBG')];
+        } catch (err) {
+          console.error('[mask-generator] upload-time mask save failed:', err);
+        }
+      }
+
       res.status(201).json({ success: true, data: image });
     } catch (error) { next(error); }
   }
@@ -157,6 +179,9 @@ export class ProductController {
       const id = parseInt(req.params.id);
       const imageId = parseInt(req.params.imageId);
       if (isNaN(id) || isNaN(imageId)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      // Mask rows cascade with the image row, but their files don't — unlink first
+      await deleteMaskFiles(imageId).catch(() => {});
+
       const deleted = await ProductImageModel.delete(id, imageId);
       if (!deleted) { res.status(404).json({ success: false, error: 'Image not found' }); return; }
 
@@ -167,6 +192,52 @@ export class ProductController {
       await fsPromises.unlink(filePath).catch(() => { /* ignore if already gone */ });
 
       res.json({ success: true });
+    } catch (error) { next(error); }
+  }
+
+  // BP17 Phase 3 — generate (or regenerate) the slot-0 silhouette mask for one image.
+  async generateImageMask(req: Request, res: Response<ApiResponse>, _next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      const imageId = parseInt(req.params.imageId);
+      if (isNaN(id) || isNaN(imageId)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+
+      const images = await ProductImageModel.findByProduct(id);
+      const image = images.find((img) => img.id === imageId);
+      if (!image) { res.status(404).json({ success: false, error: 'Image not found' }); return; }
+
+      if (!(await isSingleColorProduct(id))) {
+        res.status(400).json({
+          success: false,
+          error: 'Auto-generate only works for single-color products (exactly one recipe slot). Multi-color products need per-slot masks (uploaded manually).',
+        });
+        return;
+      }
+
+      const mask = await generateMaskForImage(imageId, image.url);
+      res.json({ success: true, data: mask, message: 'Mask generated' });
+    } catch (error) {
+      // rembg/validation failures come back as plain errors — surface the
+      // message so the admin sees WHY (empty alpha, sidecar down, …) instead
+      // of a generic 500.
+      const message = error instanceof Error ? error.message : 'Mask generation failed';
+      res.status(422).json({ success: false, error: message });
+    }
+  }
+
+  // BP17 Phase 3 — one-button backfill for every unmasked single-color product image.
+  async bulkGenerateMasks(_req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const job = await startBulkMaskJob();
+      res.status(202).json({ success: true, data: job });
+    } catch (error) { next(error); }
+  }
+
+  async getMaskJob(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const job = getBulkJob(req.params.jobId);
+      if (!job) { res.status(404).json({ success: false, error: 'Job not found' }); return; }
+      res.json({ success: true, data: job });
     } catch (error) { next(error); }
   }
 

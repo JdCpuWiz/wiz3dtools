@@ -6,6 +6,7 @@ import { productApi } from '../../services/api';
 import { useColors } from '../../hooks/useColors';
 import { useCategories } from '../../hooks/useCategories';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import type { Color, ProductColorDto, ProductImage } from '@wizqueue/shared';
 
 // All fields RHF wires to inputs — wholesalePrice + retailPrice are
@@ -146,6 +147,10 @@ export const ProductForm: React.FC = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  // BP17 Phase 3 — per-image mask generation state
+  const [maskBusy, setMaskBusy] = useState<Record<number, boolean>>({});
+  const [maskErrors, setMaskErrors] = useState<Record<number, string>>({});
+
   // Change #160 — allowed material families for this product's color
   // picker (and order validation). Empty = no constraint.
   const [allowedMaterials, setAllowedMaterials] = useState<string[]>([]);
@@ -262,6 +267,26 @@ export const ProductForm: React.FC = () => {
   const handleDeleteImage = async (imageId: number) => {
     await productApi.deleteImage(productId, imageId);
     setImages((prev) => prev.filter((img) => img.id !== imageId));
+  };
+
+  // BP17 Phase 3 — auto-generate (or regenerate) the slot-0 silhouette mask.
+  // Only meaningful for single-color products (exactly one recipe slot).
+  const isSingleColor = colorWeights.length === 1;
+
+  const handleGenerateMask = async (imageId: number) => {
+    setMaskBusy((prev) => ({ ...prev, [imageId]: true }));
+    setMaskErrors((prev) => { const next = { ...prev }; delete next[imageId]; return next; });
+    try {
+      const mask = await productApi.generateImageMask(productId, imageId);
+      setImages((prev) => prev.map((img) => (img.id === imageId ? { ...img, masks: [mask] } : img)));
+    } catch (err) {
+      const message = axios.isAxiosError(err)
+        ? (err.response?.data?.error ?? err.message)
+        : 'Mask generation failed';
+      setMaskErrors((prev) => ({ ...prev, [imageId]: message }));
+    } finally {
+      setMaskBusy((prev) => ({ ...prev, [imageId]: false }));
+    }
   };
 
   const onSubmit = async (data: ProductFormFields) => {
@@ -626,6 +651,33 @@ export const ProductForm: React.FC = () => {
                           Primary
                         </span>
                       )}
+                      {/* BP17 — mask coverage badge (solid pills per fleet standard) */}
+                      {maskErrors[img.id] ? (
+                        <span
+                          className="absolute bottom-1 left-1 text-xs font-bold px-1.5 py-0.5 rounded"
+                          style={{ background: '#b91c1c', color: '#ffffff' }}
+                          title={maskErrors[img.id]}
+                        >
+                          MASK FAILED
+                        </span>
+                      ) : (img.masks?.length ?? 0) > 0 ? (
+                        <span
+                          className="absolute bottom-1 left-1 text-xs font-bold px-1.5 py-0.5 rounded"
+                          style={{
+                            background: img.masks!.every((m) => m.source === 'MANUAL_UPLOAD') ? '#1d4ed8' : '#15803d',
+                            color: '#ffffff',
+                          }}
+                        >
+                          {img.masks!.every((m) => m.source === 'MANUAL_UPLOAD') ? 'MASK: MANUAL' : 'MASK: AUTO'}
+                        </span>
+                      ) : (
+                        <span
+                          className="absolute bottom-1 left-1 text-xs font-bold px-1.5 py-0.5 rounded"
+                          style={{ background: '#4b5563', color: '#ffffff' }}
+                        >
+                          NO MASK
+                        </span>
+                      )}
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
                         {!img.isPrimary && (
                           <button
@@ -634,6 +686,22 @@ export const ProductForm: React.FC = () => {
                             className="btn-secondary btn-sm w-full text-xs"
                           >
                             Set Primary
+                          </button>
+                        )}
+                        {isSingleColor && (
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateMask(img.id)}
+                            disabled={!!maskBusy[img.id]}
+                            className="btn-secondary btn-sm w-full text-xs"
+                          >
+                            {maskBusy[img.id]
+                              ? 'Generating…'
+                              : maskErrors[img.id]
+                                ? 'Retry Mask'
+                                : (img.masks?.length ?? 0) > 0
+                                  ? 'Regenerate Mask'
+                                  : 'Generate Mask'}
                           </button>
                         )}
                         <button

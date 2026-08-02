@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import type { Product, CreateProductDto, UpdateProductDto, ProductImage, Category } from '@wizqueue/shared';
 import { ProductColorModel } from './product-color.model.js';
+import { ProductImageMaskModel } from './product-image-mask.model.js';
 
 const SELECT = `
   id, name, description, sku,
@@ -21,7 +22,12 @@ async function attachImages(productId: number): Promise<ProductImage[]> {
      FROM product_images WHERE product_id = $1 ORDER BY sort_order ASC, id ASC`,
     [productId],
   );
-  return result.rows as ProductImage[];
+  const images = result.rows as ProductImage[];
+  // Single-product responses carry masks (admin badges + BP17 preview);
+  // findAll list responses deliberately don't (no N+1 on the index).
+  const maskMap = await ProductImageMaskModel.findByImageIds(images.map((i) => i.id));
+  for (const img of images) img.masks = maskMap.get(img.id) ?? [];
+  return images;
 }
 
 async function attachCategory(categoryId: number | null): Promise<Category | null> {

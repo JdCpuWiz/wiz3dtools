@@ -69,17 +69,71 @@ function makeNoiseOverlay(size: number): Buffer {
 }
 
 /**
+ * Wrap a cutout's alpha channel into the mask format stored on disk:
+ * white RGB + the silhouette in the ALPHA channel (BP17 spike convention —
+ * the storefront compositor reads only the alpha).
+ *
+ * Rejects degenerate masks: an all-transparent alpha means rembg found no
+ * subject; a near-fully-opaque one means it failed to find the background.
+ * Both would silently produce a broken color preview, so they throw instead.
+ */
+async function cutoutAlphaToMaskPng(cutoutRgba: Buffer): Promise<Buffer> {
+  const alpha = sharp(cutoutRgba).ensureAlpha().extractChannel('alpha');
+  const { width, height } = await alpha.metadata();
+  if (!width || !height) throw new Error('mask: could not read cutout dimensions');
+
+  const alphaPng = await alpha.png().toBuffer();
+  const stats = await sharp(alphaPng).stats();
+  const meanAlpha = stats.channels[0].mean;
+  if (meanAlpha < 3) throw new Error('mask: empty alpha — rembg found no subject');
+  if (meanAlpha > 250) throw new Error('mask: alpha covers whole frame — rembg found no background');
+
+  return sharp({
+    create: { width, height, channels: 3, background: { r: 255, g: 255, b: 255 } },
+  })
+    .joinChannel(alphaPng)
+    .png()
+    .toBuffer();
+}
+
+/**
+ * Derive a slot-0 silhouette mask for an ALREADY-PROCESSED product image
+ * (the 800×800 dark-backdrop webp). Runs rembg on the processed file, so the
+ * mask is aligned to the frame customers actually see. Used by the BP17
+ * on-demand / bulk mask endpoints for images uploaded before masks existed.
+ */
+export async function deriveMaskFromProcessedImage(imagePath: string): Promise<Buffer> {
+  const rembgUrl = `${process.env.REMBG_URL ?? 'http://rembg:7000'}/api/remove`;
+  const inputBuffer = await fsPromises.readFile(imagePath);
+  const form = new FormData();
+  form.append('file', new Blob([inputBuffer]), path.basename(imagePath));
+  const rembgResponse = await fetch(rembgUrl, { method: 'POST', body: form });
+  if (!rembgResponse.ok) {
+    throw new Error(`rembg API returned ${rembgResponse.status}: ${await rembgResponse.text()}`);
+  }
+  const cutout = Buffer.from(await rembgResponse.arrayBuffer());
+  return cutoutAlphaToMaskPng(cutout);
+}
+
+/**
  * Full image processing pipeline:
- *   1. Remove background (AI — @imgly/background-removal-node)
+ *   1. Remove background (rembg sidecar)
  *   2. Auto-crop to visible subject
  *   3. Resize subject to fit within 672×672 (with transparency padding)
  *   4. Composite onto 800×800 dark charcoal + heather background
  *   5. Export as WebP quality-85
  *
- * Returns the path of the processed file (saved alongside the original).
- * Throws on failure — caller should fall back to original if this errors.
+ * Returns the processed file's path plus a slot-0 silhouette mask (white PNG
+ * with the subject in the alpha channel) in the SAME 800×800 frame as the
+ * processed image — the cutout is already computed here, so the mask is a
+ * free byproduct (BP17 Phase 3). maskPng is null when the mask came out
+ * degenerate; the upload still succeeds and the admin can retry on demand.
+ *
+ * Throws on processing failure — caller should fall back to original.
  */
-export async function processProductImage(inputPath: string): Promise<string> {
+export async function processProductImage(
+  inputPath: string,
+): Promise<{ processedPath: string; maskPng: Buffer | null }> {
   const ext = path.extname(inputPath).toLowerCase();
 
   // 1. Remove background via rembg sidecar.
@@ -132,5 +186,26 @@ export async function processProductImage(inputPath: string): Promise<string> {
   const outputPath = `${inputPath.slice(0, -ext.length)}-processed.webp`;
   await fsPromises.writeFile(outputPath, outputBuffer);
 
-  return outputPath;
+  // 7. Mask byproduct: the subject cutout composited onto a TRANSPARENT
+  // 800×800 canvas goes through the exact same geometry as step 5, so its
+  // alpha is pixel-aligned with the processed image.
+  let maskPng: Buffer | null = null;
+  try {
+    const fullFrameCutout = await sharp({
+      create: {
+        width: OUTPUT_SIZE,
+        height: OUTPUT_SIZE,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    })
+      .composite([{ input: subjectBuffer, gravity: 'centre' }])
+      .png()
+      .toBuffer();
+    maskPng = await cutoutAlphaToMaskPng(fullFrameCutout);
+  } catch (err) {
+    console.error('[image-processing] mask byproduct failed (upload continues):', err);
+  }
+
+  return { processedPath: outputPath, maskPng };
 }

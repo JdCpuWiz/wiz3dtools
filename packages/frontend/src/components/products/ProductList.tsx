@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProducts } from '../../hooks/useProducts';
+import { productApi } from '../../services/api';
 import { PageIcon } from '../common/PageIcon';
+import type { BulkMaskJob } from '@wizqueue/shared';
 
 type FilterTab = 'all' | 'active' | 'inactive' | 'webstore';
 type SortKey = 'name' | 'retailPrice' | 'unitsSold' | 'revenue';
@@ -21,6 +23,33 @@ export const ProductList: React.FC = () => {
   const [filter, setFilter] = useState<FilterTab>('all');
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  // BP17 Phase 3 — bulk mask generation for single-color products
+  const [maskJob, setMaskJob] = useState<BulkMaskJob | null>(null);
+  const [maskJobError, setMaskJobError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startBulkMasks = async () => {
+    setMaskJobError(null);
+    try {
+      const job = await productApi.bulkGenerateMasks();
+      setMaskJob(job);
+    } catch {
+      setMaskJobError('Could not start the bulk mask job (is one already running?)');
+    }
+  };
+
+  useEffect(() => {
+    if (!maskJob || maskJob.status === 'done') return;
+    pollRef.current = setInterval(async () => {
+      try {
+        setMaskJob(await productApi.getMaskJob(maskJob.id));
+      } catch {
+        // transient poll failure — keep trying until the job reports done
+      }
+    }, 1000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [maskJob?.id, maskJob?.status]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -83,10 +112,46 @@ export const ProductList: React.FC = () => {
           <PageIcon src="/icons/products.png" alt="Products" />
           <h2 className="text-xl font-semibold text-iron-50">Products</h2>
         </div>
-        <button onClick={() => navigate('/products/new')} className="btn-primary btn-sm">
-          + New Product
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={startBulkMasks}
+            disabled={maskJob?.status === 'running'}
+            className="btn-secondary btn-sm"
+            title="Auto-generate color-preview masks for every image of a single-color product that has none yet"
+          >
+            {maskJob?.status === 'running'
+              ? `Generating masks… ${maskJob.completed}/${maskJob.total}`
+              : 'Generate Masks'}
+          </button>
+          <button onClick={() => navigate('/products/new')} className="btn-primary btn-sm">
+            + New Product
+          </button>
+        </div>
       </div>
+
+      {/* Bulk mask job result */}
+      {maskJobError && (
+        <div className="text-xs px-3 py-2 rounded-lg" style={{ background: '#b91c1c', color: '#ffffff' }}>
+          {maskJobError}
+        </div>
+      )}
+      {maskJob?.status === 'done' && (
+        <div
+          className="text-xs px-3 py-2 rounded-lg"
+          style={{ background: maskJob.failed.length > 0 ? '#b91c1c' : '#15803d', color: '#ffffff' }}
+        >
+          {maskJob.total === 0
+            ? 'All single-color product images already have masks — nothing to do.'
+            : `Masks generated for ${maskJob.total - maskJob.failed.length} of ${maskJob.total} image(s).`}
+          {maskJob.failed.length > 0 && (
+            <ul className="mt-1 list-disc list-inside">
+              {maskJob.failed.map((f) => (
+                <li key={f.imageId}>{f.productName} (image {f.imageId}): {f.error}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Filter tabs */}
       <div className="flex gap-2 flex-wrap">
