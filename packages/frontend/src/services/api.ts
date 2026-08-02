@@ -264,6 +264,22 @@ export const productApi = {
     return response.data.data;
   },
 
+  uploadImageMask: async (id: number, imageId: number, slotIndex: number, file: File): Promise<ProductImageMask> => {
+    const form = new FormData();
+    form.append('mask', file);
+    const response = await api.post<ApiResponse<ProductImageMask>>(
+      `/products/${id}/images/${imageId}/mask/${slotIndex}`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    if (!response.data.data) throw new Error('Failed to upload mask');
+    return response.data.data;
+  },
+
+  deleteImageMask: async (id: number, imageId: number, slotIndex: number): Promise<void> => {
+    await api.delete(`/products/${id}/images/${imageId}/mask/${slotIndex}`);
+  },
+
   bulkGenerateMasks: async (): Promise<BulkMaskJob> => {
     const response = await api.post<ApiResponse<BulkMaskJob>>('/products/bulk-generate-masks');
     if (!response.data.data) throw new Error('Failed to start bulk mask job');

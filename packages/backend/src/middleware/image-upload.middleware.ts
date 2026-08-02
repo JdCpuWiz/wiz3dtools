@@ -47,6 +47,19 @@ export const imageUploadMiddleware = multer({
   },
 });
 
+// BP17 Phase 4 — mask uploads: PNG only, held in memory so sharp can
+// validate/normalize before anything touches disk.
+export const maskUploadMiddleware = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'image/png') cb(null, true);
+    else cb(new Error('Mask must be a PNG file'));
+  },
+  limits: {
+    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '5242880'), // 5MB default
+  },
+});
+
 export async function validateImageMagicBytes(req: Request, res: Response, next: NextFunction): Promise<void> {
   if (!req.file) { next(); return; }
   try {

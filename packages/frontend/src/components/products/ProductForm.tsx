@@ -7,6 +7,7 @@ import { useColors } from '../../hooks/useColors';
 import { useCategories } from '../../hooks/useCategories';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { MaskEditorModal } from './MaskEditorModal';
 import type { Color, ProductColorDto, ProductImage } from '@wizqueue/shared';
 
 // All fields RHF wires to inputs — wholesalePrice + retailPrice are
@@ -151,6 +152,9 @@ export const ProductForm: React.FC = () => {
   const [maskBusy, setMaskBusy] = useState<Record<number, boolean>>({});
   const [maskErrors, setMaskErrors] = useState<Record<number, string>>({});
 
+  // BP17 Phase 4 — mask editor modal (multi-color products)
+  const [maskEditorImage, setMaskEditorImage] = useState<ProductImage | null>(null);
+
   // Change #160 — allowed material families for this product's color
   // picker (and order validation). Empty = no constraint.
   const [allowedMaterials, setAllowedMaterials] = useState<string[]>([]);
@@ -272,6 +276,27 @@ export const ProductForm: React.FC = () => {
   // BP17 Phase 3 — auto-generate (or regenerate) the slot-0 silhouette mask.
   // Only meaningful for single-color products (exactly one recipe slot).
   const isSingleColor = colorWeights.length === 1;
+  const isMultiColor = colorWeights.length > 1;
+
+  // BP17 Phase 4 — recipe slots resolved against the color catalog, for the
+  // mask editor's slot labels + default test colors.
+  const recipeSlots = React.useMemo(
+    () =>
+      colorWeights.map((cw, i) => {
+        const cat = availableColors.find((c) => c.id === cw.colorId);
+        return {
+          slotIndex: i,
+          colorName: cat?.name ?? `Color #${cw.colorId}`,
+          hex: cat?.hex ?? '#888888',
+        };
+      }),
+    [colorWeights, availableColors],
+  );
+
+  const handleMasksChange = (imageId: number, masks: ProductImage['masks']) => {
+    setImages((prev) => prev.map((img) => (img.id === imageId ? { ...img, masks } : img)));
+    setMaskEditorImage((prev) => (prev && prev.id === imageId ? { ...prev, masks } : prev));
+  };
 
   const handleGenerateMask = async (imageId: number) => {
     setMaskBusy((prev) => ({ ...prev, [imageId]: true }));
@@ -660,7 +685,22 @@ export const ProductForm: React.FC = () => {
                         >
                           MASK FAILED
                         </span>
-                      ) : (img.masks?.length ?? 0) > 0 ? (
+                      ) : (img.masks?.length ?? 0) === 0 ? (
+                        <span
+                          className="absolute bottom-1 left-1 text-xs font-bold px-1.5 py-0.5 rounded"
+                          style={{ background: '#4b5563', color: '#ffffff' }}
+                        >
+                          NO MASK
+                        </span>
+                      ) : (img.masks?.length ?? 0) < colorWeights.length ? (
+                        <span
+                          className="absolute bottom-1 left-1 text-xs font-bold px-1.5 py-0.5 rounded"
+                          style={{ background: '#eab308', color: '#000000' }}
+                          title="Some recipe slots have no mask yet"
+                        >
+                          MASK {img.masks!.length}/{colorWeights.length}
+                        </span>
+                      ) : (
                         <span
                           className="absolute bottom-1 left-1 text-xs font-bold px-1.5 py-0.5 rounded"
                           style={{
@@ -669,13 +709,6 @@ export const ProductForm: React.FC = () => {
                           }}
                         >
                           {img.masks!.every((m) => m.source === 'MANUAL_UPLOAD') ? 'MASK: MANUAL' : 'MASK: AUTO'}
-                        </span>
-                      ) : (
-                        <span
-                          className="absolute bottom-1 left-1 text-xs font-bold px-1.5 py-0.5 rounded"
-                          style={{ background: '#4b5563', color: '#ffffff' }}
-                        >
-                          NO MASK
                         </span>
                       )}
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
@@ -704,6 +737,15 @@ export const ProductForm: React.FC = () => {
                                   : 'Generate Mask'}
                           </button>
                         )}
+                        {isMultiColor && (
+                          <button
+                            type="button"
+                            onClick={() => setMaskEditorImage(img)}
+                            className="btn-secondary btn-sm w-full text-xs"
+                          >
+                            Edit Masks
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleDeleteImage(img.id)}
@@ -720,6 +762,18 @@ export const ProductForm: React.FC = () => {
               <p className="text-xs text-iron-400 italic">Save the product first, then upload images.</p>
             )}
           </div>
+        )}
+
+        {/* BP17 Phase 4 — mask editor for multi-color products */}
+        {maskEditorImage && (
+          <MaskEditorModal
+            isOpen={!!maskEditorImage}
+            onClose={() => setMaskEditorImage(null)}
+            productId={productId}
+            image={maskEditorImage}
+            slots={recipeSlots}
+            onMasksChange={handleMasksChange}
+          />
         )}
 
         {!isEdit && (

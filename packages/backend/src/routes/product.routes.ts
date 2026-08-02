@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ProductController } from '../controllers/product.controller.js';
-import { imageUploadMiddleware, validateImageMagicBytes } from '../middleware/image-upload.middleware.js';
+import { imageUploadMiddleware, maskUploadMiddleware, validateImageMagicBytes } from '../middleware/image-upload.middleware.js';
 
 const router = Router();
 const controller = new ProductController();
@@ -19,6 +19,8 @@ router.put('/:id/colors', controller.setColors.bind(controller));
 router.post('/bulk-generate-masks', controller.bulkGenerateMasks.bind(controller));
 router.get('/mask-jobs/:jobId', controller.getMaskJob.bind(controller));
 router.post('/:id/images/:imageId/mask', controller.generateImageMask.bind(controller));
+router.post('/:id/images/:imageId/mask/:slotIndex', maskUploadMiddleware.single('mask'), controller.uploadImageMask.bind(controller));
+router.delete('/:id/images/:imageId/mask/:slotIndex', controller.deleteImageMask.bind(controller));
 
 // Product images
 router.post('/:id/images', imageUploadMiddleware.single('image'), validateImageMagicBytes, controller.uploadImage.bind(controller));

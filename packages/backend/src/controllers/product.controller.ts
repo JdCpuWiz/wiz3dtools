@@ -7,6 +7,8 @@ import { ProductImageModel } from '../models/product-image.model.js';
 import { processProductImage } from '../services/image-processing.service.js';
 import {
   saveMask,
+  saveManualMask,
+  deleteMask,
   generateMaskForImage,
   deleteMaskFiles,
   isSingleColorProduct,
@@ -223,6 +225,65 @@ export class ProductController {
       const message = error instanceof Error ? error.message : 'Mask generation failed';
       res.status(422).json({ success: false, error: message });
     }
+  }
+
+  // BP17 Phase 4 — manual mask upload for one (image, slot). PNG with alpha required.
+  async uploadImageMask(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      const imageId = parseInt(req.params.imageId);
+      const slotIndex = parseInt(req.params.slotIndex);
+      if (isNaN(id) || isNaN(imageId) || isNaN(slotIndex) || slotIndex < 0) {
+        res.status(400).json({ success: false, error: 'Invalid ID' });
+        return;
+      }
+      if (!req.file?.buffer) { res.status(400).json({ success: false, error: 'No mask file provided' }); return; }
+
+      const images = await ProductImageModel.findByProduct(id);
+      if (!images.some((img) => img.id === imageId)) {
+        res.status(404).json({ success: false, error: 'Image not found' });
+        return;
+      }
+      const recipe = await ProductColorModel.findByProduct(id);
+      if (slotIndex >= recipe.length) {
+        res.status(400).json({
+          success: false,
+          error: `Slot ${slotIndex} does not exist — this product's recipe has ${recipe.length} slot(s)`,
+        });
+        return;
+      }
+
+      const mask = await saveManualMask(imageId, slotIndex, req.file.buffer);
+      res.status(201).json({ success: true, data: mask, message: 'Mask uploaded' });
+    } catch (error) {
+      const statusCode = (error as { statusCode?: number }).statusCode;
+      if (statusCode === 400) {
+        res.status(400).json({ success: false, error: (error as Error).message });
+        return;
+      }
+      next(error);
+    }
+  }
+
+  // BP17 Phase 4 — remove one slot's mask (file archived for 30 days).
+  async deleteImageMask(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      const imageId = parseInt(req.params.imageId);
+      const slotIndex = parseInt(req.params.slotIndex);
+      if (isNaN(id) || isNaN(imageId) || isNaN(slotIndex)) {
+        res.status(400).json({ success: false, error: 'Invalid ID' });
+        return;
+      }
+      const images = await ProductImageModel.findByProduct(id);
+      if (!images.some((img) => img.id === imageId)) {
+        res.status(404).json({ success: false, error: 'Image not found' });
+        return;
+      }
+      const removed = await deleteMask(imageId, slotIndex);
+      if (!removed) { res.status(404).json({ success: false, error: 'Mask not found' }); return; }
+      res.json({ success: true, message: 'Mask removed' });
+    } catch (error) { next(error); }
   }
 
   // BP17 Phase 3 — one-button backfill for every unmasked single-color product image.

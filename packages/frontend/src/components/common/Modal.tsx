@@ -6,6 +6,8 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  /** Wider panel for editor-style dialogs (BP17 mask editor). */
+  wide?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -13,6 +15,7 @@ export const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
+  wide = false,
 }) => {
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -40,7 +43,7 @@ export const Modal: React.FC<ModalProps> = ({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl p-6 shadow-xl transition-all" style={{ background: 'linear-gradient(to bottom, #3a3a3a, #2d2d2d)', border: '1px solid #4a4a4a' }}>
+              <Dialog.Panel className={`w-full ${wide ? 'max-w-4xl' : 'max-w-md'} transform overflow-hidden rounded-2xl p-6 shadow-xl transition-all`} style={{ background: 'linear-gradient(to bottom, #3a3a3a, #2d2d2d)', border: '1px solid #4a4a4a' }}>
                 <Dialog.Title
                   as="h3"
                   className="text-lg font-medium leading-6 text-iron-50 mb-4"

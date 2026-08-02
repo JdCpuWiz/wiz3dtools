@@ -1,5 +1,6 @@
 import path from 'path';
 import fsPromises from 'fs/promises';
+import sharp from 'sharp';
 import { pool } from '../config/database.js';
 import { ProductImageMaskModel } from '../models/product-image-mask.model.js';
 import { deriveMaskFromProcessedImage } from './image-processing.service.js';
@@ -7,6 +8,36 @@ import type { ProductImageMask, BulkMaskJob } from '@wizqueue/shared';
 
 const PUBLIC_BASE = () => process.env.STORE_IMAGE_PUBLIC_BASE || '/uploads/store';
 const MASKS_DIR = () => path.resolve(process.env.UPLOAD_DIR || './uploads', 'store', 'masks');
+// Replaced masks are retained here for 30 days (BP17 Phase 4 versioning) so an
+// accidental upload is recoverable — restore by copying the file back into
+// masks/ and re-pointing the row, or just re-upload the correct mask.
+const ARCHIVE_DIR = () => path.join(MASKS_DIR(), 'archive');
+const ARCHIVE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Move a replaced/deleted mask file into the archive with a replaced-at stamp. */
+async function archiveMaskFile(url: string): Promise<void> {
+  await fsPromises.mkdir(ARCHIVE_DIR(), { recursive: true });
+  const filename = path.basename(url);
+  const from = diskPathFromUrl(url);
+  const to = path.join(ARCHIVE_DIR(), `${filename}.replaced-${Date.now()}`);
+  await fsPromises.rename(from, to).catch(() => {});
+}
+
+/** Opportunistic cleanup: drop archived masks past the 30-day retention. */
+async function cleanMaskArchive(): Promise<void> {
+  try {
+    const entries = await fsPromises.readdir(ARCHIVE_DIR());
+    const cutoff = Date.now() - ARCHIVE_RETENTION_MS;
+    for (const entry of entries) {
+      const stamp = Number(entry.match(/\.replaced-(\d+)$/)?.[1]);
+      if (stamp && stamp < cutoff) {
+        await fsPromises.unlink(path.join(ARCHIVE_DIR(), entry)).catch(() => {});
+      }
+    }
+  } catch {
+    // archive dir may not exist yet — nothing to clean
+  }
+}
 
 /** Resolve a product_images.url (or mask url) back to its file on disk. */
 function diskPathFromUrl(url: string): string {
@@ -35,9 +66,63 @@ export async function saveMask(
   const url = `${PUBLIC_BASE()}/masks/${filename}`;
   const { mask, previousUrl } = await ProductImageMaskModel.upsert(imageId, slotIndex, url, source);
   if (previousUrl && previousUrl !== url) {
-    await fsPromises.unlink(diskPathFromUrl(previousUrl)).catch(() => {});
+    await archiveMaskFile(previousUrl);
   }
+  void cleanMaskArchive();
   return mask;
+}
+
+/**
+ * BP17 Phase 4 — validate + normalize a manually-prepared mask PNG and persist
+ * it for (image, slot). Accepts any PNG with an alpha channel (Photoshop /
+ * GIMP / Procreate export) and normalizes it to the canonical white-RGB +
+ * alpha format. Resolution is not enforced: the compositor scales masks to
+ * the base frame, so a mismatched export still works.
+ */
+export async function saveManualMask(
+  imageId: number,
+  slotIndex: number,
+  pngBuffer: Buffer,
+): Promise<ProductImageMask> {
+  const meta = await sharp(pngBuffer).metadata();
+  if (meta.format !== 'png') {
+    throw Object.assign(new Error('Mask must be a PNG file'), { statusCode: 400 });
+  }
+  if (!meta.hasAlpha) {
+    throw Object.assign(
+      new Error('Mask PNG has no alpha channel — export with transparency (the painted area is the mask)'),
+      { statusCode: 400 },
+    );
+  }
+  const alphaPng = await sharp(pngBuffer).ensureAlpha().extractChannel('alpha').png().toBuffer();
+  const stats = await sharp(alphaPng).stats();
+  const meanAlpha = stats.channels[0].mean;
+  if (meanAlpha < 3) {
+    throw Object.assign(new Error('Mask alpha is empty — nothing is painted'), { statusCode: 400 });
+  }
+  if (meanAlpha > 250) {
+    throw Object.assign(new Error('Mask alpha covers the whole frame — the mask should cover only this slot’s area'), { statusCode: 400 });
+  }
+
+  const normalized = await sharp({
+    create: { width: meta.width!, height: meta.height!, channels: 3, background: { r: 255, g: 255, b: 255 } },
+  })
+    .joinChannel(alphaPng)
+    .png()
+    .toBuffer();
+
+  return saveMask(imageId, slotIndex, normalized, 'MANUAL_UPLOAD');
+}
+
+/** BP17 Phase 4 — remove one slot's mask (row deleted, file archived for 30 days). */
+export async function deleteMask(imageId: number, slotIndex: number): Promise<boolean> {
+  const result = await pool.query(
+    'DELETE FROM product_image_masks WHERE image_id = $1 AND slot_index = $2 RETURNING url',
+    [imageId, slotIndex],
+  );
+  if (!result.rows[0]) return false;
+  await archiveMaskFile(result.rows[0].url as string);
+  return true;
 }
 
 /** rembg → validate → persist, for one already-uploaded image. */
