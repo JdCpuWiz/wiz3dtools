@@ -18,7 +18,19 @@ export interface StoreProduct {
   retailPrice: number;
   categoryId: number | null;
   category: { id: number; name: string; slug: string } | null;
-  images: { id: number; url: string; sortOrder: number; isPrimary: boolean }[];
+  images: {
+    id: number;
+    url: string;
+    sortOrder: number;
+    isPrimary: boolean;
+    /**
+     * BP17 Phase 5 — per-slot silhouette masks for the dynamic color preview.
+     * slotIndex matches this product's colors[].sortOrder. Always an array;
+     * empty when the image has no masks (storefront falls back to the plain
+     * image).
+     */
+    masks: { slotIndex: number; url: string }[];
+  }[];
   /** Product recipe — default colors with per-slot weights. Pickers use these as defaults. */
   colors: ProductColor[];
   /**
@@ -112,10 +124,33 @@ export class StoreService {
        ORDER BY sort_order ASC, id ASC`,
       [productIds],
     );
+    // Batch-load masks for all images in one query (BP17 Phase 5)
+    const imageIds = imgResult.rows.map((r) => r.id as number);
+    const maskMap = new Map<number, { slotIndex: number; url: string }[]>();
+    if (imageIds.length > 0) {
+      const maskResult = await pool.query(
+        `SELECT image_id AS "imageId", slot_index AS "slotIndex", url
+         FROM product_image_masks WHERE image_id = ANY($1)
+         ORDER BY slot_index ASC`,
+        [imageIds],
+      );
+      for (const m of maskResult.rows) {
+        const list = maskMap.get(m.imageId as number) ?? [];
+        list.push({ slotIndex: m.slotIndex as number, url: m.url as string });
+        maskMap.set(m.imageId as number, list);
+      }
+    }
+
     const imageMap = new Map<number, StoreProduct['images']>();
     for (const img of imgResult.rows) {
       const list = imageMap.get(img.productId as number) ?? [];
-      list.push({ id: img.id as number, url: img.url as string, sortOrder: img.sortOrder as number, isPrimary: img.isPrimary as boolean });
+      list.push({
+        id: img.id as number,
+        url: img.url as string,
+        sortOrder: img.sortOrder as number,
+        isPrimary: img.isPrimary as boolean,
+        masks: maskMap.get(img.id as number) ?? [],
+      });
       imageMap.set(img.productId as number, list);
     }
 
