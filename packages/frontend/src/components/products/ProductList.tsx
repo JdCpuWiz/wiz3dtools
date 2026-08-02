@@ -113,6 +113,16 @@ export const ProductList: React.FC = () => {
           <h2 className="text-xl font-semibold text-iron-50">Products</h2>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href="/docs/mask-guide.pdf"
+            target="_blank"
+            rel="noopener"
+            className="text-xs font-medium hover:underline"
+            style={{ color: '#ff9900' }}
+            title="Printable guide: photo rules + mask workflow for the color preview"
+          >
+            Mask Guide (PDF)
+          </a>
           <button
             onClick={startBulkMasks}
             disabled={maskJob?.status === 'running'}
