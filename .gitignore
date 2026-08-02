@@ -39,6 +39,8 @@ Thumbs.db
 # Uploads
 uploads/
 *.pdf
+# …except the generated mask guide the admin serves (BP17)
+!packages/frontend/public/docs/mask-guide.pdf
 
 # Docker
 compose.override.yaml
