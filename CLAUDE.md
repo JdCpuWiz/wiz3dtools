@@ -102,6 +102,7 @@ PostgreSQL. Migrations live in `packages/backend/migrations/` and are applied in
 | `040_consolidate_product_details.sql` | `products` | **BP #19** — drops `store_title`/`store_description`/`unit_price` (backfilled first); adds `customers.is_wholesale` |
 | `041_add_allowed_materials_to_products.sql` | `products` | **Change #160** — `allowed_materials TEXT[]` allowlist for storefront picker + order validation |
 | `042_default_existing_products_to_pla.sql` | `products` | **Change #160 follow-up** — backfills empty `allowed_materials` to `['pla']` (one-shot; idempotent) |
+| `043_create_product_image_masks_table.sql` | `product_image_masks` | **BP #17 Phase 2** — one alpha-mask PNG per (image, recipe slot) for the storefront's dynamic color preview; `slot_index` maps to `product_colors.sort_order`; files under `uploads/store/masks/` (30-day archive on replace). Process doc: `docs/ADDING_PRODUCTS.md` (+ PDF at `/docs/mask-guide.pdf`, regenerate via `scripts/generate-mask-guide-pdf.mjs`) |
 
 ---
 
@@ -186,6 +187,7 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 - `GET /api/products/:id`
 - `PUT /api/products/:id`
 - `DELETE /api/products/:id`
+- **Color-preview masks (BP #17):** `POST /api/products/:id/images/:imageId/mask` (auto-generate via rembg, single-color products only, 422 with reason on failure) · `POST /api/products/:id/images/:imageId/mask/:slotIndex` (manual PNG upload, validated + normalized) · `DELETE /api/products/:id/images/:imageId/mask/:slotIndex` · `POST /api/products/bulk-generate-masks` + `GET /api/products/mask-jobs/:jobId` (in-process bulk job, 3-way concurrency). Upload pipeline auto-saves the slot-0 mask for single-color products. See `docs/ADDING_PRODUCTS.md`.
 
 **Sales Invoices**
 - `GET /api/sales-invoices`
@@ -227,7 +229,7 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 - `DELETE /api/users/:id` — delete user (cannot delete own account)
 
 **Store** (API-key auth, no cookie) — consumed by wiz3d-prints
-- `GET /api/store/products`
+- `GET /api/store/products` — `images[]` entries carry `masks: {slotIndex,url}[]` (BP #17; always an array, empty when unmasked)
 - `GET /api/store/colors` — wiz3d-prints customer color picker source
 - `POST /api/store/orders` — customer places an order
 - `GET /api/store/orders?customerId=...` — list a customer's orders

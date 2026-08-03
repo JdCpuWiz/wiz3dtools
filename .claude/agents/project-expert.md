@@ -42,7 +42,29 @@ It also exposes MCP tools for jarvis-ai integration.
 
 ---
 
-## Database Schema (15 migrations)
+## BP17 — Dynamic color preview (2026-08-02)
+
+The wiz3d-prints storefront live-recolors product photos using per-slot alpha
+masks owned by this project:
+- `product_image_masks` (migration **043**) — one row per (image, recipe
+  slot); `slot_index` = `product_colors.sort_order`; files under
+  `uploads/store/masks/` (replace/delete archives 30 days).
+- `services/mask-generator.service.ts` + the `wiz3dtools-rembg` sidecar
+  (:7000, server mode). The upload pipeline
+  (`image-processing.service.ts`) emits the slot-0 mask as a byproduct for
+  single-color products.
+- Admin: per-image Generate/Edit Masks + bulk button on Products index;
+  MASK pills (AUTO green / MANUAL blue / m∕N yellow / FAILED red).
+- Store API: `GET /api/store/products` → `images[].masks[{slotIndex,url}]`.
+- Uploads are served by the frontend **nginx** at `/uploads/store/` with
+  `Access-Control-Allow-Origin: *` (the storefront canvas needs it).
+- Compositor exists in TWO copies — `packages/frontend/src/lib/compositor.ts`
+  (reference) and wiz3d-prints `lib/compositor.ts` — keep the math in sync.
+- Process doc: `docs/ADDING_PRODUCTS.md` (PDF: `/docs/mask-guide.pdf`,
+  regenerate with `scripts/generate-mask-guide-pdf.mjs`; note the repo
+  gitignores `*.pdf` with one `!` exception for this file).
+
+## Database Schema (43 migrations — 001-015 detailed below, see CLAUDE.md for the full table)
 
 | Migration | Table(s) | Key Columns |
 |-----------|----------|-------------|

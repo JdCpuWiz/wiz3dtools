@@ -3,7 +3,19 @@
 Running log of completed work and what's still planned.
 
 ---
+## 2026-08-02 — BP17: Dynamic product color preview (masks side)
 
+- Migration 043 `product_image_masks` — per (image, recipe slot) alpha masks
+- Auto mask generation: upload-pipeline byproduct (single-color) + on-demand /
+  bulk endpoints via the rembg sidecar; failures surface with reasons
+- Manual mask editor for multi-color products (per-slot PNG upload, slot
+  overlay + test-colors sandbox, 30-day archive on replace/delete)
+- Store API: `images[].masks[]` on `GET /api/store/products`
+- nginx: CORS header on `/uploads/store/` for the storefront canvas
+- Docs: `docs/ADDING_PRODUCTS.md` + printable `/docs/mask-guide.pdf`
+  (admin Products index links it); `scripts/generate-mask-guide-pdf.mjs`
+
+---
 ## Completed
 
 ### Session 20 — UI styling overhaul (v1.3.16–1.3.28)
