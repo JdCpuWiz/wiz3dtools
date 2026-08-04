@@ -7,6 +7,7 @@ import { useColors } from '../../hooks/useColors';
 import { useCategories } from '../../hooks/useCategories';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 import { MaskEditorModal } from './MaskEditorModal';
 import type { Color, ProductColorDto, ProductImage } from '@wizqueue/shared';
 
@@ -24,6 +25,10 @@ interface ProductFormFields {
   publishedToStore?: boolean;
   publishedToWholesale?: boolean;
   categoryId?: number | null;
+  // Change #442 — transient, never loaded from the product. Deliberately
+  // re-defaults to OFF on every visit: posting is an action you opt into for
+  // this save, not a setting that lingers on the listing.
+  postToFacebook?: boolean;
 }
 
 interface ColorWeightEntry {
@@ -159,6 +164,18 @@ export const ProductForm: React.FC = () => {
   // picker (and order validation). Empty = no constraint.
   const [allowedMaterials, setAllowedMaterials] = useState<string[]>([]);
 
+  // Change #442 — Facebook posting. The whole block is hidden unless the
+  // server has a Page token (env absent = feature off, not a broken button).
+  const { data: facebookEnabled = false } = useQuery({
+    queryKey: ['products', 'facebook-status'],
+    queryFn: () => productApi.facebookStatus(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const [fbPostId, setFbPostId] = useState<string | null>(null);
+  const [fbPostedAt, setFbPostedAt] = useState<string | null>(null);
+  const [fbError, setFbError] = useState<string | null>(null);
+  const [fbBusy, setFbBusy] = useState(false);
+
   // Available material families derived from the live color catalog.
   // Each material string ("PLA Basic", "PETG-HF") collapses to its
   // family token via the same regex the dedupe service uses.
@@ -207,6 +224,8 @@ export const ProductForm: React.FC = () => {
         setImages(existing.images);
       }
       setAllowedMaterials(existing.allowedMaterials ?? []);
+      setFbPostId(existing.facebookPostId ?? null);
+      setFbPostedAt(existing.facebookPostedAt ?? null);
     }
   }, [existing, reset]);
 
@@ -314,26 +333,55 @@ export const ProductForm: React.FC = () => {
     }
   };
 
+  // Change #442 — retroactive post of an already-saved product. Re-posting an
+  // already-posted product is behind a confirm.
+  const handlePostToFacebook = async () => {
+    if (fbPostId && !window.confirm('This product has already been posted to Facebook. Post it again as a new post?')) return;
+    setFbBusy(true);
+    setFbError(null);
+    try {
+      const posted = await productApi.postToFacebook(productId, !!fbPostId);
+      setFbPostId(posted.facebookPostId ?? null);
+      setFbPostedAt(posted.facebookPostedAt ?? null);
+      queryClient.invalidateQueries({ queryKey: ['products', productId] });
+    } catch (err) {
+      setFbError(err instanceof Error ? err.message : 'Facebook post failed');
+    } finally {
+      setFbBusy(false);
+    }
+  };
+
   const onSubmit = async (data: ProductFormFields) => {
     const colorDtos: ProductColorDto[] = colorWeights.map((c, i) => ({
       colorId: c.colorId,
       weightGrams: parseFloat(c.weightGrams) || 0,
       sortOrder: i,
     }));
+    setFbError(null);
 
     if (isEdit) {
       // Save colors BEFORE the product so the backend's published+active
       // invariant check (which reads product_colors) sees the new recipe
       // state when validating the publish toggle.
       await productApi.setColors(productId, colorDtos);
-      await update(productId, { ...data, allowedMaterials });
+      const saved = await update(productId, { ...data, allowedMaterials });
+      // Change #442 — the save always succeeds; a failed publish-time
+      // Facebook post rides back as `facebookError`. Stay on the form and
+      // show it rather than navigating away from the only place it's visible.
+      if (saved?.facebookError) {
+        setFbError(saved.facebookError);
+        queryClient.invalidateQueries({ queryKey: ['products'] });
+        return;
+      }
+      setFbPostId(saved?.facebookPostId ?? null);
+      setFbPostedAt(saved?.facebookPostedAt ?? null);
     } else {
       // Create is always unpublished server-side (ProductModel.create
       // doesn't insert published_to_store). Set colors next, then — if the
       // user wanted this product published — run a follow-up update with
       // the publish flag, which will pass the invariant check now that the
       // recipe exists.
-      const { publishedToStore, publishedToWholesale, ...createData } = data;
+      const { publishedToStore, publishedToWholesale, postToFacebook, ...createData } = data;
       // Coerce the two prices to numbers — RHF's `valueAsNumber` returns
       // `undefined` for an empty input, but the backend requires both.
       const created = await create({
@@ -344,10 +392,23 @@ export const ProductForm: React.FC = () => {
       });
       await productApi.setColors(created.id, colorDtos);
       if (publishedToStore === true || publishedToWholesale === true) {
-        await update(created.id, {
+        // The publish flag rides on THIS update, so this is the
+        // unpublished → live transition the backend posts on.
+        const saved = await update(created.id, {
           publishedToStore: publishedToStore === true,
           publishedToWholesale: publishedToWholesale === true,
+          postToFacebook: postToFacebook === true,
         });
+        if (saved?.facebookError) {
+          // The product IS created — don't strand the user on the "new" form
+          // (a second save would duplicate it). Send them to its edit page,
+          // where the "Post to Facebook" button is the retry, and carry the
+          // reason across the navigation as a toast.
+          toast.error(`Product saved, but the Facebook post failed: ${saved.facebookError}`, { duration: 10000 });
+          queryClient.invalidateQueries({ queryKey: ['products'] });
+          navigate(`/products/${created.id}`);
+          return;
+        }
       }
     }
 
@@ -527,6 +588,65 @@ export const ProductForm: React.FC = () => {
               </label>
             </div>
           </div>
+
+          {/* Change #442 — Facebook posting. Hidden entirely when the server
+              has no Page token (env absent = kill switch). */}
+          {facebookEnabled && (
+            <div className="space-y-3 pt-1">
+              <label className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  {...register('postToFacebook')}
+                  className="h-4 w-4 rounded accent-primary-500 mt-0.5"
+                />
+                <span className="text-sm">
+                  <span className="font-medium" style={{ color: '#ff9900' }}>Post to Facebook when this goes live</span>
+                  <span className="block text-xs text-[#f0f1f4] mt-0.5">
+                    {isEdit
+                      ? 'Only fires when this save turns "Show in webstore" on for the first time, and only if it has not been posted before.'
+                      : 'Images upload after the product is saved, so a post made now would be text-only. For a photo post, save first, add photos, then publish.'}
+                  </span>
+                </span>
+              </label>
+
+              {isEdit && (
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handlePostToFacebook}
+                    disabled={fbBusy}
+                    className="btn-secondary btn-sm"
+                  >
+                    {fbBusy ? 'Posting…' : fbPostId ? 'Post Again' : 'Post to Facebook'}
+                  </button>
+                  {fbPostId ? (
+                    <a
+                      href={`https://www.facebook.com/${fbPostId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-bold px-2 py-1 rounded"
+                      style={{ background: '#15803d', color: '#ffffff' }}
+                    >
+                      POSTED{fbPostedAt ? ` ${new Date(fbPostedAt).toLocaleDateString()}` : ''}
+                    </a>
+                  ) : (
+                    <span
+                      className="text-xs font-bold px-2 py-1 rounded"
+                      style={{ background: '#6b7280', color: '#ffffff' }}
+                    >
+                      NOT POSTED
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {fbError && (
+                <p className="text-xs rounded px-3 py-2" style={{ background: '#b91c1c', color: '#ffffff' }}>
+                  Facebook post failed — the product was still saved. {fbError}
+                </p>
+              )}
+            </div>
+          )}
 
           {(watch('publishedToStore') || watch('publishedToWholesale')) && colorWeights.length === 0 && (
             <p className="text-xs text-red-400">

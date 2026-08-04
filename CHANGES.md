@@ -3,6 +3,25 @@
 Running log of completed work and what's still planned.
 
 ---
+## 2026-08-04 — Change #442: Facebook auto-posting for products
+
+- Migration 044 — `products.facebook_post_id` + `facebook_posted_at`
+  (`facebook_post_id` doubles as the "already posted" marker)
+- `facebook.service.ts` — Graph API client, version pinned to v23.0;
+  `/photos` with the primary image, `/feed` text+link fallback
+- Publish path: "Post to Facebook when this goes live" checkbox on the
+  product form; fires only on the unpublished→live transition, once per
+  product. Failures never block the save — the Graph error is shown in
+  the admin and the post marker stays null so the button retries
+- Edit form: "Post to Facebook" / "Post Again" button + a POSTED pill
+  linking to the live post; re-posting is behind a confirm
+- `GET /api/products/facebook-status` — env absent = the whole feature is
+  hidden in the UI (kill switch)
+- `scripts/facebook-smoke.mjs` — token/image check via an unpublished
+  photo round-trip, so the token can be verified without posting
+- Design doc: `wiz3d-prints/docs/SOCIAL_POSTING.md` (C438)
+
+---
 ## 2026-08-02 — BP17: Dynamic product color preview (masks side)
 
 - Migration 043 `product_image_masks` — per (image, recipe slot) alpha masks

@@ -12,6 +12,8 @@ const SELECT = `
   wholesale_price as "wholesalePrice",
   retail_price as "retailPrice",
   allowed_materials as "allowedMaterials",
+  facebook_post_id as "facebookPostId",
+  facebook_posted_at as "facebookPostedAt",
   created_at as "createdAt", updated_at as "updatedAt"
 `;
 
@@ -169,6 +171,23 @@ export class ProductModel {
     const result = await pool.query(
       `UPDATE products SET ${fields.join(', ')} WHERE id = $${i} RETURNING ${SELECT}`,
       values,
+    );
+    if (!result.rows[0]) return null;
+    const [product] = await attachColors([result.rows[0]]);
+    return product;
+  }
+
+  /**
+   * Change #442 — stamp the Facebook post marker after a successful post.
+   * Deliberately does NOT touch updated_at: posting to Facebook isn't an edit
+   * of the listing, and bumping it would make every post look like a product
+   * change to anything watching that column.
+   */
+  static async setFacebookPost(id: number, postId: string): Promise<Product | null> {
+    const result = await pool.query(
+      `UPDATE products SET facebook_post_id = $1, facebook_posted_at = NOW()
+       WHERE id = $2 RETURNING ${SELECT}`,
+      [postId, id],
     );
     if (!result.rows[0]) return null;
     const [product] = await attachColors([result.rows[0]]);

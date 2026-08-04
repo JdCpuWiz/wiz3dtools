@@ -15,7 +15,8 @@ import {
   startBulkMaskJob,
   getBulkJob,
 } from '../services/mask-generator.service.js';
-import { parseBody, createProductSchema, updateProductSchema, setProductColorsSchema } from '../validation/schemas.js';
+import { parseBody, createProductSchema, updateProductSchema, setProductColorsSchema, facebookPostSchema } from '../validation/schemas.js';
+import { isFacebookConfigured } from '../services/facebook.service.js';
 import type { ApiResponse } from '@wizqueue/shared';
 
 const service = new ProductService();
@@ -300,6 +301,36 @@ export class ProductController {
       if (!job) { res.status(404).json({ success: false, error: 'Job not found' }); return; }
       res.json({ success: true, data: job });
     } catch (error) { next(error); }
+  }
+
+  // Change #442 — is Facebook posting wired up on this server? The admin UI
+  // hides the checkbox + button entirely when it isn't, so a missing token
+  // reads as "feature off" rather than a button that always errors.
+  async facebookStatus(_req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      res.json({ success: true, data: { enabled: isFacebookConfigured() } });
+    } catch (error) { next(error); }
+  }
+
+  // Change #442 — retroactive / manual post of one product to the Page.
+  async postToFacebook(req: Request, res: Response<ApiResponse>, _next: NextFunction): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) { res.status(400).json({ success: false, error: 'Invalid ID' }); return; }
+      const parsed = parseBody(facebookPostSchema, req.body ?? {});
+      if (!parsed.ok) { res.status(400).json({ success: false, error: parsed.error }); return; }
+
+      const product = await service.postToFacebook(id, parsed.data.force === true);
+      res.json({ success: true, data: product, message: 'Posted to Facebook' });
+    } catch (error) {
+      const statusCode = (error as { statusCode?: number }).statusCode;
+      const message = error instanceof Error ? error.message : 'Facebook post failed';
+      if (message === 'Product not found') { res.status(404).json({ success: false, error: message }); return; }
+      // Graph failures (dead token, unreachable image) come back as plain
+      // errors — surface the reason as a 502 instead of a generic 500 so the
+      // admin sees WHY and can retry after fixing the token.
+      res.status(statusCode ?? 502).json({ success: false, error: message });
+    }
   }
 
   async suggestSku(req: Request, res: Response<ApiResponse>, next: NextFunction): Promise<void> {

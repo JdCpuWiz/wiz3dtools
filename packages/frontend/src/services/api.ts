@@ -235,6 +235,26 @@ export const productApi = {
     return response.data.data;
   },
 
+  // Change #442 — Facebook posting. `facebookStatus` is the kill switch the UI
+  // reads: no Page token on the server → the checkbox and button never render.
+  facebookStatus: async (): Promise<boolean> => {
+    const response = await api.get<ApiResponse<{ enabled: boolean }>>('/products/facebook-status');
+    return response.data.data?.enabled === true;
+  },
+
+  postToFacebook: async (id: number, force = false): Promise<Product> => {
+    try {
+      const response = await api.post<ApiResponse<Product>>(`/products/${id}/facebook-post`, { force });
+      if (!response.data.data) throw new Error('Facebook post failed');
+      return response.data.data;
+    } catch (error: any) {
+      // Surface the Graph message (expired token, unreachable image, …) rather
+      // than axios' "Request failed with status code 502".
+      const message = error.response?.data?.error || error.response?.data?.message || error.message;
+      throw new Error(message);
+    }
+  },
+
   uploadImage: async (id: number, file: File): Promise<ProductImage> => {
     const form = new FormData();
     form.append('image', file);

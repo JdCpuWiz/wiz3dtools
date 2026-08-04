@@ -92,6 +92,7 @@ Snailslap / Pawdio / other homelab apps are unrelated — out of scope here.
 | Manufacturers (Bambu Lab, etc., spool weights, low/critical thresholds) | wiz3dtools | — | local table; not synced anywhere                    |
 | Showcase content (portfolio, services, materials, testimonials, about blocks) | **wiz3d-prints** | wiz3dtools admin proxies edits via `/admin/showcase/*` | wiz3d-prints owns the schema + CRUD; wiz3dtools is just a polished admin UI |
 | Print queue + printer status + MQTT events | **BamBuddy** | — | wiz3dtools no longer touches the queue (removed BP #6 Phase 3) |
+| Facebook Page posts for products (Change #442) | wiz3dtools (`products.facebook_post_id` / `facebook_posted_at`) | **Meta Graph API** (outbound only) | wiz3dtools POSTs to `/{page-id}/photos` (or `/feed` when there's no image) when a product goes live on the webstore with "Post to Facebook" ticked, or when the admin presses the button on `/products/:id`. Nothing ever reads back from Facebook — the stored `post_id` is a marker + a link. **wiz3d-prints posts nothing**; the same Meta app also serves rustic-ridge, which posts its own products independently. |
 
 **Quick test**: if the table above doesn't say "canonical owner" for the
 field you're editing, **stop**. Either you're touching a mirror (changes
@@ -117,6 +118,7 @@ will be overwritten on next sync) or you're missing context.
 | Storefront showcase content (portfolio, services, etc.) | wiz3dtools admin → `/admin/showcase/*` (proxies to wiz3d-prints' schema) |
 | Manufacturer spool weights / thresholds         | wiz3dtools admin → `/admin/manufacturers` |
 | The print queue / live print state              | **BamBuddy** (https://bambuddy.deckerzoo.com) |
+| Whether a product gets announced on Facebook    | wiz3dtools admin → `/products/:id` Store Listing section — tick "Post to Facebook when this goes live" before publishing, or press "Post to Facebook" any time afterwards |
 
 ---
 
@@ -173,6 +175,14 @@ sequenceDiagram
 **There's no push** from wiz3dtools to wiz3d-prints — the storefront
 pulls on every page load with a short cache. Publish flips a flag;
 visibility happens on the next page render.
+
+**The one outbound push in this flow is Facebook** (Change #442). If
+"Post to Facebook when this goes live" was ticked on the save that flips
+`published_to_store` on, wiz3dtools posts the product's primary image +
+caption to the Wiz3D Prints Page and stores the resulting `post_id`. It
+fires on the transition only, never on a re-save, and never twice for the
+same product. A failure there never blocks the publish — the product still
+goes live and the admin sees the Graph error.
 
 ### A customer places an order on the storefront
 

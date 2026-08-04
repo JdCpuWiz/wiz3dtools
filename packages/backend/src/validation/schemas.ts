@@ -86,9 +86,18 @@ export const createProductSchema = z.object({
   // entry is a family token like "pla", "abs", "petg" (lowercase,
   // alphanumeric). Empty list = no constraint.
   allowedMaterials: z.array(z.string().regex(/^[a-z0-9]+$/, 'Material family tokens must be lowercase alphanumeric').max(20)).max(20).optional(),
+  // Change #442 — transient request flag (NOT a column). Must be declared
+  // here or zod strips it off the body before the service ever sees it.
+  postToFacebook: z.boolean().optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();
+
+// Change #442 — the retroactive "Post to Facebook" button. `force` is the
+// re-post confirmation; without it an already-posted product is refused.
+export const facebookPostSchema = z.object({
+  force: z.boolean().optional(),
+});
 
 // Bug #66 — color dedupe
 export const mergeColorsSchema = z.object({

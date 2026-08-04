@@ -58,6 +58,12 @@ services:
       # no-op (order/payment flow never breaks if the hub is un-provisioned).
       - ZOO_NOTIFIER_URL=${ZOO_NOTIFIER_URL:-http://192.168.7.84:3030}
       - ZOO_NOTIFIER_KEY=${ZOO_NOTIFIER_KEY}
+      # Change #442 — Facebook Page auto-posting for products. This list is an
+      # ALLOWLIST: a var in the host .env that isn't named here never reaches
+      # the container. Both blank = the feature is hidden in the admin UI.
+      - FACEBOOK_PAGE_ID=${FACEBOOK_PAGE_ID}
+      - FACEBOOK_PAGE_TOKEN=${FACEBOOK_PAGE_TOKEN}
+      - STORE_PUBLIC_URL=${STORE_PUBLIC_URL:-https://wiz3dprints.com}
     volumes:
       - ${UPLOADS_PATH:-./uploads}:/app/uploads
     networks:

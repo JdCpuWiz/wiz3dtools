@@ -46,6 +46,18 @@ export interface Product {
   // satisfy 'pla'.
   allowedMaterials: string[];
   images: ProductImage[];
+  // Facebook Page post marker (Change #442). `facebookPostId` non-null means
+  // this product has been posted; it also gates the publish-time auto-post so
+  // a product is never posted twice by accident.
+  facebookPostId: string | null;
+  facebookPostedAt: string | null;
+  /**
+   * TRANSIENT — never stored, never returned by a plain read. Set only on a
+   * save response when a publish-time Facebook post was attempted and failed,
+   * so the admin form can show the Graph error instead of silently dropping
+   * it. The save itself still succeeded.
+   */
+  facebookError?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -77,4 +89,10 @@ export interface UpdateProductDto {
   wholesalePrice?: number;
   retailPrice?: number;
   allowedMaterials?: string[];
+  /**
+   * Change #442 — transient request flag, not a column. When true, a save
+   * that flips this product from unpublished to live on the webstore also
+   * posts it to the Facebook Page (once — skipped if already posted).
+   */
+  postToFacebook?: boolean;
 }

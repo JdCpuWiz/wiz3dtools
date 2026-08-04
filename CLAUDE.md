@@ -103,6 +103,7 @@ PostgreSQL. Migrations live in `packages/backend/migrations/` and are applied in
 | `041_add_allowed_materials_to_products.sql` | `products` | **Change #160** — `allowed_materials TEXT[]` allowlist for storefront picker + order validation |
 | `042_default_existing_products_to_pla.sql` | `products` | **Change #160 follow-up** — backfills empty `allowed_materials` to `['pla']` (one-shot; idempotent) |
 | `043_create_product_image_masks_table.sql` | `product_image_masks` | **BP #17 Phase 2** — one alpha-mask PNG per (image, recipe slot) for the storefront's dynamic color preview; `slot_index` maps to `product_colors.sort_order`; files under `uploads/store/masks/` (30-day archive on replace). Process doc: `docs/ADDING_PRODUCTS.md` (+ PDF at `/docs/mask-guide.pdf`, regenerate via `scripts/generate-mask-guide-pdf.mjs`) |
+| `044_add_facebook_post_fields_to_products.sql` | `products` | **Change #442** — `facebook_post_id` + `facebook_posted_at` (both nullable). `facebook_post_id` doubles as the "already posted" marker; NULL = never posted, so the admin's button stays a retry. See "Facebook Page posting" below. |
 
 ---
 
@@ -187,6 +188,7 @@ Create invoice (with optional line items) → add/edit line items, picking from 
 - `GET /api/products/:id`
 - `PUT /api/products/:id`
 - `DELETE /api/products/:id`
+- **Facebook posting (Change #442):** `GET /api/products/facebook-status` → `{ enabled }` (the admin UI's kill switch — false when the Page env vars are unset) · `POST /api/products/:id/facebook-post` body `{ force?: boolean }` (retroactive/manual post; 409 without `force` if already posted, 502 with the Graph message on a Graph failure, 503 when unconfigured). `PUT /api/products/:id` also accepts a transient `postToFacebook: true`, which posts only on the unpublished→live transition.
 - **Color-preview masks (BP #17):** `POST /api/products/:id/images/:imageId/mask` (auto-generate via rembg, single-color products only, 422 with reason on failure) · `POST /api/products/:id/images/:imageId/mask/:slotIndex` (manual PNG upload, validated + normalized) · `DELETE /api/products/:id/images/:imageId/mask/:slotIndex` · `POST /api/products/bulk-generate-masks` + `GET /api/products/mask-jobs/:jobId` (in-process bulk job, 3-way concurrency). Upload pipeline auto-saves the slot-0 mask for single-color products. See `docs/ADDING_PRODUCTS.md`.
 
 **Sales Invoices**
@@ -401,6 +403,9 @@ Default tax rate: **7%** (Iowa sales tax). Shipping is not taxed.
 | `STORE_API_KEY` | — | API-key auth for `/api/store/*` (wiz3d-prints customer site) |
 | `BAMBUDDY_URL` | `http://192.168.7.147:8000` | BamBuddy base URL (used by `bambuddy-sync.service.ts`) |
 | `BAMBUDDY_API_KEY` | — | `X-API-Key` value for BamBuddy. Same key shared with the bambuddy-mcp bridge on CT 106 |
+| `FACEBOOK_PAGE_ID` | — | Wiz3D Prints Facebook Page id (Change #442). Blank = feature hidden |
+| `FACEBOOK_PAGE_TOKEN` | — | **Non-expiring** Page access token. Blank = feature hidden |
+| `STORE_PUBLIC_URL` | `https://wiz3dprints.com` | Public storefront root; the PDP link in each Facebook caption |
 
 ---
 
@@ -433,6 +438,57 @@ git pull origin master
 npm run migrate          # apply any new SQL migrations
 docker compose up -d --build
 ```
+
+---
+
+## Facebook Page posting (Change #442, 2026-08-04)
+
+Publishing a product to the webstore can announce it on the **Wiz3D Prints
+Facebook Page**. Design + the one-time Meta app/token setup live in
+`wiz3d-prints/docs/SOCIAL_POSTING.md` (the C438 investigation); this is the
+wiz3dtools implementation of it. **wiz3d-prints itself has no code in this** —
+it's read-only over the store API, and product listings are authored here.
+
+- `packages/backend/src/services/facebook.service.ts` — the whole Graph client.
+  Plain `fetch`, Graph version pinned in ONE constant (`v23.0`; Meta keeps a
+  version alive ~2 years). `/{page-id}/photos` with a public image URL, falling
+  back to `/{page-id}/feed` for a text+link post when the product has no image.
+- **Failure is LOUD and NON-FATAL — this is the whole design, and it is the
+  opposite of `notify.service.ts`'s deliberate silence.** The realistic failure
+  is a dead Page token, whose only other symptom is "posts quietly stopped",
+  which nobody notices. So: the product save always succeeds, `facebook_post_id`
+  stays NULL, and the Graph error text rides back to the admin form on a
+  transient `facebookError` field (never stored, never on a plain read). The
+  "Post to Facebook" button is then the retry.
+- **It fires on the TRANSITION, not on every save.** `ProductService.update`
+  reads the pre-update row and posts only when: the admin ticked the box on this
+  save, `published_to_store` went false→true, the product is `active`, and
+  `facebook_post_id` is NULL. Re-saving a live product never re-posts.
+- **`facebook_post_id` is the "already posted" marker.** Re-posting is possible
+  but only behind the admin's confirm (`force: true`), which re-stamps the id.
+- **Env absent = feature HIDDEN, not broken.** `GET /api/products/facebook-status`
+  drives it; with no `FACEBOOK_PAGE_ID`/`FACEBOOK_PAGE_TOKEN` the checkbox and
+  button never render. That absence is the kill switch.
+- **The credentials are MIRRORED from wiz3d-prints, and the compose
+  `environment:` list is an ALLOWLIST** — a var sitting in the host `.env` that
+  isn't named in `compose.yaml` never reaches the container. Both vars live in
+  `/home/shad/wiz3dtools/.env` on CT114 (copied from
+  `/home/shad/docker/wiz3d_prints/.env` on CT308, which is where the tokens were
+  minted). `FACEBOOK_PAGE_TOKEN` must be the **non-expiring Page token derived
+  from a long-lived user token** — a Graph API Explorer token dies in ~1 hour.
+  Refresh runbook: `wiz3d-prints/scripts/facebook-refresh-tokens.sh` (rewrites
+  BOTH brands' env files; re-copy here afterwards).
+- **Verify without posting anything:** `node scripts/facebook-smoke.mjs` (after
+  `set -a; . ./.env; set +a`) checks the token, uploads a photo **unpublished**
+  through the real client, and deletes it. That is how the token was validated
+  in C438 and how this shipped. Graph accepts the storefront's **WEBP** images
+  by URL, which is not obvious from Meta's docs — verified live, not assumed.
+- Product images are already public at `tools.wiz3dprints.com/uploads/store/`
+  (CORS `*`), so Facebook fetches them directly. A relative image URL is
+  resolved against `STORE_IMAGE_PUBLIC_BASE`; if that can't produce an absolute
+  URL, the post downgrades to text+link rather than failing.
+- Instagram is the documented next step (same Meta app, IG Business account
+  linked to the Page) and is deliberately NOT in this change.
 
 ---
 

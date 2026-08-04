@@ -8,12 +8,16 @@ const controller = new ProductController();
 router.get('/', controller.getAll.bind(controller));
 router.post('/', controller.create.bind(controller));
 router.get('/suggest-sku', controller.suggestSku.bind(controller));
+// Change #442 — Facebook posting. Static path registered before `/:id` so
+// "facebook-status" is never parsed as a product id.
+router.get('/facebook-status', controller.facebookStatus.bind(controller));
 router.get('/:id', controller.getById.bind(controller));
 router.put('/:id', controller.update.bind(controller));
 router.delete('/:id', controller.delete.bind(controller));
 router.post('/:id/copy', controller.copy.bind(controller));
 router.get('/:id/colors', controller.getColors.bind(controller));
 router.put('/:id/colors', controller.setColors.bind(controller));
+router.post('/:id/facebook-post', controller.postToFacebook.bind(controller));
 
 // Image masks (BP17 Phase 3) — static paths registered before parameterized ones
 router.post('/bulk-generate-masks', controller.bulkGenerateMasks.bind(controller));
