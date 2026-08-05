@@ -407,6 +407,36 @@ Default tax rate: **7%** (Iowa sales tax). Shipping is not taxed.
 | `FACEBOOK_PAGE_TOKEN` | — | **Non-expiring** Page access token. Blank = feature hidden |
 | `STORE_PUBLIC_URL` | `https://wiz3dprints.com` | Public storefront root; the PDP link in each Facebook caption |
 
+### Retired: `MCP_SERVICE_TOKEN` (Bug #243, 2026-08-05)
+
+**The admin API is cookie-session-only. There is no static-header read
+credential for it, and re-adding one to `.env` will do nothing.**
+
+`MCP_SERVICE_TOKEN` was a single static Bearer that `requireAuth` accepted in
+place of the session cookie. Bug #60 hardened it — read-only (any non-GET got
+`403 Service token is read-only`), synthetic user with `role: 'service'` so
+`requireAdmin` refused it, timing-safe compare — so it was never a takeover
+path. But it still read every non-admin GET on the admin API: `/api/customers`
+in full (names, emails, postal addresses), every sales invoice, plus products /
+colors / categories / manufacturers / upload / reports.
+
+It was minted for exactly one consumer, the `wiz3dtools-mcp` → Jarvis bridge on
+:8014, **which was retired 2026-07-04 (Bug #97) while the credential was left
+live.** A key with no owner is one nobody rotates, notices in a log, or misses
+when it leaks — that ownership gap, not the permissions, is what got it pulled.
+
+Removed in three places on purpose: `checkServiceToken` in
+`auth.middleware.ts`, the `MCP_SERVICE_TOKEN` line in `compose.yaml` (that
+`environment:` list is an **allowlist**), and the value in the host `.env` on
+CT114. **Deleting the code matters as much as deleting the value** — a dormant
+`if (process.env.X)` bypass comes back to life silently the day someone re-adds
+the var, which is how it survived Bug #97 in the first place.
+
+If a header-cardable read credential is ever wanted again, mint a **new** one
+with a named owner and record that owner; don't resurrect this one. The store
+surface keeps its own separate key (`STORE_API_KEY`), which is unaffected —
+it gates only `/api/store/*`, not the admin API.
+
 ---
 
 ## Deployment

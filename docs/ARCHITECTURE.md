@@ -282,6 +282,18 @@ flowchart LR
 - **Roles** (admin / wholesaler / customer) live on wiz3d-prints'
   `User.role`. wiz3dtools doesn't see this today.
 
+**The admin surface is cookie-session-only — no cross-system credential
+reaches it (Bug #243, 2026-08-05).** It used to accept a second door:
+`MCP_SERVICE_TOKEN`, a static Bearer that `requireAuth` took instead of the
+cookie. Hardened at Bug #60 (read-only, `role: 'service'` so `requireAdmin`
+still refused it) but never scoped — it read every non-admin GET on the admin
+API, including the full `customers` table and every sales invoice. Its one
+consumer was the `wiz3dtools-mcp` → Jarvis bridge, retired at Bug #97; the
+credential outlived it by a month. Removed from the middleware, `compose.yaml`
+and CT114's `.env`. Cross-system integration is now exactly two surfaces —
+`/api/store/*` (`STORE_API_KEY`, optionally `X-Customer-Token`) and the
+wholesale-user proxy to wiz3d-prints — with nothing reaching the admin API.
+
 ---
 
 ## The store API — every cross-system endpoint

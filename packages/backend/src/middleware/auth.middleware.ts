@@ -13,8 +13,6 @@ declare global {
 const COOKIE_NAME = 'wiz3d_token';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-const MCP_SERVICE_TOKEN = process.env.MCP_SERVICE_TOKEN;
-
 // Bug #60: the previous `a !== b` compare was timing-leaky. Pre-checks the
 // length so timingSafeEqual doesn't throw on mismatched buffer sizes —
 // otherwise it'd reveal the secret length to the caller.
@@ -23,30 +21,24 @@ function constantTimeEqual(a: string, b: string): boolean {
   return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 
-function checkServiceToken(req: Request): boolean {
-  if (!MCP_SERVICE_TOKEN) return false;
-  const authHeader = req.headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return false;
-  const token = authHeader.slice(7);
-  if (!constantTimeEqual(token, MCP_SERVICE_TOKEN)) return false;
-  // Bug #60 F3: service token is now READ-ONLY. The only legitimate
-  // consumer (wiz3dtools-mcp → Jarvis) only ever issues GETs. Synthetic
-  // user keeps role 'service' (not 'admin') so a downstream guard that
-  // checks `role === 'admin'` blocks even if a future caller tries to
-  // POST. Mutating methods reject here outright.
-  req.user = { userId: 0, username: 'mcp-service', role: 'service', csrfToken: '' };
-  return true;
-}
+// Bug #243 (2026-08-05): the `MCP_SERVICE_TOKEN` bearer path is GONE.
+// It let any holder of one static header read every non-admin GET on the
+// admin API — the whole customer table (names, emails, postal addresses)
+// and every invoice. Bug #60 had hardened it (read-only, role 'service',
+// timing-safe compare), so it was never a takeover; the problem was
+// OWNERSHIP. Its only consumer was the wiz3dtools-mcp → Jarvis bridge,
+// retired 2026-07-04 (Bug #97), and the credential outlived it. A live key
+// nobody owns is one nobody rotates, notices in a log, or misses when it
+// leaks.
+//
+// The env var is also gone from `compose.yaml` (that list is an ALLOWLIST)
+// and from the host `.env` on CT114. Deleting the code as well as the value
+// is deliberate: a dormant `if (process.env.X)` bypass silently comes back
+// to life the day someone re-adds the var. The admin API is now
+// cookie-session-only. If a header-cardable read credential is ever wanted
+// again, mint a NEW one with a named owner — do not resurrect this.
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  if (checkServiceToken(req)) {
-    if (!SAFE_METHODS.has(req.method)) {
-      res.status(403).json({ success: false, error: 'Service token is read-only' });
-      return;
-    }
-    return next();
-  }
-
   const token = req.cookies?.[COOKIE_NAME];
   if (!token) {
     res.status(401).json({ success: false, error: 'Authentication required' });
@@ -73,9 +65,8 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  // Bug #60 F3: 'service' must NOT pass requireAdmin even though the token
-  // verified — service tokens should never reach admin-only paths. Defense
-  // in depth on top of the safe-methods reject above.
+  // Positive check on 'admin', never a blocklist of non-admin roles — a new
+  // role must be granted admin explicitly rather than inherit it by omission.
   if (!req.user || req.user.role !== 'admin') {
     res.status(403).json({ success: false, error: 'Admin access required' });
     return;

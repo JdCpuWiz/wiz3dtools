@@ -3,6 +3,27 @@
 Running log of completed work and what's still planned.
 
 ---
+## 2026-08-05 — Bug #243: retire `MCP_SERVICE_TOKEN`
+
+- Removed the static-Bearer bypass in `requireAuth`. The admin API is now
+  cookie-session-only — there is no header-cardable credential for it
+- The token read every non-admin GET on the admin API: the full `customers`
+  table (names, emails, postal addresses), every sales invoice, products,
+  colors, categories, manufacturers, upload and sales reports. Bug #60's
+  hardening held (read-only, `role: 'service'`, timing-safe compare), so this
+  was a read exposure, not a takeover
+- The real problem was ownership: its only consumer, the `wiz3dtools-mcp` →
+  Jarvis bridge on :8014, was retired at Bug #97 (2026-07-04) and the
+  credential outlived it by a month
+- Pulled from all three places — `auth.middleware.ts`, the `compose.yaml`
+  `environment:` allowlist, and the host `.env` on CT114. Deleting the code
+  matters as much as the value: a dormant `if (process.env.X)` bypass silently
+  revives the day someone re-adds the var
+- Deleted `.claude/agents/jarvis-ai-integration-expert.md` — it documented the
+  retired bridge, a queue API dropped at BP#6 P3, and a stale backend IP
+- `STORE_API_KEY` is untouched; it gates only `/api/store/*`
+
+---
 ## 2026-08-04 — Change #442: Facebook auto-posting for products
 
 - Migration 044 — `products.facebook_post_id` + `facebook_posted_at`

@@ -35,7 +35,11 @@ services:
       - PAYMENT_VENMO=${PAYMENT_VENMO}
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGIN=${CORS_ORIGIN:-https://tools.wiz3dprints.com}
-      - MCP_SERVICE_TOKEN=${MCP_SERVICE_TOKEN}
+      # Bug #243 (2026-08-05): MCP_SERVICE_TOKEN removed. It was minted for the
+      # wiz3dtools-mcp → Jarvis bridge, which was retired at Bug #97; the
+      # credential outlived its only consumer. The backend code path is gone
+      # too, so re-adding this line does nothing — mint a NEW owned credential
+      # instead of resurrecting this one.
       # BUILDPLAN_6_PHASE_3 (2026-06-04): BAMBU_MONITOR_URL removed — backend
       # no longer proxies the bambu-monitor (service deleted). BAMBUDDY_URL +
       # BAMBUDDY_API_KEY remain on the backend for Phase 4's colors sync.
